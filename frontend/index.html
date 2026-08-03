@@ -210,13 +210,17 @@
       </div>
     </div>
 
-            <!-- RIGHT: OUR VIDEO — clean, no overlays -->
+            <!-- RIGHT: Evernote's REAL hero animation — matches left column height, centered -->
     <div class="reveal relative flex h-full min-h-[420px] items-center justify-center">
-      <div class="mx-auto w-full max-w-[560px]">
-        <video id="heroDemoVideo" class="hero-video" src="assets/hero-demo-full.mp4"
-               poster="assets/hero-demo-poster.jpg"
-               autoplay muted loop playsinline preload="auto"
-               aria-label="Notin demo — notebooks and checklists"></video>
+      <div class="mx-auto w-full max-w-[540px]">
+        <!-- Evernote's exact responsive heights -->
+        <div class="flex h-[300px] items-center md:h-[340px] lg:h-[400px]">
+          <div id="heroLottie" class="hero-lottie h-full w-full">
+            <div id="heroLottiePoster" class="hero-lottie-poster">
+              <svg class="h-10 w-10 animate-pulse text-brand-500/70" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 </section>
@@ -840,6 +844,8 @@
   </div>
 </div>
 
+<script src="assets/hero-anim-data.js"></script>
+<script src="assets/lottie.min.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

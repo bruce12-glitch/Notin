@@ -513,6 +513,43 @@ const OS_META = NOTIN_PLATFORMS[OS] || NOTIN_PLATFORMS.web;
 
 
 
+
+// ============================================================
+// HERO — the REAL Evernote animation (lottie homepage.json)
+// Exact source: evernote.com/lottie/homepage.json — vector UI,
+// crisp at ANY size (never blurry), loops forever.
+// ============================================================
+(function () {
+  const container = document.getElementById('heroLottie');
+  if (!container) return;
+  const poster = document.getElementById('heroLottiePoster');
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const start = () => {
+    if (typeof lottie === 'undefined' || !window.NOTIN_HERO_ANIM) return;
+    try {
+      const anim = lottie.loadAnimation({
+        container: container,
+        renderer: 'svg',
+        loop: true,
+        autoplay: !reduced,
+        animationData: window.NOTIN_HERO_ANIM,
+      });
+      anim.addEventListener('DOMLoaded', () => {
+        container.classList.add('has-anim');
+        if (poster) poster.style.display = 'none';
+      });
+      if (reduced) anim.goToAndStop(0, true);
+    } catch (e) { /* keep poster */ }
+  };
+
+  if (document.readyState === 'complete' || document.readyState === 'interactive') start();
+  else window.addEventListener('DOMContentLoaded', start);
+  setTimeout(start, 300);
+  setTimeout(start, 1500);
+})();
+
+
 // Footer year
 const yearEl = document.getElementById('year');
 if (yearEl) yearEl.textContent = new Date().getFullYear();

@@ -1262,3 +1262,27 @@ h1, h2, h3, h4, h5,
 @media (prefers-reduced-motion: reduce) {
   .hero-card, .hero-share { animation: none; }
 }
+
+/* ============================================================
+   HERO LOTTIE — Evernote's real animation, crisp at any size
+   ============================================================ */
+.hero-lottie { position: relative; }
+.hero-lottie svg { position: relative; z-index: 2; }
+.hero-lottie-poster {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(60% 55% at 50% 40%, rgba(255,125,66,.10), transparent 70%),
+    linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,.1));
+}
+.hero-lottie.has-anim .hero-lottie-poster { display: none; }
+.hero-lottie svg {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain;
+  pointer-events: none;
+}
