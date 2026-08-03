@@ -1341,3 +1341,19 @@ h1, h2, h3, h4, h5,
 .carousel-track-features::-webkit-scrollbar { display: none; }
 
 /* smooth infinite auto-scroll is JS-driven (paused on hover) */
+
+/* AI tools band chips */
+.ai-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--color-brand-100);
+  color: var(--color-brand-700);
+  border: 1px solid rgba(255, 125, 66, 0.25);
+  border-radius: 999px;
+  padding: 11px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.ai-chip:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,125,66,0.18); }

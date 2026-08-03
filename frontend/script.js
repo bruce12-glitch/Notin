@@ -547,39 +547,24 @@ const OS_META = NOTIN_PLATFORMS[OS] || NOTIN_PLATFORMS.web;
 
 
 
+
 // ============================================================
-// HERO — the REAL Evernote animation (lottie homepage.json)
-// Exact source: evernote.com/lottie/homepage.json — vector UI,
-// crisp at ANY size (never blurry), loops forever.
+// HERO VIDEO — play enforcer (strict: video MUST play)
+// Retries autoplay; if the browser blocks it, plays on the
+// first tap/scroll/click (autoplay policies require gesture).
 // ============================================================
 (function () {
-  const container = document.getElementById('heroLottie');
-  if (!container) return;
-  const poster = document.getElementById('heroLottiePoster');
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  const start = () => {
-    if (typeof lottie === 'undefined' || !window.NOTIN_HERO_ANIM) return;
-    try {
-      const anim = lottie.loadAnimation({
-        container: container,
-        renderer: 'svg',
-        loop: true,
-        autoplay: !reduced,
-        animationData: window.NOTIN_HERO_ANIM,
-      });
-      anim.addEventListener('DOMLoaded', () => {
-        container.classList.add('has-anim');
-        if (poster) poster.style.display = 'none';
-      });
-      if (reduced) anim.goToAndStop(0, true);
-    } catch (e) { /* keep poster */ }
-  };
-
-  if (document.readyState === 'complete' || document.readyState === 'interactive') start();
-  else window.addEventListener('DOMContentLoaded', start);
-  setTimeout(start, 300);
-  setTimeout(start, 1500);
+  const v = document.getElementById('heroDemoVideo');
+  if (!v) return;
+  const tryPlay = () => { const p = v.play(); if (p && p.catch) p.catch(() => {}); };
+  tryPlay();
+  v.addEventListener('canplay', tryPlay);
+  v.addEventListener('loadeddata', tryPlay);
+  ['click', 'keydown', 'touchstart', 'scroll'].forEach(ev =>
+    window.addEventListener(ev, tryPlay, { once: true, passive: true })
+  );
+  // retry a few times in case source loads late
+  [500, 1200, 2500, 5000].forEach(t => setTimeout(tryPlay, t));
 })();
 
 

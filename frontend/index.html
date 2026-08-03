@@ -210,16 +210,14 @@
       </div>
     </div>
 
-            <!-- RIGHT: Evernote's REAL hero animation — matches left column height, centered -->
+            <!-- RIGHT: OUR VIDEO — guaranteed playback (native video, no JS required) -->
     <div class="reveal relative flex h-full min-h-[420px] items-center justify-center">
-      <div class="mx-auto w-full max-w-[540px]">
-        <!-- Evernote's exact responsive heights -->
-        <div class="flex h-[300px] items-center md:h-[340px] lg:h-[400px]">
-          <div id="heroLottie" class="hero-lottie h-full w-full">
-            <div id="heroLottiePoster" class="hero-lottie-poster">
-              <svg class="h-10 w-10 animate-pulse text-brand-500/70" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
-            </div>
-          </div>
+      <div class="mx-auto w-full max-w-[580px]">
+        <div class="aspect-[8/5] w-full overflow-hidden rounded-2xl border border-stroke-cards bg-surface shadow-[0_30px_70px_rgba(26,20,16,0.16)]">
+          <video id="heroDemoVideo" class="hero-video" src="assets/hero-demo-full.mp4"
+                 poster="assets/hero-demo-poster.jpg"
+                 autoplay muted loop playsinline preload="auto"
+                 aria-label="Notin demo — notebooks and checklists"></video>
         </div>
       </div>
     </div>
@@ -735,6 +733,23 @@
   </div>
 </section>
 
+<!-- ============ AI TOOLS BAND (Evernote IntervalSection pattern) ============ -->
+<section data-sentry-component="IntervalSection" data-sentry-source-file="sections/IntervalSection.tsx" class="bg-bg-secondary px-6 py-14 md:py-16">
+  <div class="mx-auto flex max-w-6xl flex-col items-center gap-6 rounded-3xl border border-stroke-cards bg-surface p-8 text-center shadow-[0_16px_40px_rgba(44,45,42,0.07)] md:flex-row md:justify-between md:text-left md:p-10">
+    <div class="max-w-[420px]">
+      <span class="text-xs font-bold uppercase tracking-[0.14em] text-brand-500">AI tools</span>
+      <h2 class="mt-2 text-[clamp(24px,3vw,32px)] font-extrabold leading-tight tracking-[-0.02em]">Want to give AI a try?</h2>
+      <p class="mt-2 text-[15px] leading-relaxed text-text-secondary">Test out the AI power of Notin — standalone tools that make your second brain even sharper.</p>
+      <a href="#" class="btn-3d mt-5 inline-flex px-7 py-3 text-[15px]">Try it for free</a>
+    </div>
+    <div class="flex flex-wrap items-center justify-center gap-3">
+      <span class="ai-chip"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload</span>
+      <span class="ai-chip"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>Record</span>
+      <span class="ai-chip"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>Transcribe</span>
+    </div>
+  </div>
+</section>
+
 <!-- ============ DOWNLOAD (upgraded: OS-aware + QR + web clipper) ============ -->
 <section id="download" data-sentry-component="DownloadCards" data-sentry-source-file="sections/DownloadCards.tsx" class="bg-bg-secondary px-6 py-16 md:py-24">
   <div class="mx-auto max-w-6xl">
@@ -981,8 +996,6 @@
   </div>
 </div>
 
-<script src="assets/hero-anim-data.js"></script>
-<script src="assets/lottie.min.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
