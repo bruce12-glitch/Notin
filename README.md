@@ -1,10 +1,31 @@
 <div align="center">
 
-# 📝 Notin — Your Second Brain
+<!-- 3D animated title with layered glow -->
+<a href="https://github.com/bruce12-glitch/Notin">
+  <img src="https://readme-typing-svg.demolab.com?font=IBM+Plex+Sans&weight=700&size=42&duration=2800&pause=300&color=8FE333&center=true&vCenter=true&width=600&lines=📝+Notin+—+Your+Second+Brain;Green+Edition+🌿;Neon+Edition+⚡;3D+Motion+Design+🎨" alt="Notin — Your Second Brain" />
+</a>
 
-**A beautiful, Evernote-inspired note-taking web experience with 3D motion design**
+<!-- 3D floating logo/icon -->
+<p>
+  <img src="https://raw.githubusercontent.com/bruce12-glitch/Notin/main/frontend/assets/notin-icon-nav.png" width="90" alt="Notin 3D icon" />
+</p>
 
-`🌿 Green Edition` · `⚡ Neon Edition` · `🎨 3D Interactions` · `📱 Fully Responsive`
+<!-- animated 3D badges (shields.io with custom colors) -->
+<p>
+  <img src="https://img.shields.io/badge/Edition-Green-8FE333?style=for-the-badge&logo=leaflet&logoColor=white" />
+  <img src="https://img.shields.io/badge/Edition-Neon-8FE333?style=for-the-badge&logo=lightning&logoColor=black" />
+  <img src="https://img.shields.io/badge/3D-Interactions-8FE333?style=for-the-badge&logo=threedotjs&logoColor=white" />
+  <img src="https://img.shields.io/badge/Tailwind-v4-8FE333?style=for-the-badge&logo=tailwindcss&logoColor=white" />
+</p>
+<p>
+  <img src="https://img.shields.io/github/repo-size/bruce12-glitch/Notin?style=flat-square&label=Repo%20Size&color=8FE333" />
+  <img src="https://img.shields.io/github/last-commit/bruce12-glitch/Notin?style=flat-square&label=Last%20Commit&color=8FE333" />
+  <img src="https://img.shields.io/github/license/bruce12-glitch/Notin?style=flat-square&label=License&color=8FE333" />
+  <img src="https://img.shields.io/badge/status-🚀%20Active-8FE333?style=flat-square" />
+</p>
+
+<!-- subtle divider with glow -->
+<p><img src="https://readme-typing-svg.demolab.com?font=IBM+Plex+Sans&size=16&duration=4000&color=8FE333&center=true&width=500&lines=✨+A+beautiful,+Evernote-inspired+note-taking+web+experience+with+3D+motion+design+✨" alt="tagline" /></p>
 
 </div>
 
@@ -63,7 +84,7 @@ notin/
 
 ## 🎨 Design System
 
-### Green Edition (light)
+### 🌿 Green Edition (light)
 | Token | Value |
 |---|---|
 | Background | `#F4EEE5` warm cream |
@@ -71,7 +92,7 @@ notin/
 | Text | `#141414` / `#292929` |
 | Dark sections | `#141414` |
 
-### Neon Edition (dark)
+### ⚡ Neon Edition (dark)
 | Token | Value |
 |---|---|
 | Background | `#0F0F0F` near-black |
@@ -79,7 +100,7 @@ notin/
 | Text | `#FFFFFF` / `#8F8F8F` |
 | Glows | `rgba(143,227,51,…)` |
 
-### Typography
+### 🔤 Typography
 | Role | Font |
 |---|---|
 | Display / headings | **IBM Plex Sans** |
@@ -133,4 +154,9 @@ notin/
 
 ---
 
-<div align="center">Made with 💚 · Green & Neon editions</div>
+<div align="center">
+
+<!-- 3D animated footer -->
+<img src="https://readme-typing-svg.demolab.com?font=IBM+Plex+Sans&size=20&duration=3000&color=8FE333&center=true&width=450&lines=Made+with+💚+by+the+Notin+team;Green+🌿+%26+Neon+⚡+editions;Thanks+for+visiting+✨" alt="footer" />
+
+</div>
