@@ -575,24 +575,9 @@ details[open] .faq-body { grid-template-rows: 1fr; }
 .carousel-track-features::-webkit-scrollbar { display: none; }
 
 /* Lottie container + poster fallback */
-.hero-lottie { position: relative; }
 /* overlay sits ON TOP of the video; hidden until the animation loads */
-.hero-lottie-overlay {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  transition: opacity .4s ease;
-}
-.hero-lottie-overlay.has-anim { opacity: 1; }
-.hero-lottie-poster { display: none; }
 
 /* FIX: force lottie SVG to fill container (lottie-web sets 40px default) */
-.hero-lottie svg {
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: contain;
-  pointer-events: none;   /* don't block clicks on buttons below the animation */
-}
 
 /* ============================================================
    ORGANIZE SHOWCASE — layered "Organize Everything" section

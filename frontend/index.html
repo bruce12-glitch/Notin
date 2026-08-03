@@ -210,21 +210,13 @@
       </div>
     </div>
 
-            <!-- RIGHT: OUR VIDEO always plays — MP4 by default, Evernote Lottie overlays when loaded -->
+            <!-- RIGHT: OUR VIDEO — clean, no overlays -->
     <div class="reveal relative flex h-full min-h-[420px] items-center justify-center">
       <div class="mx-auto w-full max-w-[560px]">
-        <div class="relative">
-          <!-- 1. OUR REAL VIDEO (guaranteed visible everywhere) -->
-          <video id="heroDemoVideo" class="hero-video" src="assets/hero-demo-full.mp4"
-                 poster="assets/hero-demo-poster.jpg"
-                 autoplay muted loop playsinline preload="auto"
-                 aria-label="Notin demo — notebooks and checklists"></video>
-
-          <!-- 2. Evernote Lottie enhancement — fades in over the video when it loads -->
-          <div id="heroLottie" class="hero-lottie hero-lottie-overlay h-full w-full">
-            <div id="heroLottiePoster" class="hero-lottie-poster"></div>
-          </div>
-        </div>
+        <video id="heroDemoVideo" class="hero-video" src="assets/hero-demo-full.mp4"
+               poster="assets/hero-demo-poster.jpg"
+               autoplay muted loop playsinline preload="auto"
+               aria-label="Notin demo — notebooks and checklists"></video>
       </div>
     </div>
 </section>
@@ -848,8 +840,6 @@
   </div>
 </div>
 
-<script src="assets/hero-anim-data.js"></script>
-<script src="assets/lottie.min.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
