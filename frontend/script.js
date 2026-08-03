@@ -511,6 +511,38 @@ const OS_META = NOTIN_PLATFORMS[OS] || NOTIN_PLATFORMS.web;
 })();
 
 
+
+// ============================================================
+// HERO UI — looping task-tick timeline (subtle, Evernote-like)
+// ============================================================
+(function () {
+  const tasks = [...document.querySelectorAll('.hero-task')];
+  const notebook = document.querySelector('.hero-notebook');
+  if (!tasks.length || !notebook) return;
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (reduced) { tasks.forEach(t => t.classList.add('done')); return; }
+
+  const rows = [...document.querySelectorAll('.hero-row')];
+  let timers = [];
+  const at = (ms, fn) => timers.push(setTimeout(fn, ms));
+  const setActive = (i) => rows.forEach((r, idx) => r.classList.toggle('active', idx === i));
+
+  const play = () => {
+    timers.forEach(clearTimeout); timers = [];
+    tasks.forEach(t => t.classList.remove('done'));
+    setActive(0);
+    at(600, () => tasks[0]?.classList.add('done'));
+    at(1600, () => tasks[1]?.classList.add('done'));
+    at(2600, () => tasks[2]?.classList.add('done'));
+    at(3400, () => setActive(1));   // Food
+    at(4300, () => setActive(2));   // Work
+    at(5200, () => setActive(3));   // Tokyo conference
+    at(6000, play);
+  };
+  at(500, play);
+})();
+
+
 // Footer year
 const yearEl = document.getElementById('year');
 if (yearEl) yearEl.textContent = new Date().getFullYear();

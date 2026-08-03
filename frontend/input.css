@@ -1140,3 +1140,146 @@ h1, h2, h3, h4, h5,
   font-family: var(--font-mono);
 }
 
+
+/* ============================================================
+   HERO — live floating app UI (Evernote-faithful)
+   White popup cards floating on the cream page background
+   ============================================================ */
+.hero-ui-wrap {
+  position: relative;
+  min-height: 560px;
+}
+.hero-card {
+  position: absolute;
+  background: #ffffff;
+  border: 1px solid rgba(20, 20, 20, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 18px 38px rgba(24, 20, 16, 0.14);
+  padding: 14px 14px;
+  z-index: 2;
+}
+
+/* --- notebook card (top-left) --- */
+.hero-notebook {
+  width: 232px;
+  top: 0;
+  left: 0;
+}
+.hero-card__head {
+  display: flex; align-items: center; gap: 8px;
+  padding-bottom: 9px; font-size: 13px; font-weight: 700; color: #1c1a17;
+}
+.hero-card__head-label { flex: 1; }
+.hero-ic { width: 15px; height: 15px; color: #8f897d; flex: none; }
+.hero-chev { width: 13px; height: 13px; color: #9b968f; }
+.hero-row {
+  display: flex; align-items: center; gap: 8px;
+  height: 32px; padding: 0 8px; margin-bottom: 2px;
+  border-radius: 8px; font-size: 13px; font-weight: 500; color: #4a463e;
+}
+.hero-row.active { background: #ffdfae; color: #b34700; font-weight: 600; }
+.hero-row.active .hero-ic { color: #f0651f; }
+.hero-row.indent { padding-left: 20px; }
+.hero-row.hero-new { color: #16a34a; font-weight: 700; }
+.hero-row.hero-new .hero-ic { color: #16a34a; }
+
+/* --- checklist card (center, overlapping) --- */
+.hero-checklist {
+  width: 292px;
+  top: 64px;
+  left: 150px;
+  z-index: 3;
+}
+.hero-check-title { display: flex; gap: 10px; align-items: flex-start; padding-bottom: 8px; }
+.hero-check-title svg { width: 17px; height: 17px; color: #f0651f; margin-top: 2px; }
+.hero-check-title b { font-size: 15px; font-weight: 800; color: #1c1a17; display: block; line-height: 1.25; }
+.hero-check-title span { font-size: 11.5px; color: #8f897d; }
+.hero-tasks { }
+.hero-task { display: flex; align-items: center; gap: 9px; padding: 5px 0; font-size: 13.5px; font-weight: 500; color: #1c1a17; }
+.hero-circle {
+  width: 17px; height: 17px; border-radius: 50%;
+  border: 2.5px solid #a855f7; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.hero-circle.sm { width: 15px; height: 15px; border-width: 2px; }
+.hero-tt { flex: 1; }
+.hero-chip {
+  font-size: 10.5px; font-weight: 800; padding: 3px 9px; border-radius: 999px;
+  background: #ffe9c9; color: #b34700; white-space: nowrap;
+}
+.hero-chip.gray { background: #efe7da; color: #6e6759; }
+.hero-enter {
+  display: flex; align-items: center; gap: 9px;
+  margin-top: 8px; padding: 8px 10px;
+  border: 1px solid rgba(20,20,20,0.08); border-radius: 10px;
+  background: #fbfaf8;
+}
+.hero-enter-label { flex: 1; font-size: 12.5px; color: #9b968f; }
+.hero-flag { width: 14px; height: 14px; color: #ef4444; }
+
+/* --- info card (right side) --- */
+.hero-info {
+  width: 248px;
+  top: 210px;
+  right: 0;
+}
+.hero-info-head { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; font-weight: 800; color: #1c1a17; }
+.hero-info-count { font-size: 11px; color: #8f897d; font-weight: 600; }
+.hero-info-rows { margin-top: 8px; font-size: 12px; color: #5c584f; }
+.hero-info-rows p { padding: 3px 0; }
+.hero-info-rows b { color: #1c1a17; }
+
+/* --- share chip --- */
+.hero-share {
+  position: absolute;
+  bottom: 40px;
+  right: 60px;
+  z-index: 3;
+  display: inline-flex; align-items: center; gap: 8px;
+  background: #fff; border: 1px solid rgba(20,20,20,0.08);
+  border-radius: 999px; padding: 9px 16px;
+  font-size: 13px; font-weight: 700; color: #1c1a17;
+  box-shadow: 0 10px 26px rgba(24,20,16,0.12);
+}
+
+/* --- floating bob animation --- */
+.hero-card, .hero-share { animation: hero-bob 5.5s ease-in-out infinite; }
+.hero-checklist { animation-delay: -1.2s; }
+.hero-info { animation-delay: -2.6s; }
+.hero-share { animation-delay: -3.8s; }
+@keyframes hero-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* task tick animation */
+.hero-task .hero-circle {
+  transition: background .35s ease, border-color .35s ease;
+}
+.hero-task.done .hero-circle { background: #a855f7; border-color: #a855f7; }
+.hero-task.done .hero-circle::after {
+  content: ""; width: 8px; height: 4.5px;
+  border-left: 2px solid #fff; border-bottom: 2px solid #fff;
+  transform: rotate(-45deg) translate(1px,-1px);
+}
+.hero-task.done .hero-tt { color: #b0aa9f; text-decoration: line-through; }
+
+/* --- tablet --- */
+@media (max-width: 1199px) {
+  .hero-checklist { left: 90px; }
+  .hero-ui-wrap { min-height: 540px; }
+}
+/* --- mobile --- */
+@media (max-width: 767px) {
+  .hero-ui-wrap { min-height: 460px; }
+  .hero-notebook { width: 190px; transform-origin: top left; }
+  .hero-checklist { width: 235px; left: 80px; top: 44px; }
+  .hero-info { width: 200px; top: 180px; }
+  .hero-info-rows { font-size: 10.5px; }
+  .hero-share { bottom: 10px; right: 10px; }
+  .hero-chip { font-size: 9px; padding: 2px 7px; }
+  .hero-row { font-size: 12px; height: 29px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-card, .hero-share { animation: none; }
+}
