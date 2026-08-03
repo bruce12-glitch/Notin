@@ -1625,3 +1625,16 @@ section[data-sentry-component="CallToAction"] .text-\[\#94e130\] {
   background: transparent;
 }
 .btn-outline-evernote:hover, .btn-sm-evernote:hover { background: #8fe333; color: #0f0f0f; }
+
+.hero-3d {
+  background: #171717;
+  border-color: rgba(143, 227, 51, 0.3);
+  box-shadow: 0 0 22px rgba(143,227,51,0.15), 0 18px 38px rgba(0,0,0,.6);
+}
+.hero-3d b { color: #fff; }
+.hero-3d span { color: #8f8f8f; }
+.hero-3d--badge {
+  background: linear-gradient(135deg, #8fe333, #a8f05a);
+  box-shadow: 0 0 30px rgba(143,227,51,0.7);
+}
+.hero-3d--ring { border-color: rgba(143,227,51,0.4); }
