@@ -5,7 +5,7 @@
 
    THEME: "Notin" brand palette
    Extracted from the official logo:
-     yellow #fbca39 · orange #00b93c · near-black #2c2d2a
+     yellow #fbca39 · orange #8fe333 · near-black #2c2d2a
      cream background #f8f7f3
    ============================================================ */
 @import "tailwindcss";
@@ -17,13 +17,13 @@
 
   /* Raw brand palette — EVERNOTE GREEN (green note) */
   --color-brand-50:  #e9f9ee;
-  --color-brand-100: #e3f5e6;
-  --color-brand-200: #c4eccd;
-  --color-brand-300: #8fdcab;
-  --color-brand-400: #4ddb80;
-  --color-brand-500: #00b93c;   /* Evernote green */
-  --color-brand-600: #009c2e;
-  --color-brand-700: #00701f;
+  --color-brand-100: #eefad8;
+  --color-brand-200: #ddf4b2;
+  --color-brand-300: #c4ec82;
+  --color-brand-400: #a8f05a;
+  --color-brand-500: #8fe333;   /* Evernote green */
+  --color-brand-600: #7cc92a;
+  --color-brand-700: #5fa11e;
   --color-brand-800: #005c1a;
 
   /* Semantic surfaces — Evernote warm cream + near-black */
@@ -513,7 +513,7 @@ details[open] .faq-body { grid-template-rows: 1fr; }
     0 1px 0 rgba(255,255,255,.35) inset,        /* top highlight */
     0 -1px 0 rgba(0,0,0,.08) inset,             /* bottom shade */
     0 6px 0 var(--color-brand-700),             /* hard 3D edge */
-    0 12px 24px rgba(0,168,45,.35);           /* soft ambient */
+    0 12px 24px rgba(143,227,51,.35);           /* soft ambient */
   transform: translate3d(var(--mx, 0px), var(--my, 0px), 0);
   transition: transform .18s cubic-bezier(.2,.8,.3,1.2), box-shadow .18s ease, filter .18s ease;
 }
@@ -523,7 +523,7 @@ details[open] .faq-body { grid-template-rows: 1fr; }
     0 1px 0 rgba(255,255,255,.35) inset,
     0 -1px 0 rgba(0,0,0,.08) inset,
     0 9px 0 var(--color-brand-700),
-    0 20px 40px rgba(0,168,45,.45);
+    0 20px 40px rgba(143,227,51,.45);
   filter: brightness(1.04);
 }
 .btn-3d:active {
@@ -531,7 +531,7 @@ details[open] .faq-body { grid-template-rows: 1fr; }
   box-shadow:
     0 1px 0 rgba(255,255,255,.25) inset,
     0 2px 0 var(--color-brand-700),
-    0 6px 14px rgba(0,168,45,.3);
+    0 6px 14px rgba(143,227,51,.3);
   transition-duration: .08s;
 }
 
@@ -1075,7 +1075,7 @@ details[open] .faq-body { grid-template-rows: 1fr; }
   background: #fff;
   display: block;
   border: 1px solid rgba(24, 24, 24, 0.08);
-  box-shadow: 0 0 0 3px rgba(0,168,45,0.15), 0 30px 70px rgba(26, 20, 16, 0.18);
+  box-shadow: 0 0 0 3px rgba(143,227,51,0.15), 0 30px 70px rgba(26, 20, 16, 0.18);
   image-rendering: auto;
 }
 
@@ -1277,7 +1277,7 @@ h1, h2, h3, h4, h5,
   align-items: center;
   justify-content: center;
   background:
-    radial-gradient(60% 55% at 50% 40%, rgba(0,168,45,.10), transparent 70%),
+    radial-gradient(60% 55% at 50% 40%, rgba(143,227,51,.10), transparent 70%),
     linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,.1));
 }
 .hero-lottie.has-anim .hero-lottie-poster { display: none; }
@@ -1405,7 +1405,7 @@ h1, h2, h3, h4, h5,
 /* 3D tilt on hover (subtle, no aggressive rotation) */
 #featuresTrack a.group:hover article {
   transform: perspective(900px) rotateX(3deg) rotateY(-3deg) translateY(-6px);
-  box-shadow: 0 30px 60px rgba(0,168,45,.18);
+  box-shadow: 0 30px 60px rgba(143,227,51,.18);
 }
 
 /* expanding green circle from center on click (same as AI button) */
@@ -1436,6 +1436,6 @@ h1, h2, h3, h4, h5,
 .theme-toggle-dot {
   width: 14px; height: 14px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #00b93c, #4ddb80);
+  background: linear-gradient(135deg, #8fe333, #a8f05a);
   box-shadow: 0 0 8px rgba(0, 185, 60, 0.6);
 }
