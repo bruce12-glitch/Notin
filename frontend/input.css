@@ -5,7 +5,7 @@
 
    THEME: "Notin" brand palette
    Extracted from the official logo:
-     yellow #fbca39 · orange #00a82d · near-black #2c2d2a
+     yellow #fbca39 · orange #00b93c · near-black #2c2d2a
      cream background #f8f7f3
    ============================================================ */
 @import "tailwindcss";
@@ -20,9 +20,9 @@
   --color-brand-100: #e3f5e6;
   --color-brand-200: #c4eccd;
   --color-brand-300: #8fdcab;
-  --color-brand-400: #3ecf6e;
-  --color-brand-500: #00a82d;   /* Evernote green */
-  --color-brand-600: #008f26;
+  --color-brand-400: #4ddb80;
+  --color-brand-500: #00b93c;   /* Evernote green */
+  --color-brand-600: #009c2e;
   --color-brand-700: #00701f;
   --color-brand-800: #005c1a;
 
@@ -1358,3 +1358,37 @@ h1, h2, h3, h4, h5,
   transition: transform .2s ease, box-shadow .2s ease;
 }
 .ai-chip:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255,125,66,0.18); }
+
+/* ============================================================
+   CIRCLE DESIGN ON ALL PRIMARY BUTTONS (Evernote-style pop)
+   A soft green circle expands from the button on hover/click
+   ============================================================ */
+.btn-3d { position: relative; overflow: hidden; }
+.btn-3d::before {
+  content: "";
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform .5s cubic-bezier(.22, 1, .36, 1);
+  pointer-events: none;
+  z-index: 0;
+}
+.btn-3d:hover::before,
+.btn-3d:active::before,
+.btn-3d:focus-visible::before {
+  transform: translate(-50%, -50%) scale(14);
+}
+.btn-3d > * { position: relative; z-index: 1; }
+
+.hero-video {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  display: block;
+  background: #fff;
+  transform: translateZ(0);   /* GPU layer — sharper playback */
+  backface-visibility: hidden;
+}
