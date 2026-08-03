@@ -37,3 +37,11 @@ notin/
 
 - Colors: orange `#ff7d42` · yellow `#fbca39` · cream `#f8f7f3` · near-black `#2c2d2a`
 - Font: Inter (self-hosted via preloaded woff2)
+
+## 🌈 Neon Edition
+
+A neon + black variant of the landing page:
+- **Open** `frontend/index-neon.html`
+- Files: `frontend/index-neon.html`, `frontend/input-neon.css`, `frontend/styles-neon.css`
+- Same Evernote-style structure, re-skinned with neon cyan `#00E5FF` + magenta `#FF2EC4` + lime `#B6FF00` glows on pure black
+- Rebuild: `npx @tailwindcss/cli -i input-neon.css -o styles-neon.css --minify`
