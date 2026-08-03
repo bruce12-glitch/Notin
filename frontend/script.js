@@ -170,20 +170,53 @@ if (track && prevBtn && nextBtn) {
 }
 
 
-// Features peek-carousel arrows (CardsShowcase)
+// ============================================================
+// FEATURES CAROUSEL — seamless infinite loop + autoplay
+// Dual card sets: when we reach the clone set, snap back to
+// the originals (visually identical = infinite feel).
+// ============================================================
 (function () {
   const track = document.getElementById('featuresTrack');
   const prev = document.getElementById('featuresPrev');
   const next = document.getElementById('featuresNext');
   if (!track || !prev || !next) return;
+
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const cards = [...track.querySelectorAll('a.group')];
+  const half = cards.length / 2;               // one set = 8 cards
+  let autoplayTimer = null;
+
   const step = () => {
-    const card = track.querySelector('.group');
-    if (!card) return 0;
-    const gap = parseFloat(getComputedStyle(track).gap) || 16;
-    return card.getBoundingClientRect().width + gap;
+    const c = track.querySelector('a.group');
+    if (!c) return 0;
+    const gap = parseFloat(getComputedStyle(track).gap) || 24;
+    return c.getBoundingClientRect().width + gap;
   };
-  next.addEventListener('click', () => track.scrollBy({ left: step(), behavior: 'smooth' }));
-  prev.addEventListener('click', () => track.scrollBy({ left: -step(), behavior: 'smooth' }));
+
+  const go = (dir) => {
+    const max = track.scrollWidth - track.clientWidth;
+    let target = track.scrollLeft + dir * step();
+    if (target >= max - step()) target = 0;            // seamless wrap
+    if (target <= 0 && dir < 0) target = max - step() * 2;
+    track.scrollTo({ left: target, behavior: reduced ? 'auto' : 'smooth' });
+  };
+
+  next.addEventListener('click', () => go(1));
+  prev.addEventListener('click', () => go(-1));
+
+  // autoplay — gentle infinite loop, pauses on hover/touch
+  const startAuto = () => {
+    if (reduced) return;
+    stopAuto();
+    autoplayTimer = setInterval(() => {
+      if (!document.hidden && !track.matches(':hover')) go(1);
+    }, 2600);
+  };
+  const stopAuto = () => { if (autoplayTimer) { clearInterval(autoplayTimer); autoplayTimer = null; } };
+  track.addEventListener('mouseenter', stopAuto);
+  track.addEventListener('mouseleave', startAuto);
+  document.addEventListener('visibilitychange', () => document.hidden ? stopAuto() : startAuto());
+  startAuto();
 })();
 
 // FAQ — swap + / – indicator when toggling

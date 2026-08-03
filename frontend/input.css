@@ -1286,3 +1286,58 @@ h1, h2, h3, h4, h5,
   object-fit: contain;
   pointer-events: none;
 }
+
+/* ============================================================
+   CARDS SHOWCASE — circle designs + infinite loop
+   ============================================================ */
+.showcase-circles { overflow: hidden; }
+.sc-circle {
+  position: absolute;
+  transition: transform .5s cubic-bezier(.22,1,.36,1), opacity .4s ease;
+  will-change: transform, opacity;
+}
+/* big circle — top-right, flies in on hover & click */
+.sc-circle--big {
+  top: -30px; right: -30px;
+  width: 190px; height: 190px;
+  transform: translate(60px, -50px) scale(.4) rotate(-40deg);
+  opacity: 0;
+}
+.sc-circle--big svg { width: 100%; height: 100%; }
+/* small dashed circle — bottom-left accent */
+.sc-circle--small {
+  bottom: -24px; left: -24px;
+  width: 120px; height: 120px;
+  transform: translate(-40px, 40px) scale(.5);
+  opacity: 0;
+}
+.sc-circle--small svg { width: 100%; height: 100%; }
+
+/* appear on hover (desktop) */
+.group:hover .sc-circle--big {
+  transform: translate(0, 0) scale(1) rotate(0deg);
+  opacity: 1;
+}
+.group:hover .sc-circle--small {
+  transform: translate(0, 0) scale(1);
+  opacity: .9;
+}
+/* appear on click / focus / tap (mobile + keyboard) */
+.group:active .sc-circle--big,
+.group:focus-visible .sc-circle--big,
+.group:focus .sc-circle--big {
+  transform: translate(0, 0) scale(1) rotate(0deg);
+  opacity: 1;
+}
+.group:active .sc-circle--small,
+.group:focus-visible .sc-circle--small,
+.group:focus .sc-circle--small {
+  transform: translate(0, 0) scale(1);
+  opacity: .9;
+}
+
+/* roomier track spacing */
+.carousel-track-features { scrollbar-width: none; }
+.carousel-track-features::-webkit-scrollbar { display: none; }
+
+/* smooth infinite auto-scroll is JS-driven (paused on hover) */
