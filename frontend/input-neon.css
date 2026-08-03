@@ -1588,3 +1588,16 @@ section[data-sentry-component="CallToAction"] .text-\[\#94e130\] {
 
 /* --- testimonial mockups inside organize (light) stay dark --- */
 .organize-showcase .mock-card, .organize-showcase .note-card { background: #111; }
+
+.theme-toggle-dot {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: #66ff33;
+  box-shadow: 0 0 10px rgba(102, 255, 51, 0.9), 0 0 22px rgba(102, 255, 51, 0.5);
+}
+.theme-toggle {
+  background: #171717 !important;
+  border-color: rgba(102, 255, 51, 0.35) !important;
+  color: #66ff33 !important;
+}
+.theme-toggle:hover { box-shadow: 0 0 16px rgba(102, 255, 51, 0.35); }
