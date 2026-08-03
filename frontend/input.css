@@ -5,7 +5,7 @@
 
    THEME: "Notin" brand palette
    Extracted from the official logo:
-     yellow #fbca39 · orange #ff7d42 · near-black #2c2d2a
+     yellow #fbca39 · orange #00a82d · near-black #2c2d2a
      cream background #f8f7f3
    ============================================================ */
 @import "tailwindcss";
@@ -15,30 +15,31 @@
   --font-display: "Geist", "Inter", -apple-system, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  /* Raw brand palette (from Notin logo) */
-  --color-brand-50:  #fff9ef;
-  --color-brand-100: #ffefd3;
-  --color-brand-200: #ffe3a8;
-  --color-brand-300: #ffd574;
-  --color-brand-400: #fbca39;   /* logo yellow */
-  --color-brand-500: #ff7d42;   /* logo orange */
-  --color-brand-600: #f0651f;   /* deeper orange */
-  --color-brand-700: #c95012;   /* burnt orange */
+  /* Raw brand palette — EVERNOTE GREEN (green note) */
+  --color-brand-50:  #e9f9ee;
+  --color-brand-100: #e3f5e6;
+  --color-brand-200: #c4eccd;
+  --color-brand-300: #8fdcab;
+  --color-brand-400: #3ecf6e;
+  --color-brand-500: #00a82d;   /* Evernote green */
+  --color-brand-600: #008f26;
+  --color-brand-700: #00701f;
+  --color-brand-800: #005c1a;
 
-  /* Semantic surfaces — warm cream (logo bg) + logo near-black */
-  --color-bg-primary:   #f8f7f3;
-  --color-bg-secondary: #f1e9dd;
-  --color-bg-tertiary:  #2c2d2a;
+  /* Semantic surfaces — Evernote warm cream + near-black */
+  --color-bg-primary:   #f4eee5;
+  --color-bg-secondary: #f9f6f2;
+  --color-bg-tertiary:  #141414;
   --color-surface:      #ffffff;
 
   /* Semantic text */
-  --color-text-primary:   #2c2d2a;
-  --color-text-secondary: #5c584f;
-  --color-text-tertiary:  #8f897d;
+  --color-text-primary:   #141414;
+  --color-text-secondary: #292929;
+  --color-text-tertiary:  #8b877f;
 
   /* Semantic strokes */
-  --color-stroke-cards:   #e9e2d4;
-  --color-stroke-buttons: #ddd3c0;
+  --color-stroke-cards:   #e7e0d3;
+  --color-stroke-buttons: #d8d0c0;
 }
 
 /* ---------- Small custom bits Tailwind can't express ---------- */
@@ -512,7 +513,7 @@ details[open] .faq-body { grid-template-rows: 1fr; }
     0 1px 0 rgba(255,255,255,.35) inset,        /* top highlight */
     0 -1px 0 rgba(0,0,0,.08) inset,             /* bottom shade */
     0 6px 0 var(--color-brand-700),             /* hard 3D edge */
-    0 12px 24px rgba(255,125,66,.35);           /* soft ambient */
+    0 12px 24px rgba(0,168,45,.35);           /* soft ambient */
   transform: translate3d(var(--mx, 0px), var(--my, 0px), 0);
   transition: transform .18s cubic-bezier(.2,.8,.3,1.2), box-shadow .18s ease, filter .18s ease;
 }
@@ -522,7 +523,7 @@ details[open] .faq-body { grid-template-rows: 1fr; }
     0 1px 0 rgba(255,255,255,.35) inset,
     0 -1px 0 rgba(0,0,0,.08) inset,
     0 9px 0 var(--color-brand-700),
-    0 20px 40px rgba(255,125,66,.45);
+    0 20px 40px rgba(0,168,45,.45);
   filter: brightness(1.04);
 }
 .btn-3d:active {
@@ -530,7 +531,7 @@ details[open] .faq-body { grid-template-rows: 1fr; }
   box-shadow:
     0 1px 0 rgba(255,255,255,.25) inset,
     0 2px 0 var(--color-brand-700),
-    0 6px 14px rgba(255,125,66,.3);
+    0 6px 14px rgba(0,168,45,.3);
   transition-duration: .08s;
 }
 
@@ -1074,7 +1075,7 @@ details[open] .faq-body { grid-template-rows: 1fr; }
   background: #fff;
   display: block;
   border: 1px solid rgba(24, 24, 24, 0.08);
-  box-shadow: 0 30px 70px rgba(26, 20, 16, 0.16);
+  box-shadow: 0 0 0 3px rgba(0,168,45,0.15), 0 30px 70px rgba(26, 20, 16, 0.18);
   image-rendering: auto;
 }
 
@@ -1156,8 +1157,8 @@ h1, h2, h3, h4, h5,
   height: 32px; padding: 0 8px; margin-bottom: 2px;
   border-radius: 8px; font-size: 13px; font-weight: 500; color: #4a463e;
 }
-.hero-row.active { background: #ffdfae; color: #b34700; font-weight: 600; }
-.hero-row.active .hero-ic { color: #f0651f; }
+.hero-row.active { background: #ffdfae; color: #00701f; font-weight: 600; }
+.hero-row.active .hero-ic { color: #008f26; }
 .hero-row.indent { padding-left: 20px; }
 .hero-row.hero-new { color: #16a34a; font-weight: 700; }
 .hero-row.hero-new .hero-ic { color: #16a34a; }
@@ -1170,7 +1171,7 @@ h1, h2, h3, h4, h5,
   z-index: 3;
 }
 .hero-check-title { display: flex; gap: 10px; align-items: flex-start; padding-bottom: 8px; }
-.hero-check-title svg { width: 17px; height: 17px; color: #f0651f; margin-top: 2px; }
+.hero-check-title svg { width: 17px; height: 17px; color: #008f26; margin-top: 2px; }
 .hero-check-title b { font-size: 15px; font-weight: 800; color: #1c1a17; display: block; line-height: 1.25; }
 .hero-check-title span { font-size: 11.5px; color: #8f897d; }
 .hero-tasks { }
@@ -1184,7 +1185,7 @@ h1, h2, h3, h4, h5,
 .hero-tt { flex: 1; }
 .hero-chip {
   font-size: 10.5px; font-weight: 800; padding: 3px 9px; border-radius: 999px;
-  background: #ffe9c9; color: #b34700; white-space: nowrap;
+  background: #ffe9c9; color: #00701f; white-space: nowrap;
 }
 .hero-chip.gray { background: #efe7da; color: #6e6759; }
 .hero-enter {
@@ -1276,7 +1277,7 @@ h1, h2, h3, h4, h5,
   align-items: center;
   justify-content: center;
   background:
-    radial-gradient(60% 55% at 50% 40%, rgba(255,125,66,.10), transparent 70%),
+    radial-gradient(60% 55% at 50% 40%, rgba(0,168,45,.10), transparent 70%),
     linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,.1));
 }
 .hero-lottie.has-anim .hero-lottie-poster { display: none; }
