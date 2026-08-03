@@ -170,111 +170,17 @@
   <div id="navLinksMobile" class="hidden flex-col gap-4 border-t border-stroke-cards bg-bg-primary px-6 py-5 md:hidden"></div>
 </header>
 
-<!-- ============ HERO (Evernote-inspired split hero) ============ -->
+<!-- ============ HERO — VIDEO ONLY (like Evernote: just the animation, nothing else) ============ -->
 <section id="top" data-sentry-component="Hero" data-sentry-source-file="sections/Hero.tsx"
   class="relative overflow-hidden bg-bg-primary">
-  <!-- Lottie-style animated background (pure CSS — swap with real Lottie/video later) -->
-  <div class="hero-bg" aria-hidden="true">
-    <div class="hero-blob" data-parallax="0.25" style="left: 8%; top: 6%; width: 320px; height: 320px; background: rgba(255,125,66,.16);"></div>
-    <div class="hero-blob" data-parallax="0.4" style="right: 5%; top: 30%; width: 380px; height: 380px; background: rgba(251,202,57,.18); animation-delay: -4s;"></div>
-    <div class="hero-blob" data-parallax="0.15" style="left: 38%; bottom: -10%; width: 300px; height: 300px; background: rgba(255,125,66,.10); animation-delay: -8s;"></div>
-
-    <div class="hero-note" data-parallax="0.3" style="left: 6%; top: 18%; --tilt: -6deg;">
-      <span class="chip"></span><span class="bar wide"></span><span class="bar mid"></span>
-    </div>
-    <div class="hero-note" data-parallax="0.5" style="left: 12%; bottom: 12%; --tilt: 5deg; animation-delay: -2.4s; animation-duration: 8s;">
-      <span class="bar wide"></span><span class="bar small"></span><span class="chip"></span>
-    </div>
-    <div class="hero-note" data-parallax="0.35" style="right: 8%; top: 14%; --tilt: 7deg; animation-delay: -4.6s; animation-duration: 9s;">
-      <span class="bar mid"></span><span class="bar wide"></span><span class="bar small"></span>
-    </div>
-    <div class="hero-note" data-parallax="0.2" style="right: 14%; bottom: 16%; --tilt: -4deg; animation-delay: -1.2s; animation-duration: 7.5s;">
-      <span class="chip"></span><span class="bar mid"></span>
-    </div>
-
-    <div class="hero-spark" style="left: 22%; top: 12%;"></div>
-    <div class="hero-spark" style="left: 30%; bottom: 24%; animation-delay: -1.1s;"></div>
-    <div class="hero-spark" style="right: 24%; top: 8%; animation-delay: -2.2s;"></div>
-    <div class="hero-spark" style="right: 30%; bottom: 10%; animation-delay: -.6s;"></div>
-    <div class="hero-spark" style="left: 48%; top: 6%; animation-delay: -3s;"></div>
-  </div>
-  <div class="pointer-events-none absolute inset-x-[-20%] top-[-30%] h-[80%] bg-[radial-gradient(55%_50%_at_30%_0%,rgba(255,125,66,0.09)_0%,transparent_70%)]"></div>
-  <div class="relative mx-auto grid max-w-6xl items-center gap-12 px-6 pb-16 pt-16 md:pb-24 md:pt-24 lg:grid-cols-2">
-    <!-- LEFT: copy -->
-    <div class="reveal flex flex-col items-start gap-6 text-left">
-      <span class="inline-flex items-center gap-2 rounded-full border border-brand-500/25 bg-brand-100 px-4 py-2 text-[13.5px] font-semibold text-brand-700"><svg class="h-4 w-4 text-brand-500" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3l1.9 5.8 5.8 1.9-5.8 1.9L12 18.4l-1.9-5.8-5.8-1.9 5.8-1.9z"/><path d="M18.6 13.5l.8 2.4 2.4.8-2.4.8-.8 2.4-.8-2.4-2.4-.8 2.4-.8z"/></svg> New — AI-powered search is here</span>
-      <h1 class="text-[clamp(38px,5vw,58px)] font-extrabold leading-[1.05] tracking-[-0.03em]">
-        Your <span class="gradient-animate bg-gradient-to-r from-brand-600 via-brand-500 to-brand-600 bg-clip-text text-transparent">second brain</span>
-      </h1>
-      <p class="max-w-[520px] text-lg text-text-secondary">
-        Remember everything and tackle any project — notes, tasks, and
-        schedules, all in one place.
-      </p>
-      <div class="flex flex-wrap items-center gap-4">
-        <a href="#" class="btn-3d magnetic px-8 py-3.5 text-base">Get Notin free</a>
-        <a id="heroSmartDownload" href="#download" class="inline-flex items-center gap-2 rounded-full border border-stroke-buttons bg-surface px-6 py-3 text-[15px] font-semibold transition hover:border-brand-500 hover:text-brand-600">
-          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          <span id="heroDownloadLabel">Download</span>
-        </a>
-      </div>
-      <a href="#" class="text-[15px] font-semibold text-text-secondary transition hover:text-brand-600">Already have an account? Log in <svg class="inline h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
-
-      <!-- animated stats -->
-      <div class="mt-2 flex flex-wrap items-center gap-x-8 gap-y-3 border-t border-stroke-cards pt-5">
-        <div class="flex flex-col">
-          <strong class="text-[22px] font-extrabold tracking-[-0.02em]" data-count="120" data-suffix="K+">0</strong>
-          <span class="text-[12.5px] text-text-tertiary">Happy noters</span>
-        </div>
-        <div class="flex flex-col">
-          <strong class="text-[22px] font-extrabold tracking-[-0.02em]" data-count="4.9" data-decimals="1" data-suffix="★">0</strong>
-          <span class="text-[12.5px] text-text-tertiary">Average rating</span>
-        </div>
-        <div class="flex flex-col">
-          <strong class="text-[22px] font-extrabold tracking-[-0.02em]" data-count="15" data-suffix="M+">0</strong>
-          <span class="text-[12.5px] text-text-tertiary">Notes created</span>
-        </div>
-      </div>
-    </div>
-                        <!-- RIGHT: the REAL Evernote hero animation, stage-enhanced -->
-    <div class="reveal relative tilt-wrap">
-      <div class="tilt3d mx-auto w-full max-w-[620px]">
-        <!-- ground shadow -->
-        <div class="video-ground" aria-hidden="true"></div>
-        <div class="hero-video-stage">
-          <!-- live badge -->
-          <span class="video-live"><span class="live-dot"></span> PLAYING</span>
-          <!-- floating companion cards (external features) -->
-          <div class="video-float vf-a" aria-hidden="true">
-            <span class="vf-ic"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-            <span>3 tasks done<span class="vf-sub">Tokyo conference</span></span>
-          </div>
-          <div class="video-float vf-b" aria-hidden="true">
-            <span class="vf-ic"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-            <span>Found in 0.04s<span class="vf-sub">Lightning search</span></span>
-          </div>
-          <div class="video-float vf-c" aria-hidden="true">
-            <span class="vf-ic"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span>
-            <span>Synced everywhere<span class="vf-sub">Web · iOS · Android</span></span>
-          </div>
-          <!-- OUR VIDEO — plays directly on the landing page (autoplay, muted, loop) -->
-          <div class="flex h-[350px] items-end md:h-[250px] lg:h-[320px] xl:h-[420px] 2xl:h-[480px]">
-            <video id="heroDemoVideo" class="hero-video" src="assets/hero-demo-full.mp4"
-                   poster="assets/hero-demo-poster.jpg"
-                   autoplay muted loop playsinline preload="auto"
-                   aria-label="Notin product demo video"></video>
-          </div>
-        </div>
-      </div>
-            <!-- download chip + watch full demo video (lightbox) -->
-      <div class="mt-4 flex items-center justify-center gap-5">
-        <a href="#" class="flex items-center gap-2 text-[13.5px] font-semibold text-text-secondary transition hover:text-brand-600">
-          <span class="grid h-8 w-8 place-items-center rounded-full border border-stroke-buttons bg-surface"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg></span>
-          Download Notin
-        </a>
-        <button type="button" id="watchDemoBtn" class="flex cursor-pointer items-center gap-2 text-[13.5px] font-semibold text-brand-600 transition hover:text-brand-700">
-          <span class="grid h-8 w-8 place-items-center rounded-full bg-brand-100"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 3 20 12 6 21 6 3"/></svg></span>
-          Watch full demo
-        </button>
+  <div class="mx-auto flex min-h-[70vh] max-w-6xl items-center justify-center px-6 py-16 md:py-20">
+    <!-- our video, full-width stage, no decorations -->
+    <div class="hero-video-stage w-full">
+      <div class="flex h-[420px] items-end md:h-[480px] lg:h-[540px] xl:h-[600px]">
+        <video id="heroDemoVideo" class="hero-video" src="assets/hero-demo-full.mp4"
+               poster="assets/hero-demo-poster.jpg"
+               autoplay muted loop playsinline preload="auto"
+               aria-label="Notin product demo video"></video>
       </div>
     </div>
   </div>
