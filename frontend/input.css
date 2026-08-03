@@ -1156,3 +1156,14 @@ details[open] .faq-body { grid-template-rows: 1fr; }
   }
   .organize-showcase__cta { transition: none; }
 }
+
+/* OUR video — fills the stage, rounded to match the mockup, no native controls */
+.hero-video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 16px;
+  background: #141414;
+  display: block;
+  pointer-events: none;   /* decorative: don't block buttons below */
+}

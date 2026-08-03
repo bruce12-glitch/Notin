@@ -256,16 +256,12 @@
             <span class="vf-ic"><svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span>
             <span>Synced everywhere<span class="vf-sub">Web · iOS · Android</span></span>
           </div>
-          <!-- exact responsive heights from Evernote's markup -->
+          <!-- OUR VIDEO — plays directly on the landing page (autoplay, muted, loop) -->
           <div class="flex h-[350px] items-end md:h-[250px] lg:h-[320px] xl:h-[420px] 2xl:h-[480px]">
-            <div id="heroLottie" class="hero-lottie h-full w-full">
-              <!-- poster fallback: visible until/unless lottie renders -->
-              <div id="heroLottiePoster" class="hero-lottie-poster">
-                <div class="flex h-full w-full items-center justify-center">
-                  <svg class="h-10 w-10 animate-pulse text-brand-500/70" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
-                </div>
-              </div>
-            </div>
+            <video id="heroDemoVideo" class="hero-video" src="assets/hero-demo-full.mp4"
+                   poster="assets/hero-demo-poster.jpg"
+                   autoplay muted loop playsinline preload="auto"
+                   aria-label="Notin product demo video"></video>
           </div>
         </div>
       </div>
@@ -889,8 +885,6 @@
 
 <button id="backTop" class="back-top" aria-label="Back to top"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg></button>
 
-<script src="assets/hero-anim-data.js"></script>
-<script src="assets/lottie.min.js"></script>
 <!-- ============ VIDEO LIGHTBOX (full demo) ============ -->
 <div id="videoModal" class="video-modal" role="dialog" aria-modal="true" aria-label="Notin demo video" hidden>
   <div class="video-modal-backdrop" id="videoModalBackdrop"></div>

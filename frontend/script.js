@@ -215,44 +215,6 @@ if ('IntersectionObserver' in window) {
 
 
 // ============================================================
-// HERO — the REAL Evernote homepage animation (lottie)
-// Exact same JSON file Evernote serves at /lottie/homepage.json
-// ============================================================
-(function () {
-  const container = document.getElementById('heroLottie');
-  if (!container) return;
-  const poster = document.getElementById('heroLottiePoster');
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  const start = () => {
-    if (typeof lottie === 'undefined' || !window.NOTIN_HERO_ANIM) return;
-    try {
-      const anim = lottie.loadAnimation({
-        container: container,
-        renderer: 'svg',
-        loop: true,
-        autoplay: !reduced,
-        animationData: window.NOTIN_HERO_ANIM,   // inline data — works offline & on file://
-      });
-      anim.addEventListener('DOMLoaded', () => {
-        container.classList.add('has-anim');
-        if (poster) poster.style.display = 'none';
-      });
-      if (reduced) anim.goToAndStop(0, true);
-    } catch (e) {
-      // keep poster visible as fallback
-    }
-  };
-
-  // wait for scripts (they load after this file runs in order, but be safe)
-  if (document.readyState === 'complete' || document.readyState === 'interactive') start();
-  else window.addEventListener('DOMContentLoaded', start);
-  // double safety: also try after a tick
-  setTimeout(start, 300);
-  setTimeout(start, 1500);
-})();
-
-// ============================================================
 // OS DETECTION (shared) — used by hero CTA + download section
 // ============================================================
 const NOTIN_PLATFORMS = {
