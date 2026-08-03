@@ -1,16 +1,5 @@
 @import "tailwindcss";
 
-/* ============================================================
-   NOTIN — Tailwind v4 source stylesheet
-   Build:  npx @tailwindcss/cli -i input.css -o styles.css
-   (Pre-compiled to styles.css — no CDN needed at runtime)
-
-   THEME: "Notin" brand palette
-   Extracted from the official logo:
-     yellow #fbca39 · orange #8fe333 · near-black #2c2d2a
-     cream background #f8f7f3
-   ============================================================ */
-
 /* ============================================================================
    NOTIN — MAIN STYLESHEET (Green/Light theme)
    ----------------------------------------------------------------------------

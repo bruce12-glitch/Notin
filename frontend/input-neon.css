@@ -1,3 +1,4 @@
+@import "tailwindcss";
 /* ============================================================
    NOTIN — Tailwind v4 source stylesheet
    Build:  npx @tailwindcss/cli -i input.css -o styles.css
@@ -8,7 +9,7 @@
      yellow #fbca39 · orange #00b93c · near-black #2c2d2a
      cream background #f8f7f3
    ============================================================ */
-@import "tailwindcss";
+
 
 @theme {
   --font-sans: "Inter", -apple-system, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, sans-serif;
@@ -1274,8 +1275,8 @@ h1, h2, h3, h4, h5,
   object-fit: fill;
   display: block;
   background: #fff;
-  transform: translateZ(0);   /* GPU layer — sharper playback */
-  backface-visibility: hidden;
+  /* NOTE: no transform here — transforms force GPU compositing
+     of the video and cause blurry playback in Chromium. */
 }
 
 /* ============================================================
@@ -1313,7 +1314,7 @@ h1, h2, h3, h4, h5,
 }
 
 /* inner content stays above the circle */
-#featuresTrack a.group article > *:not(.showcase-circles):not(::before) {
+#featuresTrack a.group article > *:not(.showcase-circles) {
   position: relative;
   z-index: 2;
 }
