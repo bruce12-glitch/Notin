@@ -1,3 +1,23 @@
+// ============================================================================
+// NOTIN — INTERACTIONS & MOTION ENGINE
+// ----------------------------------------------------------------------------
+// Modules (each is a guarded IIFE — safe on any page):
+//   1. Navbar        — scroll shadow, shrink on scroll
+//   2. Mobile menu   — accordion mega-menu (hamburger)
+//   3. Desktop menu  — mega-dropdowns (hover/click/Escape)
+//   4. Hero video    — play-enforcer (guaranteed playback)
+//   5. Hero 3D       — mouse parallax on floating 3D assets
+//   6. Billing       — monthly/yearly toggle w/ price flip
+//   7. Carousels     — features (infinite loop + autoplay), testimonials
+//   8. Organize      — showcase reveal, parallax, CTA state machine
+//   9. Motion engine — scroll progress, back-to-top, counters, tilt,
+//                      magnetic buttons, parallax layers, staggered reveals
+//  10. Footer year
+// ----------------------------------------------------------------------------
+// Every module: (a) guards missing elements, (b) respects
+// prefers-reduced-motion, (c) animates only transform/opacity.
+// ============================================================================
+
 // ============================================================
 // NOTIN — Landing page interactions (Tailwind v4 build)
 // Works on index.html and context.html (guards for missing elements)
@@ -567,6 +587,42 @@ const OS_META = NOTIN_PLATFORMS[OS] || NOTIN_PLATFORMS.web;
   [500, 1200, 2500, 5000].forEach(t => setTimeout(tryPlay, t));
 })();
 
+
+
+// ============================================================
+// HERO 3D — mouse parallax depth on floating assets
+// Floating note cards + badge drift subtly toward the cursor,
+// creating layered 3D depth. Disabled for reduced-motion.
+// ============================================================
+(function () {
+  const hero = document.getElementById('top');
+  const assets = [...document.querySelectorAll('.hero-3d')];
+  if (!hero || !assets.length) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  let raf = null, mx = 0, my = 0, tx = 0, ty = 0;
+  const lerp = (a, b) => a + (b - a) * 0.08;
+
+  const tick = () => {
+    mx = lerp(mx, tx); my = lerp(my, ty);
+    assets.forEach((el, i) => {
+      const depth = 8 + (i % 3) * 6;          // per-asset depth factor
+      const px = mx * depth, py = my * depth;
+      el.style.setProperty('--px3d', px.toFixed(1) + 'px');
+      el.style.setProperty('--py3d', py.toFixed(1) + 'px');
+    });
+    if (Math.abs(mx - tx) > 0.1 || Math.abs(my - ty) > 0.1) raf = requestAnimationFrame(tick);
+    else raf = null;
+  };
+
+  hero.addEventListener('pointermove', (e) => {
+    const r = hero.getBoundingClientRect();
+    tx = ((e.clientX - r.left) / r.width - 0.5) * 2;
+    ty = ((e.clientY - r.top) / r.height - 0.5) * 2;
+    if (!raf) raf = requestAnimationFrame(tick);
+  });
+  hero.addEventListener('pointerleave', () => { tx = 0; ty = 0; });
+})();
 
 // Footer year
 const yearEl = document.getElementById('year');

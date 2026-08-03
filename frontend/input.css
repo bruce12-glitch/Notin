@@ -10,6 +10,39 @@
    ============================================================ */
 @import "tailwindcss";
 
+/* ============================================================================
+   NOTIN — MAIN STYLESHEET (Green/Light theme)
+   ----------------------------------------------------------------------------
+   TABLE OF CONTENTS
+   01. Design tokens (@theme) ............ line ~18   colors/fonts/surfaces
+   02. Base & utilities .................. .nav, .reveal, buttons, badges
+   03. Layout sections:
+       - Navbar & mega-menu ............. .nav, .mega-*
+       - Hero ........................... #top, .hero-*, .hero-3d
+       - CardsShowcase .................. #features, .sc-circle, carousel
+       - Split rows (Capture) ........... .split-*
+       - Organize showcase .............. .organize-showcase (big block)
+       - Testimonials carousel .......... .carousel-*
+       - Pricing ....................... .price-card, .toggle-btn
+       - AI tools band ................. .ai-chip
+       - Download ...................... .platform-card, .download-*
+       - Dark CTA ...................... section[data-sentry-component="CallToAction"]
+       - FAQ ........................... .faq-*
+       - Footer ........................ .footer-*
+   04. Effects & animation:
+       - 3D buttons (.btn-3d) ......... Evernote-style solid/outline/small
+       - 3D tilt cards ................ .tilt-card
+       - Floating 3D hero assets ...... .hero-3d
+       - Circle designs ................ .sc-circle (hover/click)
+       - Reveal / motion system ........ .reveal, gradients, parallax
+   05. Component blocks (kept appended for history):
+       - Video lightbox, hero UI, typography system, etc.
+   ----------------------------------------------------------------------------
+   BUILD:  npx @tailwindcss/cli -i input.css -o styles.css --minify
+   ============================================================================
+*/
+
+
 @theme {
   --font-sans: "Inter", -apple-system, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, sans-serif;
   --font-display: "IBM Plex Sans", "Inter", -apple-system, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
@@ -1575,3 +1608,62 @@ h1, h2, h3, h4, h5,
 @media (prefers-reduced-motion: reduce) {
   .hero-3d, .hero-3d--ring { animation: none; }
 }
+
+/* ============================================================
+   3D DEPTH ENHANCEMENTS — pricing & download cards + hero assets
+   ============================================================ */
+
+/* Hero 3D assets react to mouse (JS sets --px3d/--py3d) */
+.hero-3d {
+  transform: translate3d(var(--px3d, 0px), var(--py3d, 0px), 0);
+  transition: transform .18s ease-out;
+}
+.hero-3d:hover {
+  transform: translate3d(var(--px3d, 0px), calc(var(--py3d, 0px) - 8px), 0)
+             perspective(600px) rotateX(8deg) rotateY(-8deg) scale(1.05);
+}
+
+/* Pricing cards — subtle 3D lift + green glow on hover */
+#pricing article {
+  transform-style: preserve-3d;
+  transition: transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s ease, border-color .3s ease;
+}
+#pricing article:hover {
+  transform: perspective(900px) translateY(-6px) rotateX(2deg);
+  box-shadow: 0 24px 50px rgba(143,227,51,0.14), 0 18px 40px rgba(0,0,0,.10);
+  border-color: rgba(143,227,51,0.45);
+}
+#pricing article.border-2:hover {
+  transform: perspective(900px) translateY(-8px) rotateX(2.5deg) scale(1.01);
+  box-shadow: 0 30px 60px rgba(143,227,51,0.22), 0 0 30px rgba(143,227,51,0.15);
+}
+
+/* Download cards — 3D tilt + glow */
+.platform-card {
+  transform-style: preserve-3d;
+  transition: transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s ease, border-color .3s;
+}
+.platform-card:hover {
+  transform: perspective(700px) translateY(-5px) rotateY(-3deg);
+  box-shadow: 0 20px 44px rgba(143,227,51,0.16);
+  border-color: rgba(143,227,51,0.4);
+}
+
+/* Feature showcase cards — deeper 3D lift on hover */
+#featuresTrack a.group:hover article {
+  transform: perspective(900px) rotateX(3.5deg) rotateY(-3.5deg) translateY(-8px) scale(1.02);
+}
+
+/* Testimonial cards — soft 3D */
+.carousel-slide {
+  transform-style: preserve-3d;
+  transition: transform .3s ease, box-shadow .3s ease, border-color .3s ease;
+}
+.carousel-slide:hover {
+  transform: perspective(900px) translateY(-4px) rotateX(1.5deg);
+  box-shadow: 0 18px 40px rgba(143,227,51,0.12);
+  border-color: rgba(143,227,51,0.4);
+}
+
+/* Section reveals get subtle depth via layered shadows on cards */
+.reveal.visible { will-change: transform, opacity; }

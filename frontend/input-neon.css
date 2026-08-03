@@ -1638,3 +1638,9 @@ section[data-sentry-component="CallToAction"] .text-\[\#94e130\] {
   box-shadow: 0 0 30px rgba(143,227,51,0.7);
 }
 .hero-3d--ring { border-color: rgba(143,227,51,0.4); }
+
+#pricing article:hover, .platform-card:hover, .carousel-slide:hover {
+  box-shadow: 0 0 35px rgba(143,227,51,0.25), 0 24px 50px rgba(0,0,0,.7);
+  border-color: rgba(143,227,51,0.55);
+}
+#pricing article.border-2:hover { box-shadow: 0 0 45px rgba(143,227,51,0.4); }
