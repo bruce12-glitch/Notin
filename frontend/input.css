@@ -12,7 +12,7 @@
 
 @theme {
   --font-sans: "Inter", -apple-system, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, sans-serif;
-  --font-display: "Geist", "Inter", -apple-system, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  --font-display: "IBM Plex Sans", "Inter", -apple-system, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* Raw brand palette — EVERNOTE GREEN (green note) */
@@ -1391,4 +1391,44 @@ h1, h2, h3, h4, h5,
   background: #fff;
   transform: translateZ(0);   /* GPU layer — sharper playback */
   backface-visibility: hidden;
+}
+
+/* ============================================================
+   CARDS — rich 3D interaction (like the AI Features button)
+   Tilt + lift + expanding circle + corner shapes on hover/click
+   ============================================================ */
+#featuresTrack a.group article {
+  transform-style: preserve-3d;
+  transition: transform .3s cubic-bezier(.22,1,.36,1), box-shadow .3s ease;
+  will-change: transform;
+}
+/* 3D tilt on hover (subtle, no aggressive rotation) */
+#featuresTrack a.group:hover article {
+  transform: perspective(900px) rotateX(3deg) rotateY(-3deg) translateY(-6px);
+  box-shadow: 0 30px 60px rgba(0,168,45,.18);
+}
+
+/* expanding green circle from center on click (same as AI button) */
+#featuresTrack a.group article::before {
+  content: "";
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: rgba(0, 185, 60, 0.16);
+  transform: translate(-50%, -50%) scale(0);
+  transition: transform .45s cubic-bezier(.22,1,.36,1);
+  pointer-events: none;
+  z-index: 3;
+}
+#featuresTrack a.group:hover article::before,
+#featuresTrack a.group:active article::before,
+#featuresTrack a.group:focus-visible article::before {
+  transform: translate(-50%, -50%) scale(22);
+}
+
+/* inner content stays above the circle */
+#featuresTrack a.group article > *:not(.showcase-circles):not(::before) {
+  position: relative;
+  z-index: 2;
 }
