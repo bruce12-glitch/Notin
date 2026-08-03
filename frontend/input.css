@@ -11,7 +11,9 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Inter", -apple-system, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+  --font-display: "Geist", "Inter", -apple-system, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* Raw brand palette (from Notin logo) */
   --color-brand-50:  #fff9ef;
@@ -1166,4 +1168,45 @@ details[open] .faq-body { grid-template-rows: 1fr; }
   background: #141414;
   display: block;
   box-shadow: 0 30px 80px rgba(20, 20, 18, 0.35);
+}
+
+/* ============================================================
+   TYPOGRAPHY SYSTEM
+   Geist (display) — hero headers, headings, prominent features
+   Inter (sans)    — main body & UI (default)
+   JetBrains Mono  — tags, metadata, micro-copy, code-like bits
+   SF Pro stack    — system fallback (native Mac/iOS fidelity)
+   ============================================================ */
+h1, h2, h3, h4, h5,
+.brand-name,
+.mega-plan-name,
+.amount,
+.price-card h3,
+.feature-card h3,
+.testimonial-card figcaption strong,
+.organize-showcase__title,
+.organize-showcase__badge,
+.organize-showcase__cta,
+.organize-showcase__cta-label,
+.btn-3d,
+.video-modal-caption {
+  font-family: var(--font-display);
+}
+
+/* Mono — tags, metadata, micro-copy, code-like accents */
+.note-tag,
+.eyebrow,
+.mega-label,
+.floating-label,
+.task-card__metadata,
+.task-card__input-label,
+.demo-typed,
+.video-live,
+.mock-chips span,
+.download-card small,
+.stat span,
+.hero-stats span,
+.organize-showcase__error,
+.organize-showcase__success {
+  font-family: var(--font-mono);
 }
