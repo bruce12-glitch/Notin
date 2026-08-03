@@ -533,6 +533,219 @@ const OS_META = NOTIN_PLATFORMS[OS] || NOTIN_PLATFORMS.web;
 
 
 // ============================================================
+// MOTION & 3D ENGINE — premium effects (both pages)
+// Every effect is guarded, GPU-friendly, and disabled for
+// users who prefer reduced motion.
+// ============================================================
+(function () {
+  const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------- Scroll progress bar ----------
+  const prog = document.getElementById('scrollProgress');
+  const setProg = () => {
+    if (!prog) return;
+    const h = document.documentElement;
+    const max = h.scrollHeight - h.clientHeight;
+    prog.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + '%';
+  };
+  window.addEventListener('scroll', setProg, { passive: true });
+  setProg();
+
+  // ---------- Back to top ----------
+  const backTop = document.getElementById('backTop');
+  if (backTop) {
+    const onScrollBT = () => backTop.classList.toggle('show', window.scrollY > 600);
+    window.addEventListener('scroll', onScrollBT, { passive: true });
+    onScrollBT();
+    backTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: REDUCED ? 'auto' : 'smooth' }));
+  }
+
+  // ---------- Navbar shrink ----------
+  const navEl = document.getElementById('nav');
+  if (navEl) {
+    const onNav = () => navEl.classList.toggle('nav-shrunk', window.scrollY > 260);
+    window.addEventListener('scroll', onNav, { passive: true });
+    onNav();
+  }
+
+  // ---------- Animated counters ----------
+  const animateCount = (el) => {
+    const target = parseFloat(el.dataset.count || '0');
+    const decimals = parseInt(el.dataset.decimals || '0', 10);
+    const prefix = el.dataset.prefix || '';
+    const suffix = el.dataset.suffix || '';
+    const dur = 1300;
+    const t0 = performance.now();
+    const tick = (now) => {
+      const p = Math.min((now - t0) / dur, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      const val = target * eased;
+      el.textContent = prefix + val.toFixed(decimals) + suffix;
+      if (p < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  };
+  if (!REDUCED) {
+    const counters = [...document.querySelectorAll('[data-count]')];
+    if ('IntersectionObserver' in window && counters.length) {
+      const cio = new IntersectionObserver((entries) => {
+        entries.forEach((e) => { if (e.isIntersecting) { animateCount(e.target); cio.unobserve(e.target); } });
+      }, { threshold: 0.6 });
+      counters.forEach((c) => cio.observe(c));
+    } else counters.forEach(animateCount);
+  }
+
+  // ---------- 3D tilt (hero mockup + feature cards) ----------
+  const applyTilt = (wrap, el, maxDeg) => {
+    if (REDUCED) return;
+    let raf = null, tx = 0, ty = 0, cx = 0, cy = 0;
+    const lerp = (a, b) => a + (b - a) * 0.12;
+    const loop = () => {
+      cx = lerp(cx, tx); cy = lerp(cy, ty);
+      el.style.transform = `perspective(1100px) rotateX(${-cy * maxDeg}deg) rotateY(${cx * maxDeg}deg)`;
+      if (Math.abs(cx - tx) > 0.01 || Math.abs(cy - ty) > 0.01) raf = requestAnimationFrame(loop);
+      else raf = null;
+    };
+    const onMove = (ev) => {
+      const r = wrap.getBoundingClientRect();
+      tx = ((ev.clientX - r.left) / r.width) * 2 - 1;
+      ty = ((ev.clientY - r.top) / r.height) * 2 - 1;
+      if (!raf) raf = requestAnimationFrame(loop);
+    };
+    const onLeave = () => {
+      tx = 0; ty = 0;
+      if (!raf) raf = requestAnimationFrame(loop);
+    };
+    wrap.addEventListener('mousemove', onMove);
+    wrap.addEventListener('mouseleave', onLeave);
+  };
+
+  const heroWrap = document.querySelector('.tilt-wrap');
+  const heroDemo = document.querySelector('.hero-demo');
+  if (heroWrap && heroDemo && !REDUCED) applyTilt(heroWrap, heroDemo, 7);
+
+  // feature cards: tilt + cursor glare
+  document.querySelectorAll('#built article').forEach((card) => {
+    if (REDUCED) return;
+    card.classList.add('tilt-card');
+    let raf = null, tx = 0, ty = 0, cx = 0, cy = 0;
+    const loop = () => {
+      cx = lerp(cx, tx); cy = lerp(cy, ty);
+      card.style.transform = `perspective(900px) rotateX(${-cy * 4}deg) rotateY(${cx * 4}deg) translateY(-4px)`;
+      if (Math.abs(cx - tx) > 0.01 || Math.abs(cy - ty) > 0.01) raf = requestAnimationFrame(loop);
+      else raf = null;
+    };
+    const lerp = (a, b) => a + (b - a) * 0.15;
+    card.addEventListener('mousemove', (ev) => {
+      const r = card.getBoundingClientRect();
+      tx = ((ev.clientX - r.left) / r.width) * 2 - 1;
+      ty = ((ev.clientY - r.top) / r.height) * 2 - 1;
+      card.style.setProperty('--gx', ((ev.clientX - r.left) / r.width * 100) + '%');
+      card.style.setProperty('--gy', ((ev.clientY - r.top) / r.height * 100) + '%');
+      if (!raf) raf = requestAnimationFrame(loop);
+    });
+    card.addEventListener('mouseleave', () => { tx = 0; ty = 0; if (!raf) raf = requestAnimationFrame(loop); });
+  });
+
+  // ---------- Magnetic buttons ----------
+  if (!REDUCED) {
+    document.querySelectorAll('.magnetic').forEach((btn) => {
+      btn.addEventListener('mousemove', (ev) => {
+        const r = btn.getBoundingClientRect();
+        const dx = (ev.clientX - r.left - r.width / 2) * 0.22;
+        const dy = (ev.clientY - r.top - r.height / 2) * 0.22;
+        btn.classList.add('mag-active');
+        if (btn.classList.contains('btn-3d')) {
+          btn.style.setProperty('--mx', dx.toFixed(1) + 'px');
+          btn.style.setProperty('--my', dy.toFixed(1) + 'px');
+        } else {
+          btn.style.transform = `translate(${dx}px, ${dy}px)`;
+        }
+      });
+      btn.addEventListener('mouseleave', () => {
+        btn.classList.remove('mag-active');
+        btn.style.transform = '';
+        btn.style.removeProperty('--mx');
+        btn.style.removeProperty('--my');
+      });
+    });
+  }
+
+  // ---------- Parallax layers ----------
+  if (!REDUCED) {
+    const layers = [...document.querySelectorAll('[data-parallax]')];
+    if (layers.length) {
+      let ticking = false;
+      const onParallax = () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+          const y = window.scrollY;
+          layers.forEach((el) => {
+            const speed = parseFloat(el.dataset.parallax || '0.2');
+            el.style.transform = `translate3d(0, ${y * speed * 0.06}px, 0)`;
+          });
+          ticking = false;
+        });
+      };
+      window.addEventListener('scroll', onParallax, { passive: true });
+      onParallax();
+    }
+  }
+
+  // ---------- Staggered reveals ----------
+  document.querySelectorAll('.feature-grid, .pricing-grid, #platformGrid, .testimonial-grid, .download-grid, #built .grid, #roadmap .grid').forEach((grid) => {
+    [...grid.children].forEach((child, i) => {
+      child.classList.add('stagger');
+      child.style.setProperty('--stagger', Math.min(i * 70, 420) + 'ms');
+    });
+  });
+
+  // ---------- Context page: animate bars into view ----------
+  const bars = [...document.querySelectorAll('.ctx-bar')];
+  if (bars.length && 'IntersectionObserver' in window && !REDUCED) {
+    const bio = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) {
+          e.target.style.width = (e.target.dataset.width || 0) + '%';
+          bio.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.35 });
+    bars.forEach((b) => bio.observe(b));
+  } else if (bars.length && REDUCED) {
+    bars.forEach((b) => (b.style.width = (b.dataset.width || 0) + '%'));
+  }
+
+  // ---------- Price flip animation on billing toggle ----------
+  const amountsEls = [...document.querySelectorAll('.amount')];
+  if (amountsEls.length) {
+    const flip = (el, text) => {
+      el.style.transition = 'opacity .12s ease, transform .12s ease';
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(-6px)';
+      setTimeout(() => {
+        el.textContent = text;
+        el.style.opacity = '1';
+        el.style.transform = '';
+      }, 120);
+    };
+    // hook into existing setBilling: patch after it runs
+    const origClick = (btn) => btn.addEventListener('click', () => {
+      setTimeout(() => {
+        const yearly = document.getElementById('yearlyBtn').classList.contains('active');
+        amountsEls.forEach((el) => flip(el, yearly ? el.dataset.yearly : el.dataset.monthly));
+      }, 0);
+    });
+    const y = document.getElementById('yearlyBtn'), m = document.getElementById('monthlyBtn');
+    if (y) origClick(y);
+    if (m) origClick(m);
+  }
+})();
+
+
+
+// ============================================================
 // VIDEO LIGHTBOX — full demo player (index.html)
 // ============================================================
 (function () {
