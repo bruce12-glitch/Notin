@@ -991,7 +991,7 @@ details[open] .faq-body { grid-template-rows: 1fr; }
   gap: 10px;
   width: 250px;
   height: 56px;
-  border-radius: 6px;
+  border-radius: 999px;
   border: none;
   background: var(--osc-action-bg);
   color: var(--osc-action-text);
