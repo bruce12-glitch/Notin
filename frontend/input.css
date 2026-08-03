@@ -576,21 +576,15 @@ details[open] .faq-body { grid-template-rows: 1fr; }
 
 /* Lottie container + poster fallback */
 .hero-lottie { position: relative; }
-.hero-lottie svg { position: relative; z-index: 2; }
-.hero-lottie-poster {
+/* overlay sits ON TOP of the video; hidden until the animation loads */
+.hero-lottie-overlay {
   position: absolute;
   inset: 0;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background:
-    radial-gradient(60% 55% at 50% 40%, rgba(255,125,66,.10), transparent 70%),
-    linear-gradient(180deg, rgba(255,255,255,.4), rgba(255,255,255,.1));
+  opacity: 0;
+  transition: opacity .4s ease;
 }
-/* when lottie svg renders, hide the poster */
-.hero-lottie svg ~ .hero-lottie-poster,
-.hero-lottie.has-anim .hero-lottie-poster { display: none; }
+.hero-lottie-overlay.has-anim { opacity: 1; }
+.hero-lottie-poster { display: none; }
 
 /* FIX: force lottie SVG to fill container (lottie-web sets 40px default) */
 .hero-lottie svg {
