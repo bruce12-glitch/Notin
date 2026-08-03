@@ -536,7 +536,12 @@ details[open] .faq-body { grid-template-rows: 1fr; }
    HERO VIDEO SECTION — external visual features (green-note feel)
    ============================================================ */
 /* soft glow + gradient ring behind the animation */
-.hero-video-stage { position: relative; }
+.hero-video-stage {
+  position: relative;
+  pointer-events: none;          /* decorative stage: never block clicks */
+}
+.hero-video-stage::before,
+.hero-video-stage::after { pointer-events: none; }
 .hero-video-stage::before {
   content: "";
   position: absolute;
@@ -663,6 +668,7 @@ details[open] .faq-body { grid-template-rows: 1fr; }
   width: 100% !important;
   height: 100% !important;
   object-fit: contain;
+  pointer-events: none;   /* don't block clicks on buttons below the animation */
 }
 
 /* ============================================================

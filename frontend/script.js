@@ -516,6 +516,39 @@ const OS_META = NOTIN_PLATFORMS[OS] || NOTIN_PLATFORMS.web;
 })();
 
 
+
+// ============================================================
+// VIDEO LIGHTBOX — full demo player (index.html)
+// ============================================================
+(function () {
+  const btn = document.getElementById('watchDemoBtn');
+  const modal = document.getElementById('videoModal');
+  const closeBtn = document.getElementById('videoModalClose');
+  const backdrop = document.getElementById('videoModalBackdrop');
+  const video = document.getElementById('demoVideo');
+  if (!btn || !modal || !video) return;
+
+  const open = () => {
+    modal.hidden = false;
+    document.body.style.overflow = 'hidden';
+    const pr = video.play();
+    if (pr && pr.catch) pr.catch(() => {});
+  };
+  const close = () => {
+    modal.hidden = true;
+    document.body.style.overflow = '';
+    video.pause();
+  };
+
+  btn.addEventListener('click', open);
+  closeBtn.addEventListener('click', close);
+  backdrop.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal.hidden) close();
+  });
+})();
+
+
 // Footer year
 const yearEl = document.getElementById('year');
 if (yearEl) yearEl.textContent = new Date().getFullYear();

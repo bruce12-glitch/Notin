@@ -269,12 +269,16 @@
           </div>
         </div>
       </div>
-            <!-- download chip -->
+            <!-- download chip + watch full demo video (lightbox) -->
       <div class="mt-4 flex items-center justify-center gap-5">
         <a href="#" class="flex items-center gap-2 text-[13.5px] font-semibold text-text-secondary transition hover:text-brand-600">
           <span class="grid h-8 w-8 place-items-center rounded-full border border-stroke-buttons bg-surface"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg></span>
           Download Notin
         </a>
+        <button type="button" id="watchDemoBtn" class="flex cursor-pointer items-center gap-2 text-[13.5px] font-semibold text-brand-600 transition hover:text-brand-700">
+          <span class="grid h-8 w-8 place-items-center rounded-full bg-brand-100"><svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="6 3 20 12 6 21 6 3"/></svg></span>
+          Watch full demo
+        </button>
       </div>
     </div>
   </div>
@@ -887,6 +891,18 @@
 
 <script src="assets/hero-anim-data.js"></script>
 <script src="assets/lottie.min.js"></script>
+<!-- ============ VIDEO LIGHTBOX (full demo) ============ -->
+<div id="videoModal" class="video-modal" role="dialog" aria-modal="true" aria-label="Notin demo video" hidden>
+  <div class="video-modal-backdrop" id="videoModalBackdrop"></div>
+  <div class="video-modal-panel" role="document">
+    <button type="button" id="videoModalClose" class="video-modal-close" aria-label="Close video">✕</button>
+    <video id="demoVideo" controls playsinline loop preload="metadata"
+           poster="assets/hero-demo-poster.jpg"
+           src="assets/hero-demo-full.mp4"></video>
+    <p class="video-modal-caption">Notin in action — the full loop, on repeat.</p>
+  </div>
+</div>
+
 <script src="script.js"></script>
 </body>
 </html>
