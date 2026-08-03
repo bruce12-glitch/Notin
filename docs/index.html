@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Notin — Redirecting…</title>
+<!-- Instant redirect to the frontend (works in every browser) -->
+<meta http-equiv="refresh" content="0; url=frontend/index.html" />
+<script>
+  // JS redirect as a second, faster path (meta refresh is the fallback)
+  window.location.replace('frontend/index.html');
+</script>
+<style>
+  body {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #f8f7f3;
+    color: #2c2d2a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    margin: 0;
+    text-align: center;
+  }
+  a { color: #f0651f; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div>
+    <p>Taking you to <strong>Notin</strong>…</p>
+    <p>If you are not redirected automatically, <a href="frontend/index.html">click here</a>.</p>
+  </div>
+</body>
+</html>
