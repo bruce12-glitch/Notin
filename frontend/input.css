@@ -535,57 +535,10 @@ details[open] .faq-body { grid-template-rows: 1fr; }
 }
 
 /* ============================================================
-   HERO VIDEO SECTION — external visual features (green-note feel)
+   HERO VIDEO SECTION — clean, no overlays on the video
    ============================================================ */
-/* soft glow + gradient ring behind the animation */
-.hero-video-stage {
-  position: relative;
-  pointer-events: none;          /* decorative stage: never block clicks */
-}
-.hero-video-stage::before,
-.hero-video-stage::after { pointer-events: none; }
-.hero-video-stage::before {
-  content: "";
-  position: absolute;
-  inset: -8% -6%;
-  z-index: -1;
-  border-radius: 28px;
-  background:
-    radial-gradient(60% 55% at 50% 30%, rgba(255,125,66,.22), transparent 70%),
-    radial-gradient(45% 40% at 75% 85%, rgba(251,202,57,.18), transparent 70%);
-  filter: blur(6px);
-}
-.hero-video-stage::after {
-  content: "";
-  position: absolute;
-  inset: 3% 4%;
-  z-index: 0;
-  border-radius: 24px;
-  border: 1px solid rgba(255,125,66,.25);
-  background: linear-gradient(180deg, rgba(255,255,255,.65), rgba(255,255,255,.15));
-  box-shadow: 0 30px 80px rgba(44,45,42,.18);
-  pointer-events: none;
-}
-#heroLottie { position: relative; z-index: 1; }
+.hero-video-stage { position: relative; }
 
-/* floating companion cards around the video */
-.video-float {
-  position: absolute;
-  z-index: 2;
-  background: var(--color-surface);
-  border: 1px solid var(--color-stroke-cards);
-  border-radius: 12px;
-  box-shadow: 0 14px 34px rgba(44,45,42,.16);
-  padding: 10px 14px;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  animation: float-note 6s ease-in-out infinite;
-  will-change: transform;
-}
 .video-float .vf-ic {
   width: 26px; height: 26px;
   border-radius: 8px;
@@ -599,31 +552,6 @@ details[open] .faq-body { grid-template-rows: 1fr; }
 .vf-b { top: 44%; right: -7%; --tilt: 4deg; animation-delay: -3s; }
 .vf-c { bottom: 4%; left: -3%; --tilt: -3deg; animation-delay: -4.6s; }
 
-/* live badge */
-.video-live {
-  position: absolute;
-  top: -12px;
-  right: 8%;
-  z-index: 3;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-stroke-cards);
-  border-radius: 999px;
-  padding: 5px 13px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .04em;
-  color: var(--color-text-secondary);
-  box-shadow: 0 8px 20px rgba(44,45,42,.12);
-}
-.video-live .live-dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--color-brand-500);
-  animation: demo-pulse 1.6s ease-in-out infinite;
-}
 
 /* ground shadow under the video */
 .video-ground {
@@ -639,7 +567,6 @@ details[open] .faq-body { grid-template-rows: 1fr; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .video-float, .video-live .live-dot { animation: none !important; }
   .btn-3d { transition: none; }
 }
 
