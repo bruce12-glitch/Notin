@@ -512,34 +512,40 @@ const OS_META = NOTIN_PLATFORMS[OS] || NOTIN_PLATFORMS.web;
 
 
 
+
 // ============================================================
-// HERO UI — looping task-tick timeline (subtle, Evernote-like)
+// HERO — the REAL Evernote animation (lottie homepage.json)
+// Exact source: evernote.com/lottie/homepage.json — vector UI,
+// crisp at ANY size (never blurry), loops forever.
 // ============================================================
 (function () {
-  const tasks = [...document.querySelectorAll('.hero-task')];
-  const notebook = document.querySelector('.hero-notebook');
-  if (!tasks.length || !notebook) return;
+  const container = document.getElementById('heroLottie');
+  if (!container) return;
+  const poster = document.getElementById('heroLottiePoster');
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (reduced) { tasks.forEach(t => t.classList.add('done')); return; }
 
-  const rows = [...document.querySelectorAll('.hero-row')];
-  let timers = [];
-  const at = (ms, fn) => timers.push(setTimeout(fn, ms));
-  const setActive = (i) => rows.forEach((r, idx) => r.classList.toggle('active', idx === i));
-
-  const play = () => {
-    timers.forEach(clearTimeout); timers = [];
-    tasks.forEach(t => t.classList.remove('done'));
-    setActive(0);
-    at(600, () => tasks[0]?.classList.add('done'));
-    at(1600, () => tasks[1]?.classList.add('done'));
-    at(2600, () => tasks[2]?.classList.add('done'));
-    at(3400, () => setActive(1));   // Food
-    at(4300, () => setActive(2));   // Work
-    at(5200, () => setActive(3));   // Tokyo conference
-    at(6000, play);
+  const start = () => {
+    if (typeof lottie === 'undefined' || !window.NOTIN_HERO_ANIM) return;
+    try {
+      const anim = lottie.loadAnimation({
+        container: container,
+        renderer: 'svg',
+        loop: true,
+        autoplay: !reduced,
+        animationData: window.NOTIN_HERO_ANIM,
+      });
+      anim.addEventListener('DOMLoaded', () => {
+        container.classList.add('has-anim');
+        if (poster) poster.style.display = 'none';
+      });
+      if (reduced) anim.goToAndStop(0, true);
+    } catch (e) { /* keep poster */ }
   };
-  at(500, play);
+
+  if (document.readyState === 'complete' || document.readyState === 'interactive') start();
+  else window.addEventListener('DOMContentLoaded', start);
+  setTimeout(start, 300);
+  setTimeout(start, 1500);
 })();
 
 

@@ -210,59 +210,17 @@
       </div>
     </div>
 
-        <!-- RIGHT: live app UI floating on the page (Evernote-style) -->
-    <div class="reveal relative hero-ui-wrap">
-      <!-- floating notebook popup -->
-      <div class="hero-card hero-notebook">
-        <div class="hero-card__head">
-          <svg class="hero-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-          <span class="hero-card__head-label">Notebooks</span>
-          <svg class="hero-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </div>
-        <div class="hero-row active"><svg class="hero-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Personal</div>
-        <div class="hero-row"><svg class="hero-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Food</div>
-        <div class="hero-row"><svg class="hero-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>Work</div>
-        <div class="hero-row indent"><svg class="hero-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Tokyo conference</div>
-        <div class="hero-row hero-new"><svg class="hero-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>New Notebook</div>
-      </div>
-
-      <!-- floating checklist popup -->
-      <div class="hero-card hero-checklist">
-        <div class="hero-check-title">
-          <svg class="hero-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          <div>
-            <b>Tokyo conference</b>
-            <span>Personal · Edited 2 min ago</span>
+            <!-- RIGHT: Evernote's REAL hero animation (lottie homepage.json) — exact source code -->
+    <div class="reveal relative">
+      <div class="tilt3d mx-auto w-full max-w-[720px]">
+        <!-- Evernote's exact responsive heights -->
+        <div class="flex h-[380px] items-end md:h-[320px] lg:h-[400px] xl:h-[480px]">
+          <div id="heroLottie" class="hero-lottie h-full w-full">
+            <div id="heroLottiePoster" class="hero-lottie-poster">
+              <svg class="h-10 w-10 animate-pulse text-brand-500/70" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+            </div>
           </div>
         </div>
-        <div class="hero-tasks">
-          <div class="hero-task"><span class="hero-circle"></span><span class="hero-tt">Book flight</span><span class="hero-chip">Due today, 1:00 PM</span></div>
-          <div class="hero-task"><span class="hero-circle"></span><span class="hero-tt">Prepare slides</span><span class="hero-chip">Due today, 1:30 PM</span></div>
-          <div class="hero-task"><span class="hero-circle"></span><span class="hero-tt">Book dinner</span><span class="hero-chip gray">Backlinks (1)</span></div>
-        </div>
-        <div class="hero-enter">
-          <span class="hero-circle sm"></span>
-          <span class="hero-enter-label">Enter task</span>
-          <svg class="hero-flag" viewBox="0 0 24 24" fill="currentColor"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15" stroke="currentColor" stroke-width="1.6"/></svg>
-        </div>
-      </div>
-
-      <!-- floating info popup -->
-      <div class="hero-card hero-info">
-        <div class="hero-info-head">
-          <span>▾ General information</span><span class="hero-info-count">3 items</span>
-        </div>
-        <div class="hero-info-rows">
-          <p><b>Dates:</b> Mon, Nov 3 – 7, 2025</p>
-          <p><b>Venue:</b> Tokyo International Forum, 1-7-3 Sakura-machi, Tokyo, Japan</p>
-          <p><b>Attendees:</b> 12 confirmed</p>
-        </div>
-      </div>
-
-      <!-- share chip -->
-      <div class="hero-share">
-        <svg class="hero-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-        Share
       </div>
     </div>
 </section>
@@ -886,6 +844,8 @@
   </div>
 </div>
 
+<script src="assets/hero-anim-data.js"></script>
+<script src="assets/lottie.min.js"></script>
 <script src="script.js"></script>
 </body>
 </html>
