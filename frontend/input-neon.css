@@ -1601,3 +1601,27 @@ section[data-sentry-component="CallToAction"] .text-\[\#94e130\] {
   color: #8fe333 !important;
 }
 .theme-toggle:hover { box-shadow: 0 0 16px rgba(143, 227, 51, 0.35); }
+
+/* NEON theme button overrides — same Evernote shapes */
+.btn-3d {
+  border-radius: 8px;
+  background: #0f0f0f;
+  border: 1px solid rgba(143, 227, 51, 0.4);
+  color: #fff;
+  min-width: 200px;
+  padding: 12px 28px;
+  box-shadow: 0 0 14px rgba(143, 227, 51, 0.25);
+}
+.btn-3d:hover {
+  background: #8fe333;
+  color: #0f0f0f;
+  box-shadow: 0 0 28px rgba(143, 227, 51, 0.6);
+}
+.btn-3d::before { display: none; }
+.btn-outline-evernote, .btn-sm-evernote {
+  border-radius: 8px;
+  border-color: rgba(143, 227, 51, 0.4);
+  color: #fff;
+  background: transparent;
+}
+.btn-outline-evernote:hover, .btn-sm-evernote:hover { background: #8fe333; color: #0f0f0f; }

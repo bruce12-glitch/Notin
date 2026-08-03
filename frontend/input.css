@@ -900,7 +900,7 @@ details[open] .faq-body { grid-template-rows: 1fr; }
   gap: 10px;
   width: 250px;
   height: 56px;
-  border-radius: 999px;
+  border-radius: 8px;   /* Evernote rounded-md */
   border: none;
   background: var(--osc-action-bg);
   color: var(--osc-action-text);
@@ -1439,3 +1439,66 @@ h1, h2, h3, h4, h5,
   background: linear-gradient(135deg, #8fe333, #a8f05a);
   box-shadow: 0 0 8px rgba(0, 185, 60, 0.6);
 }
+
+/* ============================================================
+   BUTTONS — Evernote's exact design (from source code)
+   rounded-md (NOT pill), three variants:
+   1) solid dark → green hover   (primary CTA)
+   2) outline border → dark hover (secondary)
+   3) small utility              (chips)
+   ============================================================ */
+.btn-3d {
+  border-radius: 8px;                       /* rounded-md */
+  background: #141414;                      /* bg-black */
+  color: #fff;
+  font-weight: 700;
+  min-width: 200px;
+  padding: 12px 28px;
+  box-shadow: none;
+  border: none;
+  transition: all .25s ease-in-out;
+}
+.btn-3d:hover {
+  background: #8fe333;                      /* hover:bg-green */
+  color: #141414;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(143, 227, 51, 0.35);
+}
+.btn-3d:active { transform: translateY(0); }
+.btn-3d::before { display: none; }          /* remove neon circle-pop */
+
+/* secondary outline buttons */
+.btn-outline-evernote {
+  border-radius: 8px;
+  background: transparent;
+  border: 1px solid var(--color-stroke-buttons);
+  color: var(--color-text-primary);
+  font-weight: 600;
+  min-width: 100px;
+  padding: 10px 24px;
+  transition: all .25s ease-in-out;
+}
+.btn-outline-evernote:hover {
+  background: #141414;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+/* small utility buttons (like Download for Mac / chrome pills) */
+.btn-sm-evernote {
+  border-radius: 8px;
+  border: 1px solid var(--color-stroke-buttons);
+  padding: 12px;
+  min-width: 80px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all .25s ease-in-out;
+  background: transparent;
+  color: var(--color-text-primary);
+}
+.btn-sm-evernote:hover { background: #141414; color: #fff; }
+
+/* dark-mode inverse (neon theme): hover stays green */
+.btn-3d:hover, .btn-outline-evernote:hover { background: #8fe333; color: #141414; }
+.btn-3d-sm { min-width: 110px; padding: 9px 20px; font-size: 14px; }
