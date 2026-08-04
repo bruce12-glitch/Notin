@@ -37,16 +37,7 @@ const mobilePanel = document.getElementById('navLinksMobile');
 
 if (navToggle && mobilePanel) {
   const MENU = [
-    { label: 'Features', children: [
-      { label: 'Instant capture', href: '#capture' },
-      { label: 'Smart organize', href: '#organize' },
-      { label: 'Lightning search', href: '#capture' },
-      { label: 'Tasks & to-dos', href: '#pricing' },
-      { label: 'Calendar', href: '#pricing' },
-      { label: 'Web clipper', href: '#download' },
-      { label: 'Collaboration', href: '#features' },
-      { label: 'Templates', href: '#features' },
-    ]},
+    { label: 'Features', href: '#features' },
     { label: 'Explore', children: [
       { label: 'Why Notin', href: 'context.html' },
       { label: 'Note taking', href: '#capture' },
@@ -54,10 +45,10 @@ if (navToggle && mobilePanel) {
       { label: 'Productivity', href: '#features' },
       { label: 'Students', href: '#pricing' },
       { label: 'Compare plans', href: '#pricing' },
-      { label: 'AI search', href: '#' },
-      { label: 'AI rewrite', href: '#' },
-      { label: 'PDF editor', href: '#' },
-      { label: 'Word counter', href: '#' },
+      { label: 'AI search', href: '#features' },
+      { label: 'AI rewrite', href: '#features' },
+      { label: 'PDF editor', href: '#ai-tools' },
+      { label: 'Word counter', href: '#ai-tools' },
     ]},
     { label: 'Plans', children: [
       { label: 'Free — ₹0', href: '#pricing' },
@@ -66,7 +57,6 @@ if (navToggle && mobilePanel) {
     ]},
     { label: 'Enterprise', href: '#' },
     { label: 'About', href: 'context.html' },
-    { label: 'Download', href: '#download' },
   ];
 
   const buildMobile = () => {
@@ -146,6 +136,25 @@ if (navToggle && mobilePanel) {
       e.preventDefault();
       drop.classList.toggle('open');
     });
+
+    // Clicking a link inside the mega-menu: close the dropdown and smooth-scroll
+    // to the matching section on the page (so "Explore" items jump to the slide).
+    drop.querySelectorAll('.mega-link, .mega-plan').forEach((link) => {
+      link.addEventListener('click', (e) => {
+        const href = link.getAttribute('href') || '';
+        drop.classList.remove('open');
+        if (href.startsWith('#') && href.length > 1) {
+          const target = document.querySelector(href);
+          if (target) {
+            e.preventDefault();
+            const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+            history.replaceState(null, '', href);
+          }
+        }
+        // non-# links (e.g. context.html) navigate normally
+      });
+    });
   });
 
   document.addEventListener('click', (e) => {
@@ -153,6 +162,22 @@ if (navToggle && mobilePanel) {
   });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') drops.forEach((d) => d.classList.remove('open'));
+  });
+
+  // Features button (standalone, not a dropdown): smooth-scroll to the slides
+  document.querySelectorAll('.nav-features-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      const href = btn.getAttribute('href') || '';
+      if (href.startsWith('#')) {
+        const target = document.querySelector(href);
+        if (target) {
+          e.preventDefault();
+          const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+          history.replaceState(null, '', href);
+        }
+      }
+    });
   });
 })();
 
@@ -749,12 +774,38 @@ const OS_META = NOTIN_PLATFORMS[OS] || NOTIN_PLATFORMS.web;
 // VIDEO LIGHTBOX — full demo player (index.html)
 // ============================================================
 (function () {
-  const btn = document.getElementById('watchDemoBtn');
+  // Any element that should open the demo lightbox (Discover more, Watch demo, …)
+  const triggers = [
+    document.getElementById('discoverMoreBtn'),
+    document.getElementById('watchDemoBtn'),
+  ].filter(Boolean);
   const modal = document.getElementById('videoModal');
   const closeBtn = document.getElementById('videoModalClose');
   const backdrop = document.getElementById('videoModalBackdrop');
   const video = document.getElementById('demoVideo');
-  if (!btn || !modal || !video) return;
+  if (!triggers.length || !modal || !video) return;
+
+  // ---- Playback trim: stop/loop before the last few seconds ----
+  // Reads data-trim-end="45" so the 45–50s tail (end branding) never plays.
+  const trimEnd = parseFloat(video.getAttribute('data-trim-end'));
+  if (!Number.isNaN(trimEnd) && trimEnd > 0) {
+    video.addEventListener('timeupdate', () => {
+      if (video.currentTime >= trimEnd) {
+        if (video.loop) {
+          video.currentTime = 0;      // seamless restart at the trimmed length
+        } else {
+          video.pause();
+          video.currentTime = trimEnd;
+        }
+      }
+    });
+    // If metadata says the file is shorter than the trim point, ignore the trim.
+    video.addEventListener('loadedmetadata', () => {
+      if (video.duration && video.duration <= trimEnd) {
+        video.removeAttribute('data-trim-end');
+      }
+    });
+  }
 
   const open = () => {
     modal.hidden = false;
@@ -768,7 +819,7 @@ const OS_META = NOTIN_PLATFORMS[OS] || NOTIN_PLATFORMS.web;
     video.pause();
   };
 
-  btn.addEventListener('click', open);
+  triggers.forEach((t) => t.addEventListener('click', open));
   closeBtn.addEventListener('click', close);
   backdrop.addEventListener('click', close);
   document.addEventListener('keydown', (e) => {

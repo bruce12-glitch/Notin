@@ -223,12 +223,51 @@
   animation: modal-pop .28s cubic-bezier(.2, .9, .3, 1.2);
 }
 @keyframes modal-pop { from { opacity: 0; transform: scale(.94) translateY(10px); } to { opacity: 1; transform: none; } }
+.video-modal-stage {
+  position: relative;
+  line-height: 0;
+}
 .video-modal-panel video {
   display: block;
   width: 100%;
   aspect-ratio: 16 / 10;
   background: #000;
   object-fit: cover;
+}
+/* Notin branding overlay on top of the promo video (replaces Evernote's) */
+.video-brand {
+  position: absolute;
+  top: 16px;
+  left: 18px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 14px 8px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+.video-brand-icon {
+  width: 26px;
+  height: 26px;
+  display: block;
+}
+.video-brand-name {
+  font-family: "IBM Plex Sans", "Inter", sans-serif;
+  font-weight: 800;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+  color: #141414;
+  line-height: 1;
+}
+@media (max-width: 600px) {
+  .video-brand { top: 10px; left: 10px; padding: 6px 11px 6px 7px; }
+  .video-brand-icon { width: 21px; height: 21px; }
+  .video-brand-name { font-size: 14px; }
 }
 .video-modal-close {
   position: absolute;
@@ -1266,24 +1305,76 @@ h1, h2, h3, h4, h5,
    3) small utility              (chips)
    ============================================================ */
 .btn-3d {
-  border-radius: 8px;                       /* rounded-md */
+  border-radius: 10px;                      /* rounded-md */
   background: #141414;                      /* bg-black */
   color: #fff;
   font-weight: 700;
   min-width: 200px;
   padding: 12px 28px;
-  box-shadow: none;
   border: none;
-  transition: all .25s ease-in-out;
+  /* layered 3D depth: highlight + hard bottom edge + ambient */
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.12) inset,
+    0 5px 0 #000000,
+    0 10px 22px rgba(0,0,0,.28);
+  transform: translateY(0);
+  transition: transform .16s cubic-bezier(.2,.8,.3,1.2), box-shadow .16s ease, background .25s ease, color .25s ease;
 }
 .btn-3d:hover {
   background: #8fe333;                      /* hover:bg-green */
   color: #141414;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(143, 227, 51, 0.35);
+  transform: translateY(-3px);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.4) inset,
+    0 8px 0 #5aa50f,
+    0 18px 34px rgba(143,227,51,.4);
 }
-.btn-3d:active { transform: translateY(0); }
+.btn-3d:active {
+  transform: translateY(2px);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.25) inset,
+    0 2px 0 #5aa50f,
+    0 6px 14px rgba(143,227,51,.3);
+  transition-duration: .07s;
+}
 .btn-3d::before { display: none; }          /* remove neon circle-pop */
+
+/* ============================================================
+   NOTIN ICON — 3D pressable logo (navbar)
+   ============================================================ */
+.brand-logo { text-decoration: none; }
+.brand-icon-3d {
+  border-radius: 12px;
+  transform: perspective(400px) translateZ(0) rotateX(0) rotateY(0);
+  box-shadow:
+    0 2px 0 rgba(0,0,0,.18),
+    0 6px 14px rgba(0,0,0,.22),
+    0 1px 0 rgba(255,255,255,.5) inset;
+  transition: transform .22s cubic-bezier(.2,.8,.3,1.2), box-shadow .22s ease, filter .22s ease;
+  will-change: transform;
+}
+.brand-logo:hover .brand-icon-3d {
+  transform: perspective(400px) translateY(-2px) rotateX(12deg) rotateY(-12deg) scale(1.06);
+  box-shadow:
+    0 6px 0 rgba(0,0,0,.16),
+    0 14px 26px rgba(0,0,0,.3),
+    0 1px 0 rgba(255,255,255,.6) inset;
+  filter: brightness(1.05);
+}
+.brand-logo:active .brand-icon-3d {
+  transform: perspective(400px) translateY(1px) rotateX(4deg) rotateY(-4deg) scale(.98);
+  box-shadow:
+    0 2px 0 rgba(0,0,0,.16),
+    0 5px 12px rgba(0,0,0,.25),
+    0 1px 0 rgba(255,255,255,.4) inset;
+  transition-duration: .08s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .brand-icon-3d, .brand-logo:hover .brand-icon-3d, .brand-logo:active .brand-icon-3d {
+    transition: none;
+    transform: none;
+  }
+}
 
 /* secondary outline buttons */
 .btn-outline-evernote {
@@ -1452,3 +1543,37 @@ h1, h2, h3, h4, h5,
 
 /* Section reveals get subtle depth via layered shadows on cards */
 .reveal.visible { opacity: 1; transform: none; }
+
+/* Anchor targets clear the sticky navbar (72px) when jumped to from the menu */
+section[id], [id="top"] { scroll-margin-top: 88px; }
+
+/* Features nav button — dark-filled pill that jumps to the feature slides */
+.nav-features-btn {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 8px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: #141414;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 0 #000, 0 8px 18px rgba(0,0,0,.22);
+  transition: transform .16s cubic-bezier(.2,.8,.3,1.2), box-shadow .16s ease, background .2s ease, color .2s ease;
+}
+.nav-features-btn:hover {
+  background: #8fe333;
+  color: #141414;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 #5aa50f, 0 14px 26px rgba(143,227,51,.35);
+}
+.nav-features-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #5aa50f, 0 5px 12px rgba(143,227,51,.3);
+  transition-duration: .07s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-features-btn { transition: none; }
+}
