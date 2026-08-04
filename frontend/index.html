@@ -64,34 +64,14 @@
 <header id="nav" data-sentry-component="Navbar" data-sentry-source-file="components/Navbar.tsx"
   class="nav sticky top-0 z-50 border-b border-b-transparent bg-bg-primary/85 backdrop-blur-md">
   <div class="mx-auto flex h-[72px] max-w-6xl items-center justify-between gap-6 px-6">
-    <a href="#top" class="flex items-center gap-2.5" aria-label="Notin — home">
-      <img src="assets/notin-icon-nav.png" alt="" class="h-10 w-10" />
+    <a href="#top" class="brand-logo flex items-center gap-2.5" aria-label="Notin — home">
+      <img src="assets/notin-icon-nav.png" alt="" class="brand-icon-3d h-10 w-10" />
       <span class="text-xl font-extrabold tracking-tight">Notin</span>
     </a>
         <!-- ============ MEGA-MENU NAVIGATION (Evernote-style) ============ -->
     <nav id="navLinks" aria-label="Main navigation" class="hidden items-center md:flex">
-      <!-- FEATURES dropdown -->
-      <div class="mega-drop relative">
-        <button type="button" class="mega-btn flex cursor-pointer items-center gap-1.5 px-3 py-2 text-[15px] font-medium text-text-secondary transition hover:text-brand-600">
-          Features
-          <svg class="mega-chev h-3.5 w-3.5 transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        <div class="mega-panel">
-          <div class="mega-card w-[560px]">
-            <p class="mega-label">Features</p>
-            <div class="grid grid-cols-2 gap-x-6">
-              <a href="#capture" class="mega-link"><svg class="h-4 w-4 shrink-0 text-brand-500" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>Instant capture<span class="mega-desc">Jot ideas in seconds</span></a>
-              <a href="#organize" class="mega-link"><svg class="h-4 w-4 shrink-0 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Smart organize<span class="mega-desc">Tags, folders &amp; backlinks</span></a>
-              <a href="#capture" class="mega-link"><svg class="h-4 w-4 shrink-0 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Lightning search<span class="mega-desc">Find anything instantly</span></a>
-              <a href="#pricing" class="mega-link"><svg class="h-4 w-4 shrink-0 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Tasks &amp; to-dos<span class="mega-desc">Stay on top of it all</span></a>
-              <a href="#pricing" class="mega-link"><svg class="h-4 w-4 shrink-0 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Calendar<span class="mega-desc">Link events to notes</span></a>
-              <a href="#download" class="mega-link"><svg class="h-4 w-4 shrink-0 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>Web clipper<span class="mega-desc">Save anything from the web</span></a>
-              <a href="#features" class="mega-link"><svg class="h-4 w-4 shrink-0 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Collaboration<span class="mega-desc">Work together in real time</span></a>
-              <a href="#features" class="mega-link"><svg class="h-4 w-4 shrink-0 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Templates<span class="mega-desc">Ready-made structures</span></a>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- FEATURES button (jumps straight to the feature slides) -->
+      <a href="#features" class="nav-features-btn">Features</a>
 
       <!-- EXPLORE dropdown -->
       <div class="mega-drop relative">
@@ -113,12 +93,12 @@
               </div>
               <div>
                 <p class="mega-label">Ecosystem</p>
-                <a href="#" class="mega-link">AI search</a>
-                <a href="#" class="mega-link">AI rewrite</a>
-                <a href="#" class="mega-link">PDF editor</a>
-                <a href="#" class="mega-link">Online notepad</a>
-                <a href="#" class="mega-link">Word counter</a>
-                <a href="#" class="mega-link">Citation generator</a>
+                <a href="#features" class="mega-link">AI search</a>
+                <a href="#features" class="mega-link">AI rewrite</a>
+                <a href="#ai-tools" class="mega-link">PDF editor</a>
+                <a href="#ai-tools" class="mega-link">Online notepad</a>
+                <a href="#ai-tools" class="mega-link">Word counter</a>
+                <a href="#ai-tools" class="mega-link">Citation generator</a>
               </div>
             </div>
           </div>
@@ -158,12 +138,11 @@
       <a href="context.html" class="px-3 py-2 text-[15px] font-medium text-text-secondary transition hover:text-brand-600">About</a>
     </nav>
 
-    <!-- CTA stack (Evernote order: Log in · Download · Start for free) -->
-    <div class="hidden items-center gap-2 md:flex">
-      <a href="#" class="rounded-full px-4 py-2 text-[15px] font-semibold text-text-secondary transition hover:text-brand-600">Log in</a>
-      <a href="#download" class="btn-sm-evernote">Download</a>
-      <a href="#" class="btn-3d btn-3d-sm text-[15px]">Start for free</a>
-      <button id="themeToggle" class="theme-toggle flex cursor-pointer items-center gap-1.5 rounded-full border border-stroke-buttons bg-surface px-3.5 py-2 text-[13px] font-bold transition hover:border-brand-500 hover:text-brand-500" title="Switch theme" aria-label="Switch between Green and Neon theme">
+    <!-- CTA stack (Log in · Start for free · Theme) -->
+    <div class="hidden items-center gap-3 md:flex">
+      <a href="#" class="whitespace-nowrap rounded-full px-4 py-2 text-[15px] font-semibold text-text-secondary transition hover:text-brand-600">Log in</a>
+      <a href="#" class="btn-3d btn-3d-sm whitespace-nowrap text-[15px]">Start for free</a>
+      <button id="themeToggle" class="theme-toggle flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full border border-stroke-buttons bg-surface px-3.5 py-2 text-[13px] font-bold transition hover:border-brand-500 hover:text-brand-500" title="Switch theme" aria-label="Switch between Green and Neon theme">
         <span class="theme-toggle-dot"></span>
         <span id="themeToggleLabel">Switch to Neon</span>
       </button>
@@ -740,13 +719,12 @@
 </section>
 
 <!-- ============ AI TOOLS BAND (Evernote IntervalSection pattern) ============ -->
-<section data-sentry-component="IntervalSection" data-sentry-source-file="sections/IntervalSection.tsx" class="bg-bg-secondary px-6 py-14 md:py-16">
+<section id="ai-tools" data-sentry-component="IntervalSection" data-sentry-source-file="sections/IntervalSection.tsx" class="bg-bg-secondary px-6 py-14 md:py-16">
   <div class="mx-auto flex max-w-6xl flex-col items-center gap-6 rounded-3xl border border-stroke-cards bg-surface p-8 text-center shadow-[0_16px_40px_rgba(44,45,42,0.07)] md:flex-row md:justify-between md:text-left md:p-10">
     <div class="max-w-[420px]">
       <span class="text-xs font-bold uppercase tracking-[0.14em] text-brand-500">AI tools</span>
       <h2 class="mt-2 text-[clamp(24px,3vw,32px)] font-extrabold leading-tight tracking-[-0.02em]">Want to give AI a try?</h2>
       <p class="mt-2 text-[15px] leading-relaxed text-text-secondary">Test out the AI power of Notin — standalone tools that make your second brain even sharper.</p>
-      <a href="#" class="btn-3d mt-5 text-[15px]">Try it for free</a>
     </div>
     <div class="flex flex-wrap items-center justify-center gap-3">
       <span class="ai-chip"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload</span>
@@ -778,13 +756,6 @@
         <div class="flex flex-wrap items-center gap-4">
           <a id="smartDownload" href="#" class="btn-3d px-8 py-3.5 text-base">Download Notin</a>
           <span class="text-[13px] text-text-tertiary">Latest version · Free download</span>
-        </div>
-      </div>
-      <div class="flex flex-col items-center gap-2.5 rounded-2xl border border-stroke-cards bg-bg-primary p-5 text-center">
-        <img src="assets/qr-download.png" alt="QR code — scan to download Notin on your phone" class="h-32 w-32" width="132" height="132" />
-        <div>
-          <p class="text-[13px] font-bold">Scan to get Notin</p>
-          <p class="text-[12px] text-text-tertiary">on your phone</p>
         </div>
       </div>
     </div>
@@ -915,10 +886,10 @@
       Notin v2 introduces powerful new AI features to level up your second brain.
     </p>
     <div class="flex flex-wrap items-center justify-center gap-4">
-      <a href="#" class="group inline-flex items-center gap-2 text-[16px] font-bold text-[#94e130] transition hover:brightness-110">
+      <button type="button" id="discoverMoreBtn" class="group inline-flex cursor-pointer items-center gap-2 bg-transparent text-[16px] font-bold text-[#94e130] transition hover:brightness-110" aria-haspopup="dialog" aria-controls="videoModal">
         Discover more
         <svg class="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-      </a>
+      </button>
     </div>
   </div>
 </section>
@@ -995,10 +966,19 @@
   <div class="video-modal-backdrop" id="videoModalBackdrop"></div>
   <div class="video-modal-panel" role="document">
     <button type="button" id="videoModalClose" class="video-modal-close" aria-label="Close video">✕</button>
-    <video id="demoVideo" controls playsinline loop preload="metadata"
-           poster="assets/hero-demo-poster.jpg"
-           src="assets/hero-demo-full.mp4"></video>
-    <p class="video-modal-caption">Notin in action — the full loop, on repeat.</p>
+    <div class="video-modal-stage">
+      <!-- Notin branding overlay (replaces the Evernote branding shown in the clip) -->
+      <div class="video-brand" aria-hidden="true">
+        <img src="assets/notin-icon-nav.png" alt="" class="video-brand-icon" />
+        <span class="video-brand-name">Notin</span>
+      </div>
+      <video id="demoVideo" controls playsinline loop preload="metadata"
+             poster="assets/hero-demo-poster.jpg"
+             crossorigin="anonymous"
+             data-trim-end="45"
+             src="https://evernote.cdn.prismic.io/evernote/BAhQ26f0Iw3kMeEC_BSP_WatermelonVideoRepurpose_EN_169_V03_compressed.mp4"></video>
+    </div>
+    <p class="video-modal-caption">Notin — your productivity, supercharged.</p>
   </div>
 </div>
 
