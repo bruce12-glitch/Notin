@@ -1882,6 +1882,11 @@ h1, h2, h3, h4, h5,
   transform-style: preserve-3d;
   -webkit-tap-highlight-color: transparent;
 }
+.designed-feature-card--template {
+  --feature-accent: #55cfa2;
+  --feature-shadow: rgba(38, 153, 112, .20);
+  --feature-shadow-strong: rgba(38, 153, 112, .31);
+}
 .designed-feature-card--search {
   --feature-accent: #61bff0;
   --feature-shadow: rgba(49, 143, 193, .20);
