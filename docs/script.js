@@ -273,10 +273,10 @@ if (track && prevBtn && nextBtn) {
   next.addEventListener('click', () => go(1));
   prev.addEventListener('click', () => go(-1));
 
-  // Notebooks slide: pointer-driven 3D tilt plus a visible bubble sequence
-  // before continuing to the linked section. Applies to both loop copies.
-  track.querySelectorAll('.notebook-feature-card').forEach((link) => {
-    const slide = link.querySelector('.notebook-slide');
+  // Reference feature slides: pointer-driven 3D tilt plus a visible bubble
+  // sequence before continuing to the linked section. Applies to loop copies.
+  track.querySelectorAll('.notebook-feature-card, .collaborate-feature-card').forEach((link) => {
+    const slide = link.querySelector('.notebook-slide, .collaborate-slide');
     if (!slide) return;
 
     let tiltFrame = null;
