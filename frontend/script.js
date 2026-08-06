@@ -273,6 +273,34 @@ if (track && prevBtn && nextBtn) {
   next.addEventListener('click', () => go(1));
   prev.addEventListener('click', () => go(-1));
 
+  // Notebooks slide: let the clipped corner bubbles float visibly before
+  // continuing to the linked section. Applies to both infinite-loop copies.
+  track.querySelectorAll('.notebook-feature-card').forEach((link) => {
+    link.addEventListener('click', (event) => {
+      if (reduced || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+
+      event.preventDefault();
+      const slide = link.querySelector('.notebook-slide');
+      if (!slide || slide.classList.contains('is-bubbling')) return;
+
+      stopAuto();
+      slide.classList.add('is-bubbling');
+
+      window.setTimeout(() => {
+        slide.classList.remove('is-bubbling');
+        const href = link.getAttribute('href') || '';
+        const destination = href.startsWith('#') ? document.querySelector(href) : null;
+        if (destination) {
+          destination.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          history.replaceState(null, '', href);
+        } else if (href) {
+          window.location.assign(href);
+        }
+        startAuto();
+      }, 1650);
+    });
+  });
+
   // autoplay — gentle infinite loop, pauses on hover/touch
   const startAuto = () => {
     if (reduced) return;

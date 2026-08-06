@@ -1204,6 +1204,200 @@ h1, h2, h3, h4, h5,
   opacity: .9;
 }
 
+
+/* ============================================================
+   NOTEBOOKS & SPACES — reference-matched feature slide
+   Tall white card, lime notebook glyph, clipped corner bubbles.
+   The bubbles drift on hover and perform a contained tap animation.
+   ============================================================ */
+.notebook-feature-card {
+  color: #191919;
+  -webkit-tap-highlight-color: transparent;
+}
+.notebook-slide {
+  position: relative;
+  width: 100%;
+  height: 390px;
+  min-height: 390px;
+  overflow: hidden;
+  border: 1px solid #ddd9d4;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 2px 3px rgba(28, 25, 21, .06), 0 14px 30px rgba(28, 25, 21, .035);
+  color: #191919;
+  font-family: "Figtree", var(--font-sans);
+  cursor: pointer;
+}
+#featuresTrack a.notebook-feature-card .notebook-slide::before {
+  display: none;
+}
+#featuresTrack a.notebook-feature-card:hover .notebook-slide {
+  transform: translateY(-5px);
+  border-color: #d3cec8;
+  box-shadow: 0 8px 18px rgba(28, 25, 21, .08), 0 24px 46px rgba(28, 25, 21, .08);
+}
+.notebook-feature-card:focus-visible .notebook-slide {
+  outline: 3px solid #8be52b;
+  outline-offset: 4px;
+}
+.notebook-slide__bubbles {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.notebook-bubble {
+  position: absolute;
+  display: block;
+  width: 126px;
+  height: 126px;
+  border-radius: 999px;
+  background: #f6f2ed;
+  transform: translate3d(0, 0, 0);
+  transform-origin: center;
+  will-change: transform;
+}
+.notebook-bubble--top {
+  top: -64px;
+  right: 15px;
+  --drift-x: -8px;
+  --drift-y: 13px;
+  --tap-x: -30px;
+  --tap-y: 30px;
+  --tap-x-2: 8px;
+  --tap-y-2: 44px;
+}
+.notebook-bubble--bottom {
+  top: 61px;
+  right: 15px;
+  --drift-x: 7px;
+  --drift-y: -10px;
+  --tap-x: -38px;
+  --tap-y: -16px;
+  --tap-x-2: 9px;
+  --tap-y-2: -32px;
+}
+.notebook-bubble--edge {
+  top: -2px;
+  right: -91px;
+  --drift-x: -13px;
+  --drift-y: 8px;
+  --tap-x: -44px;
+  --tap-y: 28px;
+  --tap-x-2: -20px;
+  --tap-y-2: 56px;
+}
+.notebook-feature-card:hover .notebook-bubble {
+  animation: notebook-bubble-drift 3.8s ease-in-out infinite alternate;
+}
+.notebook-feature-card:hover .notebook-bubble--bottom { animation-delay: -.9s; }
+.notebook-feature-card:hover .notebook-bubble--edge { animation-delay: -1.8s; }
+.notebook-slide.is-bubbling .notebook-bubble {
+  animation: notebook-bubble-tap 1.45s cubic-bezier(.22, 1, .36, 1) both;
+}
+.notebook-slide.is-bubbling .notebook-bubble--bottom { animation-delay: .06s; }
+.notebook-slide.is-bubbling .notebook-bubble--edge { animation-delay: .12s; }
+@keyframes notebook-bubble-drift {
+  to { transform: translate3d(var(--drift-x), var(--drift-y), 0) scale(1.025); }
+}
+@keyframes notebook-bubble-tap {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  32% { transform: translate3d(var(--tap-x), var(--tap-y), 0) scale(.9); }
+  68% { transform: translate3d(var(--tap-x-2), var(--tap-y-2), 0) scale(1.045); }
+}
+.notebook-slide__foreground {
+  width: 100%;
+  height: 100%;
+  min-height: 390px;
+  pointer-events: none;
+}
+.notebook-slide__icon {
+  position: absolute;
+  top: 54px;
+  left: 59px;
+  display: flex;
+  width: 45px;
+  height: 55px;
+  gap: 5px;
+}
+.notebook-slide__spine {
+  display: block;
+  width: 7px;
+  height: 55px;
+  background: #8be52b;
+}
+.notebook-slide__cover {
+  position: relative;
+  display: block;
+  width: 33px;
+  height: 55px;
+  overflow: hidden;
+  border-radius: 0 5px 5px 0;
+  background: #8be52b;
+}
+.notebook-slide__cover > span {
+  position: absolute;
+  top: 16px;
+  left: 9px;
+  width: 16px;
+  height: 5px;
+  border-radius: 999px;
+  background: #ffffff;
+}
+.notebook-slide__copy {
+  position: absolute;
+  top: 174px;
+  left: 45px;
+  text-align: left;
+}
+.notebook-slide__copy h5 {
+  margin: 0;
+  color: #191919;
+  font-size: 30px;
+  font-weight: 650;
+  letter-spacing: -.025em;
+  line-height: 1.04;
+}
+.notebook-slide__copy p {
+  margin: 15px 0 0;
+  color: #5e5b58;
+  font-size: 21px;
+  font-weight: 400;
+  letter-spacing: -.012em;
+  line-height: 1.25;
+}
+.notebook-slide__arrow {
+  position: absolute;
+  right: 39px;
+  bottom: 45px;
+  width: 32px;
+  height: 24px;
+  overflow: visible;
+  stroke: #191919;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform .25s cubic-bezier(.22, 1, .36, 1);
+}
+.notebook-feature-card:hover .notebook-slide__arrow,
+.notebook-slide.is-bubbling .notebook-slide__arrow {
+  transform: translateX(7px);
+}
+@media (max-width: 420px) {
+  .notebook-slide__icon { left: 46px; }
+  .notebook-slide__copy { left: 34px; }
+  .notebook-slide__copy h5 { font-size: 28px; }
+  .notebook-slide__copy p { font-size: 19px; }
+  .notebook-slide__arrow { right: 29px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .notebook-feature-card:hover .notebook-bubble,
+  .notebook-slide.is-bubbling .notebook-bubble {
+    animation: none;
+  }
+}
+
 /* roomier track spacing */
 .carousel-track-features { scrollbar-width: none; }
 .carousel-track-features::-webkit-scrollbar { display: none; }
