@@ -2528,3 +2528,242 @@ section[id], [id="top"] { scroll-margin-top: 88px; }
 @media (prefers-reduced-motion: reduce) {
   .nav-features-btn { transition: none; }
 }
+
+/* ============================================================================
+   GREEN IMMERSIVE LAYER — warm, green-only motion and dimensional polish
+   Preserves all existing interactions and never runs in the Neon edition.
+   ============================================================================ */
+.theme-green {
+  --green-pointer-x: 50vw;
+  --green-pointer-y: 30vh;
+  --green-demo-rx: 0deg;
+  --green-demo-ry: 0deg;
+}
+.theme-green body {
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(143, 227, 51, .10), transparent 35%),
+    #f4eee5;
+}
+.green-cursor-aura {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 42;
+  width: 380px;
+  height: 380px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(143, 227, 51, .13), rgba(143, 227, 51, .045) 38%, transparent 70%);
+  opacity: 0;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  transform: translate3d(var(--green-pointer-x), var(--green-pointer-y), 0) translate(-50%, -50%);
+  transition: opacity .28s ease;
+  will-change: transform, opacity;
+}
+.green-pointer-active .green-cursor-aura { opacity: .72; }
+
+/* Warm glass navigation with a restrained lifted edge. */
+.theme-green #nav {
+  background: rgba(244, 238, 229, .78) !important;
+  border-bottom-color: rgba(95, 161, 30, .09);
+  box-shadow: 0 10px 30px rgba(58, 51, 40, .08), 0 1px 0 rgba(255, 255, 255, .72);
+  backdrop-filter: blur(18px) saturate(125%);
+  transform: translateZ(0);
+}
+.theme-green #nav.scrolled {
+  border-bottom-color: rgba(95, 161, 30, .28);
+  box-shadow: 0 14px 38px rgba(58, 51, 40, .12), 0 1px 0 rgba(255, 255, 255, .8);
+}
+.theme-green .brand-icon-3d {
+  filter: drop-shadow(0 8px 10px rgba(90, 74, 44, .16));
+}
+.theme-green .nav-features-btn {
+  box-shadow: 0 4px 0 #000, 0 10px 24px rgba(37, 34, 28, .18), 0 0 0 1px rgba(143, 227, 51, .12);
+}
+
+/* Hero garden atmosphere, luminous copy, and pointer-reactive demo. */
+.theme-green #top {
+  background:
+    radial-gradient(ellipse at 50% 10%, rgba(143, 227, 51, .15), transparent 30%),
+    radial-gradient(circle at 10% 50%, rgba(255, 255, 255, .7), transparent 24%),
+    radial-gradient(circle at 91% 58%, rgba(251, 202, 57, .08), transparent 23%),
+    #f4eee5;
+}
+.theme-green #top::before {
+  border-color: rgba(124, 201, 42, .24);
+  box-shadow: inset 0 0 60px rgba(143, 227, 51, .04), 0 0 80px rgba(143, 227, 51, .04);
+  animation: green-orbit-left 12s ease-in-out infinite alternate;
+}
+.theme-green #top::after {
+  background: radial-gradient(circle, rgba(143, 227, 51, .12), transparent 68%);
+  animation: green-orbit-right 14s ease-in-out -4s infinite alternate;
+}
+.theme-green .hero-kicker {
+  border-color: rgba(124, 201, 42, .34);
+  background: rgba(238, 250, 216, .82);
+  box-shadow: 0 10px 30px rgba(95, 161, 30, .10), inset 0 1px 0 rgba(255, 255, 255, .82);
+  animation: green-kicker-breathe 5s ease-in-out infinite;
+}
+.theme-green #top .hero-title {
+  text-shadow: 0 5px 24px rgba(63, 54, 42, .09), 0 18px 45px rgba(63, 54, 42, .06);
+  animation: green-title-breathe 6s ease-in-out infinite;
+}
+.theme-green #top .hero-title .gradient-animate {
+  filter: drop-shadow(0 8px 18px rgba(95, 161, 30, .16));
+}
+.theme-green .hero-description {
+  text-shadow: 0 2px 14px rgba(255, 255, 255, .7);
+}
+.theme-green .hero-actions .btn-3d {
+  box-shadow: inset 0 1px rgba(255, 255, 255, .14), 0 6px 0 #000, 0 16px 32px rgba(42, 38, 31, .22), 0 0 0 1px rgba(143, 227, 51, .09);
+}
+.theme-green .hero-actions .btn-3d:hover {
+  box-shadow: inset 0 1px rgba(255, 255, 255, .4), 0 9px 0 #5aa50f, 0 22px 40px rgba(95, 161, 30, .28);
+}
+.theme-green .hero-demo-composition {
+  perspective: 1300px;
+  transform-style: preserve-3d;
+}
+.theme-green .hero-demo-frame {
+  position: relative;
+  transform-style: preserve-3d;
+  animation: green-demo-float 6.5s ease-in-out infinite;
+  will-change: transform;
+}
+.theme-green .hero-demo-frame::before,
+.theme-green .hero-demo-frame::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  border-radius: 24px;
+}
+.theme-green .hero-demo-frame::before {
+  inset: -2px;
+  z-index: -1;
+  background: linear-gradient(125deg, rgba(143, 227, 51, .62), rgba(255, 255, 255, .5) 36%, rgba(251, 202, 57, .25) 72%, rgba(143, 227, 51, .58));
+  filter: blur(1px);
+  opacity: .62;
+}
+.theme-green .hero-demo-frame::after {
+  inset: 7% 9% -7%;
+  z-index: -2;
+  background: rgba(143, 227, 51, .15);
+  filter: blur(44px);
+  opacity: .72;
+}
+.theme-green .hero-demo-frame > div {
+  box-shadow: 0 36px 90px rgba(74, 63, 45, .22), 0 0 52px rgba(143, 227, 51, .10);
+}
+.theme-green .hero-3d {
+  backdrop-filter: blur(12px);
+  animation-duration: 5.6s;
+}
+
+/* Warm section light and deeper controls. */
+.theme-green #features,
+.theme-green #pricing,
+.theme-green #download,
+.theme-green #faq {
+  background-image: radial-gradient(circle at 50% 0%, rgba(143, 227, 51, .055), transparent 30%);
+}
+.theme-green #features h2,
+.theme-green #pricing h2,
+.theme-green #download h2,
+.theme-green #faq h2 {
+  text-shadow: 0 6px 24px rgba(65, 55, 42, .08);
+}
+.theme-green .carousel-arrow-btn {
+  backdrop-filter: blur(13px);
+  box-shadow: 0 10px 24px rgba(60, 51, 39, .11), inset 0 1px 0 rgba(255, 255, 255, .75);
+  transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s ease, border-color .2s ease;
+}
+.theme-green .carousel-arrow-btn:hover {
+  transform: translateY(-4px) translateZ(18px);
+  border-color: rgba(124, 201, 42, .62);
+  box-shadow: 0 16px 34px rgba(60, 51, 39, .16), 0 0 26px rgba(143, 227, 51, .18);
+}
+
+/* Preserve the reference-white cards while giving them richer warm depth. */
+.theme-green #featuresTrack a.motion-feature-card .motion-feature-slide {
+  background: linear-gradient(145deg, rgba(255, 255, 255, .98), rgba(252, 251, 247, .98));
+  border-color: rgba(118, 109, 94, .22);
+  box-shadow: 0 3px 5px rgba(52, 45, 35, .045), 0 18px 40px rgba(52, 45, 35, .07), inset 0 1px 0 #fff;
+}
+.theme-green #featuresTrack a.motion-feature-card:hover .motion-feature-slide {
+  border-color: rgba(124, 201, 42, .42);
+  box-shadow: 0 20px 34px rgba(52, 45, 35, .12), 0 42px 72px rgba(52, 45, 35, .13), 0 0 34px rgba(143, 227, 51, .10);
+}
+.theme-green .notebook-bubble,
+.theme-green .collaborate-bubble,
+.theme-green .designed-feature-bubble {
+  background: rgba(143, 227, 51, .085);
+  box-shadow: inset 0 0 38px rgba(255, 255, 255, .38);
+}
+
+/* Existing cards receive restrained glass depth, not a redesign. */
+.theme-green #pricing article,
+.theme-green .platform-card,
+.theme-green .carousel-slide,
+.theme-green .faq-item,
+.theme-green .ai-chip {
+  transform-style: preserve-3d;
+  backdrop-filter: blur(10px);
+}
+.theme-green #pricing article,
+.theme-green .platform-card,
+.theme-green .carousel-slide {
+  box-shadow: 0 18px 44px rgba(69, 58, 43, .07), inset 0 1px 0 rgba(255, 255, 255, .72);
+}
+.theme-green #pricing article:hover,
+.theme-green .platform-card:hover,
+.theme-green .carousel-slide:hover {
+  box-shadow: 0 0 36px rgba(143, 227, 51, .13), 0 30px 64px rgba(69, 58, 43, .13);
+}
+.theme-green #pricing article.border-2 {
+  animation: green-popular-breathe 5.2s ease-in-out infinite;
+}
+.theme-green .organize-showcase__visual {
+  perspective: 1200px;
+  transform-style: preserve-3d;
+}
+.theme-green .organize-showcase__photo-wrap {
+  box-shadow: 0 34px 82px rgba(65, 54, 39, .16), 0 0 46px rgba(143, 227, 51, .08);
+}
+
+@keyframes green-orbit-left {
+  from { transform: translate3d(-16px, -8px, 0) rotate(-5deg); opacity: .45; }
+  to { transform: translate3d(44px, 32px, 0) rotate(8deg) scale(1.08); opacity: .9; }
+}
+@keyframes green-orbit-right {
+  from { transform: translate3d(16px, -16px, 0) scale(.92); opacity: .38; }
+  to { transform: translate3d(-46px, 36px, 0) scale(1.12); opacity: .75; }
+}
+@keyframes green-kicker-breathe {
+  0%, 100% { box-shadow: 0 9px 25px rgba(95, 161, 30, .08), inset 0 1px 0 rgba(255, 255, 255, .8); }
+  50% { box-shadow: 0 13px 38px rgba(95, 161, 30, .16), inset 0 1px 0 rgba(255, 255, 255, .92); }
+}
+@keyframes green-title-breathe {
+  0%, 100% { text-shadow: 0 5px 24px rgba(63, 54, 42, .08), 0 18px 45px rgba(63, 54, 42, .05); }
+  50% { text-shadow: 0 6px 28px rgba(63, 54, 42, .11), 0 20px 52px rgba(95, 161, 30, .08); }
+}
+@keyframes green-demo-float {
+  0%, 100% { transform: perspective(1250px) rotateX(var(--green-demo-rx)) rotateY(var(--green-demo-ry)) translate3d(0, 0, 0); }
+  50% { transform: perspective(1250px) rotateX(var(--green-demo-rx)) rotateY(var(--green-demo-ry)) translate3d(0, -10px, 17px); }
+}
+@keyframes green-popular-breathe {
+  0%, 100% { box-shadow: 0 20px 44px rgba(69, 58, 43, .08), 0 0 24px rgba(143, 227, 51, .10); }
+  50% { box-shadow: 0 28px 58px rgba(69, 58, 43, .13), 0 0 42px rgba(143, 227, 51, .20); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-green #top::before,
+  .theme-green #top::after,
+  .theme-green .hero-kicker,
+  .theme-green #top .hero-title,
+  .theme-green .hero-demo-frame,
+  .theme-green #pricing article.border-2 {
+    animation: none !important;
+  }
+  .green-cursor-aura { display: none; }
+}
