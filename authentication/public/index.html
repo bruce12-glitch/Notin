@@ -77,6 +77,7 @@
     box-shadow:0 1px 0 rgba(255,255,255,.3) inset, 0 8px 0 var(--green-d), 0 18px 32px rgba(0,168,45,.4);
   }
   button.primary:active{ transform:translateY(2px); box-shadow:0 2px 0 var(--green-d), 0 6px 14px rgba(0,168,45,.3); }
+  button.primary:disabled{ cursor:wait; opacity:.72; transform:none; box-shadow:0 3px 0 #000, 0 8px 16px rgba(0,0,0,.18); }
   .toggle{ text-align:center; margin-top:18px; font-size:14px; color:var(--muted); }
   .toggle a{ color:var(--green); font-weight:700; cursor:pointer; text-decoration:none; }
   .msg{ margin-top:14px; font-size:13.5px; padding:11px 13px; border-radius:10px; display:none; line-height:1.4; }
@@ -124,7 +125,7 @@
   <div class="card" id="authCard">
     <div class="brand depth-3"><span class="logo">N</span> Not<em>in</em></div>
     <h1 class="depth-2" id="formTitle">Log in to your account</h1>
-    <form id="authForm">
+    <form id="authForm" novalidate>
       <div class="depth-1">
         <label for="email">Email</label>
         <input id="email" type="email" placeholder="you@example.com" required autocomplete="email" />
@@ -138,7 +139,7 @@
     <div class="toggle depth-1" id="toggleLine">
       New here? <a id="toggleLink">Create an account</a>
     </div>
-    <div class="msg" id="authMsg"></div>
+    <div class="msg" id="authMsg" role="status" aria-live="polite"></div>
   </div>
 
   <!-- ===== OTP VERIFICATION VIEW ===== -->
@@ -180,6 +181,6 @@
     <div class="msg" id="appMsg"></div>
   </div>
 </div>
-<script src="app.js"></script>
+<script src="app.js?v=2"></script>
 </body>
 </html>

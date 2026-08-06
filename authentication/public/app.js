@@ -43,35 +43,79 @@ $("toggleLink").addEventListener("click", () => setMode("register"));
 // ---------- submit ----------
 $("authForm").addEventListener("submit", async (e) => {
   e.preventDefault();
-  clearMsg($("authMsg"));
 
-  const email = $("email").value.trim();
-  const password = $("password").value;
-  const res = await apiFetch("/auth/" + mode, { method: "POST", body: JSON.stringify({ email, password }) });
-  const data = await res.json().catch(() => ({}));
+  const message = $("authMsg");
+  const button = $("submitBtn");
+  const emailInput = $("email");
+  const passwordInput = $("password");
+  const email = emailInput.value.trim();
+  const password = passwordInput.value;
+  const submittedMode = mode;
 
-  if (!res.ok) {
-    if (res.status === 409) {
-      showMsg($("authMsg"), "That email already has an account — switched you to log in.", "ok");
-      setMode("login");
-      $("email").value = email;
-      $("password").focus();
-      return;
-    }
-    if (res.status === 401 && mode === "login") {
-      showMsg($("authMsg"), "Wrong email or password. New here? Create an account.", "err");
-      return;
-    }
-    showMsg($("authMsg"), data.error || "Something went wrong", "err");
+  clearMsg(message);
+
+  // Use visible inline errors instead of relying on easy-to-miss browser
+  // validation bubbles (the form intentionally has `novalidate`).
+  if (!email || !emailInput.checkValidity()) {
+    showMsg(message, "Enter a valid email address.", "err");
+    emailInput.focus();
     return;
   }
-
-  if (mode === "register" && data.step === "verify-otp") {
-    startOtpStep(data);
+  if (password.length < 8) {
+    showMsg(message, "Password must be at least 8 characters.", "err");
+    passwordInput.focus();
     return;
   }
+  if (button.disabled) return;
 
-  enterApp();
+  button.disabled = true;
+  button.textContent = submittedMode === "register" ? "Sending verification code…" : "Logging in…";
+  showMsg(
+    message,
+    submittedMode === "register" ? "Creating your secure signup…" : "Checking your account…",
+    "ok"
+  );
+
+  try {
+    const res = await apiFetch("/auth/" + submittedMode, {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      if (res.status === 409 && submittedMode === "register") {
+        setMode("login");
+        emailInput.value = email;
+        showMsg(message, "That email already has an account — please log in.", "ok");
+        passwordInput.focus();
+        return;
+      }
+      if (res.status === 401 && submittedMode === "login") {
+        showMsg(message, "Wrong email or password. New here? Create an account.", "err");
+        return;
+      }
+      showMsg(message, data.error || `Authentication failed (${res.status}). Please try again.`, "err");
+      return;
+    }
+
+    if (submittedMode === "register") {
+      if (data.step !== "verify-otp") {
+        showMsg(message, "The server did not start email verification. Please try again.", "err");
+        return;
+      }
+      startOtpStep(data);
+      return;
+    }
+
+    await enterApp();
+  } catch (error) {
+    console.error("Authentication request failed", error);
+    showMsg(message, "Could not reach the authentication server. Check your connection and try again.", "err");
+  } finally {
+    button.disabled = false;
+    button.textContent = mode === "login" ? "Log in" : "Sign up";
+  }
 });
 
 // ---------- logout ----------
