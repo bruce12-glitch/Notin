@@ -1385,9 +1385,12 @@ h1, h2, h3, h4, h5,
   height: 126px;
   border-radius: 999px;
   background: #f6f2ed;
-  transform: translate3d(0, 0, 0);
+  opacity: 0;
+  filter: blur(8px);
+  transform: translate3d(0, 0, 0) scale(.78);
   transform-origin: center;
-  will-change: transform;
+  transition: opacity .34s ease, filter .42s ease;
+  will-change: transform, opacity;
 }
 .notebook-bubble--top {
   top: -64px;
@@ -1418,6 +1421,11 @@ h1, h2, h3, h4, h5,
   --tap-y: 28px;
   --tap-x-2: -20px;
   --tap-y-2: 56px;
+}
+.notebook-slide.has-bubbles .notebook-bubble,
+.notebook-slide.is-bubbling .notebook-bubble {
+  opacity: 1;
+  filter: blur(0);
 }
 .notebook-feature-card:hover .notebook-bubble {
   animation: notebook-bubble-drift 3.8s ease-in-out infinite alternate;
@@ -1600,14 +1608,19 @@ h1, h2, h3, h4, h5,
   transform: translateZ(78px) translateX(9px);
 }
 #featuresTrack a.notebook-feature-card .notebook-bubble {
+  animation: none;
+}
+#featuresTrack a.notebook-feature-card .notebook-slide.has-bubbles .notebook-bubble {
   animation: notebook-bubble-idle 6.5s ease-in-out infinite alternate;
 }
-#featuresTrack a.notebook-feature-card .notebook-bubble--bottom { animation-delay: -2.2s; }
-#featuresTrack a.notebook-feature-card .notebook-bubble--edge { animation-delay: -4.1s; }
-#featuresTrack a.notebook-feature-card:hover .notebook-bubble {
+#featuresTrack a.notebook-feature-card .notebook-slide.has-bubbles .notebook-bubble--bottom { animation-delay: -2.2s; }
+#featuresTrack a.notebook-feature-card .notebook-slide.has-bubbles .notebook-bubble--edge { animation-delay: -4.1s; }
+#featuresTrack a.notebook-feature-card:hover .notebook-slide.has-bubbles .notebook-bubble {
   animation: notebook-bubble-drift 3.2s ease-in-out infinite alternate;
 }
 #featuresTrack a.notebook-feature-card .notebook-slide.is-bubbling .notebook-bubble {
+  opacity: 1;
+  filter: blur(0);
   animation: notebook-bubble-tap 1.45s cubic-bezier(.22, 1, .36, 1) both;
 }
 #featuresTrack a.notebook-feature-card .notebook-slide.is-bubbling .notebook-bubble--bottom { animation-delay: .06s; }

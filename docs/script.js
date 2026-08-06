@@ -325,8 +325,33 @@ if (track && prevBtn && nextBtn) {
     }
 
     link.addEventListener('click', (event) => {
-      if (reduced || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
 
+      // First activation is an interaction, not navigation: reveal the hidden
+      // bubbles and let the user see the complete animation. A second
+      // activation follows the card's destination.
+      if (!slide.classList.contains('has-bubbles')) {
+        event.preventDefault();
+        stopAuto();
+        slide.classList.remove('is-pressed');
+        slide.classList.add('has-bubbles');
+        link.setAttribute('aria-label', 'Explore Notebooks and Spaces — bubbles revealed');
+
+        if (reduced) {
+          resetTilt();
+          return;
+        }
+
+        slide.classList.add('is-bubbling');
+        window.setTimeout(() => {
+          slide.classList.remove('is-bubbling');
+          resetTilt();
+          startAuto();
+        }, 1650);
+        return;
+      }
+
+      if (reduced) return;
       event.preventDefault();
       if (slide.classList.contains('is-bubbling')) return;
 
