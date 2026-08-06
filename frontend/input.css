@@ -97,6 +97,16 @@
   color: #2c2d2a;
 }
 
+
+/* Hero headline — geometric Figtree display face */
+.hero-title {
+  font-family: "Figtree", var(--font-display);
+  font-optical-sizing: auto;
+  font-style: normal;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+}
+
 /* Task checkbox rows in the hero mockup */
 .task-check {
   width: 18px; height: 18px;
