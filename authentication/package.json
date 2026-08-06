@@ -1,0 +1,24 @@
+{
+  "name": "authentication",
+  "version": "1.0.0",
+  "description": "JWT authentication, email OTP verification, and user-scoped notes API for Notin.",
+  "main": "server.js",
+  "scripts": {
+    "test": "node test-auth.js",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.6.2",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^9.0.4",
+    "zod": "^4.4.3"
+  }
+}
