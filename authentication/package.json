@@ -1,13 +1,27 @@
 {
-  "name": "authentication",
-  "version": "1.0.0",
-  "description": "JWT authentication, email OTP verification, and user-scoped notes API for Notin.",
+  "name": "notin-authentication",
+  "version": "1.1.0",
+  "description": "Hardened JWT authentication, email OTP verification, and user-scoped notes API for Notin.",
   "main": "server.js",
-  "scripts": {
-    "test": "node test-auth.js",
-    "start": "node server.js"
+  "private": true,
+  "engines": {
+    "node": ">=22.5.0"
   },
-  "keywords": [],
+  "scripts": {
+    "setup": "node scripts/setup.js",
+    "prestart": "node scripts/preflight.js",
+    "start": "node server.js",
+    "db:check": "node scripts/preflight.js",
+    "test": "node test-auth.js",
+    "check": "node --check server.js && node --check public/app.js && npm test",
+    "security:audit": "npm audit --omit=dev"
+  },
+  "keywords": [
+    "authentication",
+    "jwt",
+    "sqlite",
+    "otp"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {

@@ -3,184 +3,89 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Notin — Sign in</title>
+<meta name="color-scheme" content="light" />
+<title>Notin — Secure account</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<style>
-  :root{
-    --green:#00a82d; --green-d:#0b7f27; --dark:#111214; --ink:#1c1d21;
-    --muted:#8b8b93; --line:#e7e4dd; --bg1:#efe9df; --bg2:#e4ece2;
-    --font-display:"Space Grotesk", sans-serif;
-    --font-body:"Plus Jakarta Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
-  }
-  *{box-sizing:border-box;}
-  html,body{height:100%;}
-  body{
-    margin:0; font-family:var(--font-body); color:var(--ink);
-    background:
-      radial-gradient(1200px 600px at 15% -10%, #ffffff 0%, transparent 55%),
-      linear-gradient(135deg, var(--bg1), var(--bg2));
-    min-height:100vh; display:grid; place-items:center; padding:24px;
-    perspective:1400px;
-  }
-  .scene{ transform-style:preserve-3d; }
-  .card{
-    position:relative; width:100%; max-width:400px;
-    background:#fff; border:1px solid var(--line); border-radius:22px;
-    padding:36px 34px;
-    transform-style:preserve-3d;
-    transform: rotateX(0deg) rotateY(0deg);
-    transition: transform .18s ease-out, box-shadow .3s ease;
-    box-shadow:
-      0 2px 4px rgba(20,20,16,.04),
-      0 12px 24px rgba(20,20,16,.08),
-      0 40px 80px rgba(20,20,16,.14);
-    animation: floaty 6s ease-in-out infinite;
-  }
-  @keyframes floaty{
-    0%,100%{ transform: translateY(0) rotateX(0) rotateY(0); }
-    50%{ transform: translateY(-8px); }
-  }
-  .card > *{ transform-style:preserve-3d; }
-  .depth-1{ transform: translateZ(28px); }
-  .depth-2{ transform: translateZ(46px); }
-  .depth-3{ transform: translateZ(64px); }
-  .brand{
-    display:flex; align-items:center; gap:10px; font-family:var(--font-display);
-    font-weight:700; font-size:22px; letter-spacing:-.02em; margin-bottom:6px;
-  }
-  .brand .logo{
-    width:34px;height:34px;border-radius:10px;display:grid;place-items:center;
-    background:linear-gradient(135deg,var(--green),#38c85f); color:#fff; font-weight:700;
-    box-shadow:0 6px 14px rgba(0,168,45,.4);
-  }
-  .brand em{ color:var(--green); font-style:normal; }
-  h1{ font-family:var(--font-display); font-size:21px; font-weight:600; margin:6px 0 22px; letter-spacing:-.01em; }
-  label{ display:block; font-size:12.5px; font-weight:600; color:var(--muted); margin:14px 0 6px; letter-spacing:.01em; }
-  input{
-    width:100%; padding:13px 15px; border:1.5px solid var(--line); border-radius:12px;
-    font-family:var(--font-body); font-size:15px; color:var(--ink); outline:none; background:#fbfaf8;
-    transition:border-color .18s, box-shadow .18s, background .18s;
-  }
-  input:focus{ border-color:var(--green); background:#fff; box-shadow:0 0 0 4px rgba(0,168,45,.12); }
-  button.primary{
-    width:100%; margin-top:22px; padding:14px; border:none; border-radius:12px;
-    font-family:var(--font-display); font-size:15.5px; font-weight:600; color:#fff; cursor:pointer;
-    background:linear-gradient(135deg,var(--dark),#26282c);
-    box-shadow:0 1px 0 rgba(255,255,255,.08) inset, 0 6px 0 #000, 0 12px 22px rgba(0,0,0,.28);
-    transform:translateZ(0); transition:transform .14s cubic-bezier(.2,.8,.3,1.2), box-shadow .14s, background .25s;
-  }
-  button.primary:hover{
-    background:linear-gradient(135deg,var(--green),var(--green-d)); color:#fff;
-    transform:translateY(-3px);
-    box-shadow:0 1px 0 rgba(255,255,255,.3) inset, 0 8px 0 var(--green-d), 0 18px 32px rgba(0,168,45,.4);
-  }
-  button.primary:active{ transform:translateY(2px); box-shadow:0 2px 0 var(--green-d), 0 6px 14px rgba(0,168,45,.3); }
-  button.primary:disabled{ cursor:wait; opacity:.72; transform:none; box-shadow:0 3px 0 #000, 0 8px 16px rgba(0,0,0,.18); }
-  .toggle{ text-align:center; margin-top:18px; font-size:14px; color:var(--muted); }
-  .toggle a{ color:var(--green); font-weight:700; cursor:pointer; text-decoration:none; }
-  .msg{ margin-top:14px; font-size:13.5px; padding:11px 13px; border-radius:10px; display:none; line-height:1.4; }
-  .msg.err{ display:block; background:#fdeaea; color:#c0392b; }
-  .msg.ok{ display:block; background:#e7f6d5; color:#3f7d0e; }
-  .hidden{ display:none; }
-  .profile{ font-size:14px; color:var(--muted); margin-bottom:18px; }
-  .profile b{ color:var(--ink); }
-  .note-form{ display:flex; flex-direction:column; gap:9px; margin-bottom:16px; }
-  .note-form input{ padding:11px 13px; }
-  .note{ border:1px solid var(--line); border-radius:12px; padding:11px 13px; margin-bottom:9px; background:#fbfaf8; }
-  .note h4{ margin:0 0 4px; font-size:14px; font-family:var(--font-display); }
-  .note p{ margin:0; font-size:13px; color:var(--muted); }
-  button.ghost{
-    width:100%; margin-top:6px; padding:12px; border:1.5px solid var(--line); border-radius:12px;
-    background:#fff; color:var(--ink); font-family:var(--font-body); font-weight:600; font-size:14.5px; cursor:pointer;
-    transition:border-color .18s, background .18s;
-  }
-  button.ghost:hover{ border-color:var(--dark); background:#f6f4f0; }
-  .otp-sub{ font-size:14px; color:var(--muted); margin:0 0 20px; line-height:1.5; }
-  .otp-sub b{ color:var(--ink); }
-  .otp-inputs{ display:flex; gap:10px; justify-content:space-between; margin:6px 0 4px; }
-  .otp-inputs input{
-    width:100%; aspect-ratio:1; text-align:center; font-family:var(--font-display);
-    font-size:24px; font-weight:700; padding:0; border:1.5px solid var(--line);
-    border-radius:12px; background:#fbfaf8; color:var(--ink);
-  }
-  .otp-inputs input:focus{ border-color:var(--green); background:#fff; box-shadow:0 0 0 4px rgba(0,168,45,.12); outline:none; }
-  .otp-meta{ display:flex; justify-content:space-between; align-items:center; margin-top:14px; font-size:13px; color:var(--muted); }
-  .otp-meta a{ color:var(--green); font-weight:700; cursor:pointer; text-decoration:none; }
-  .otp-meta a[aria-disabled="true"]{ color:var(--muted); cursor:default; }
-  .devbox{
-    margin-top:12px; font-size:12.5px; background:#fff7e6; border:1px dashed #e0b34d;
-    color:#8a6d1e; border-radius:10px; padding:9px 11px; display:none;
-  }
-  .devbox.show{ display:block; }
-  .back-link{ display:inline-block; margin-top:16px; font-size:13.5px; color:var(--muted); cursor:pointer; }
-  .back-link:hover{ color:var(--ink); }
-  @media (prefers-reduced-motion: reduce){ .card{ animation:none; } }
-</style>
+<link rel="stylesheet" href="styles.css?v=1" />
 </head>
 <body>
-<div class="scene">
-  <!-- ===== AUTH VIEW (login / signup) ===== -->
-  <div class="card" id="authCard">
-    <div class="brand depth-3"><span class="logo">N</span> Not<em>in</em></div>
+<div class="ambient" aria-hidden="true"><span class="orb orb--one"></span><span class="orb orb--two"></span></div>
+<main class="scene">
+  <section class="card" id="authCard" aria-labelledby="formTitle">
+    <div class="brand depth-3"><span class="logo">N</span>Not<em>in</em></div>
+    <div class="security-pill depth-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>Secure account access</div>
     <h1 class="depth-2" id="formTitle">Log in to your account</h1>
     <form id="authForm" novalidate>
-      <div class="depth-1">
-        <label for="email">Email</label>
-        <input id="email" type="email" placeholder="you@example.com" required autocomplete="email" />
-      </div>
-      <div class="depth-1">
+      <div class="depth-1 hidden" id="displayNameWrap"><label for="displayName">Display name</label><input id="displayName" maxlength="60" autocomplete="name" placeholder="How should we call you?" /></div>
+      <div class="depth-1"><label for="email">Email</label><input id="email" type="email" maxlength="254" placeholder="you@example.com" required autocomplete="email" /></div>
+      <div class="field depth-1">
         <label for="password">Password</label>
-        <input id="password" type="password" placeholder="At least 8 characters" required minlength="8" autocomplete="current-password" />
+        <input class="password-input" id="password" type="password" maxlength="128" placeholder="Your password" required autocomplete="current-password" />
+        <button class="password-toggle" type="button" data-password-target="password" aria-label="Show password">Show</button>
       </div>
+      <div class="password-meter depth-1" id="passwordMeter" data-score="0"><div class="meter-bars"><span></span><span></span><span></span><span></span></div><div class="meter-copy" id="passwordMeterCopy">Use 10+ characters with upper, lower, and a number.</div></div>
+      <div class="form-row depth-1"><button type="button" class="text-button" id="forgotLink">Forgot password?</button></div>
       <button type="submit" class="primary depth-2" id="submitBtn">Log in</button>
     </form>
-    <div class="toggle depth-1" id="toggleLine">
-      New here? <a id="toggleLink">Create an account</a>
-    </div>
+    <div class="toggle depth-1" id="toggleLine">New here? <a id="toggleLink">Create an account</a></div>
     <div class="msg" id="authMsg" role="status" aria-live="polite"></div>
-  </div>
+    <div class="security-note depth-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>HttpOnly sessions · CSRF protection · encrypted passwords</div>
+  </section>
 
-  <!-- ===== OTP VERIFICATION VIEW ===== -->
-  <div class="card hidden" id="otpCard">
-    <div class="brand depth-3"><span class="logo">N</span> Not<em>in</em></div>
-    <h1 class="depth-2">Verify your email</h1>
-    <p class="otp-sub depth-1">We sent a 6-digit code to <b id="otpEmail"></b>. Enter it below to finish creating your account.</p>
+  <section class="card hidden" id="otpCard" aria-labelledby="otpTitle">
+    <div class="brand depth-3"><span class="logo">N</span>Not<em>in</em></div>
+    <h1 class="depth-2" id="otpTitle">Verify your email</h1>
+    <p class="otp-sub depth-1">Enter the six-digit code sent to <b id="otpEmail"></b>.</p>
     <form id="otpForm">
       <div class="otp-inputs depth-2" id="otpInputs">
-        <input type="text" inputmode="numeric" maxlength="1" aria-label="Digit 1" />
-        <input type="text" inputmode="numeric" maxlength="1" aria-label="Digit 2" />
-        <input type="text" inputmode="numeric" maxlength="1" aria-label="Digit 3" />
-        <input type="text" inputmode="numeric" maxlength="1" aria-label="Digit 4" />
-        <input type="text" inputmode="numeric" maxlength="1" aria-label="Digit 5" />
-        <input type="text" inputmode="numeric" maxlength="1" aria-label="Digit 6" />
+        <input type="text" inputmode="numeric" maxlength="1" aria-label="Digit 1" /><input type="text" inputmode="numeric" maxlength="1" aria-label="Digit 2" /><input type="text" inputmode="numeric" maxlength="1" aria-label="Digit 3" /><input type="text" inputmode="numeric" maxlength="1" aria-label="Digit 4" /><input type="text" inputmode="numeric" maxlength="1" aria-label="Digit 5" /><input type="text" inputmode="numeric" maxlength="1" aria-label="Digit 6" />
       </div>
-      <button type="submit" class="primary depth-2" id="otpSubmit" style="margin-top:18px;">Verify &amp; create account</button>
+      <button type="submit" class="primary depth-2" id="otpSubmit">Verify &amp; create account</button>
     </form>
-    <div class="otp-meta depth-1">
-      <span id="otpTimer"></span>
-      <a id="resendLink" aria-disabled="true">Resend code</a>
-    </div>
+    <div class="otp-meta depth-1"><span id="otpTimer"></span><a id="resendLink" aria-disabled="true">Resend code</a></div>
     <div class="devbox depth-1" id="otpDevBox"></div>
     <span class="back-link depth-1" id="otpBack">← Use a different email</span>
-    <div class="msg" id="otpMsg"></div>
-  </div>
+    <div class="msg" id="otpMsg" role="status" aria-live="polite"></div>
+  </section>
 
-  <!-- ===== APP VIEW (after login) ===== -->
-  <div class="card hidden" id="appCard">
-    <div class="brand depth-3"><span class="logo">N</span> Not<em>in</em></div>
-    <div class="profile depth-1">Signed in as <b id="userEmail"></b></div>
-    <form class="note-form depth-1" id="noteForm">
-      <input id="noteTitle" placeholder="Note title" />
-      <input id="noteBody" placeholder="Write something…" />
-      <button type="submit" class="primary depth-2">Add note</button>
+  <section class="card hidden" id="forgotCard" aria-labelledby="forgotTitle">
+    <div class="brand depth-3"><span class="logo">N</span>Not<em>in</em></div>
+    <h1 class="depth-2" id="forgotTitle">Reset your password</h1>
+    <p class="otp-sub depth-1">Enter your email. We’ll send a secure, single-use reset link if an account exists.</p>
+    <form id="forgotForm" novalidate>
+      <label for="forgotEmail">Email</label><input id="forgotEmail" type="email" maxlength="254" autocomplete="email" required />
+      <button class="primary depth-2" id="forgotSubmit" type="submit">Send reset link</button>
     </form>
-    <div id="notesList" class="depth-1"></div>
-    <button class="ghost depth-1" id="logoutBtn">Log out</button>
-    <div class="msg" id="appMsg"></div>
-  </div>
-</div>
-<script src="app.js?v=2"></script>
+    <span class="back-link depth-1" id="forgotBack">← Back to login</span>
+    <div class="msg" id="forgotMsg" role="status" aria-live="polite"></div>
+  </section>
+
+  <section class="card hidden" id="resetCard" aria-labelledby="resetTitle">
+    <div class="brand depth-3"><span class="logo">N</span>Not<em>in</em></div>
+    <h1 class="depth-2" id="resetTitle">Choose a new password</h1>
+    <p class="otp-sub depth-1">This reset link is single-use. All existing sessions will be signed out.</p>
+    <form id="resetForm" novalidate>
+      <div class="field"><label for="resetPassword">New password</label><input class="password-input" id="resetPassword" type="password" maxlength="128" autocomplete="new-password" required /><button class="password-toggle" type="button" data-password-target="resetPassword" aria-label="Show password">Show</button></div>
+      <div class="field"><label for="resetConfirm">Confirm password</label><input class="password-input" id="resetConfirm" type="password" maxlength="128" autocomplete="new-password" required /><button class="password-toggle" type="button" data-password-target="resetConfirm" aria-label="Show password">Show</button></div>
+      <div class="password-meter show" id="resetMeter" data-score="0"><div class="meter-bars"><span></span><span></span><span></span><span></span></div><div class="meter-copy" id="resetMeterCopy">Use 10+ characters with upper, lower, and a number.</div></div>
+      <button class="primary depth-2" id="resetSubmit" type="submit">Reset password</button>
+    </form>
+    <span class="back-link depth-1" id="resetBack">← Back to login</span>
+    <div class="msg" id="resetMsg" role="status" aria-live="polite"></div>
+  </section>
+
+  <section class="card card--wide hidden" id="appCard" aria-label="Notin notes">
+    <div class="brand depth-3"><span class="logo">N</span>Not<em>in</em></div>
+    <div class="profile depth-1">Signed in securely as <b id="userEmail"></b></div>
+    <form class="note-form depth-1" id="noteForm"><input id="noteTitle" maxlength="200" placeholder="Note title" /><textarea id="noteBody" maxlength="100000" placeholder="Write something…"></textarea><button type="submit" class="primary depth-2">Add note</button></form>
+    <div id="notesList" class="notes-list depth-1"></div>
+    <div class="app-actions depth-1"><button class="ghost" id="sessionsBtn" type="button">Security &amp; sessions</button><button class="ghost" id="logoutBtn" type="button">Log out</button></div>
+    <div class="sessions hidden depth-1" id="sessionsPanel"><h2>Active sessions</h2><div id="sessionsList"></div><button class="ghost danger" id="logoutAllBtn" type="button">Log out everywhere</button></div>
+    <div class="msg" id="appMsg" role="status" aria-live="polite"></div>
+  </section>
+</main>
+<script src="app.js?v=4"></script>
 </body>
 </html>

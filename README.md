@@ -33,9 +33,9 @@
 
 ## ✨ Overview
 
-**Notin** is a premium landing experience for a note-taking app, meticulously crafted to match the design language of leading productivity tools. It ships in **two complete themes** — a warm **Green Edition** (cream + green) and a bold **Neon Edition** (black + neon lime) — sharing the same Evernote-style architecture, 3D interactions, and motion system.
+**Notin** is a premium note-taking experience with a polished landing site and a working, security-focused account service. It ships in **two complete themes** — a warm **Green Edition** and a bold **Neon Edition** — plus verified signup, hardened login, rotating sessions, password recovery, device-session management, and protected notes.
 
-> 🎯 Goal: feel like a production-grade SaaS landing page — pixel-matched to the "green note" reference, with every interaction polished.
+> 🎯 Goal: combine a production-quality SaaS presentation with a practical, tested authentication and data layer.
 
 ---
 
@@ -51,6 +51,12 @@ cd frontend
 npm install
 npx @tailwindcss/cli -i input.css       -o styles.css      --minify   # Green
 npx @tailwindcss/cli -i input-neon.css  -o styles-neon.css --minify   # Neon
+
+# 3) Initialize and run authentication + SQLite
+cd ../authentication
+npm install
+npm run setup
+npm start
 ```
 
 > The root `notin/index.html` redirects to the frontend — deploy the whole folder to any static host (Netlify / Vercel / GitHub Pages).
@@ -75,8 +81,15 @@ notin/
 │   ├── evernote-analysis.md    ← deep design analysis of the reference
 │   ├── evernote-match-score.md ← Notin ↔ Evernote match breakdown
 │   └── assets/                 ← video, 3D logo, Lottie, images, icons
-├── backend/                    ← (future) API / storage / sync
-├── authentication/             ← (future) auth flows
+├── backend/                    ← future sync/service expansion
+├── authentication/             ← hardened Express + SQLite account service
+│   ├── server.js               ← auth, sessions, recovery, protected notes
+│   ├── db.js                   ← connection, schema migrations, health checks
+│   ├── security.js             ← CSRF, origins, and secure cookie policy
+│   ├── models/                 ← user, OTP, refresh/reset persistence
+│   ├── public/                 ← secure account UI + minimal 3D motion
+│   ├── scripts/                ← setup and startup preflight
+│   └── test-auth.js            ← isolated security/integration suite
 └── screenshots/                ← design verification captures
 ```
 
@@ -123,6 +136,11 @@ notin/
 - **Theme switcher** — one click between Green ⇄ Neon from the navbar
 - **Motion engine** — scroll progress, back-to-top, counters, magnetic buttons, parallax, staggered reveals
 - **Accessible** — `prefers-reduced-motion` respected, focus rings, aria labels, semantic HTML
+- **Verified accounts** — two-step email OTP signup with resend cooldown and attempt limits
+- **Hardened login** — bcrypt, account lockout, constant-work unknown-user checks, and strict password policy
+- **Secure sessions** — constrained JWTs, HttpOnly cookies, CSRF defense, refresh rotation, replay detection, and device revocation
+- **Recovery and data** — single-use password reset links and validated user-scoped notes CRUD
+- **Operational startup** — generated local secrets, SQLite migrations, preflight, readiness, and graceful shutdown
 - **Honest content** — no fake stats, prices, or versions
 
 ---
@@ -136,6 +154,10 @@ notin/
 | Video | Native HTML5 `<video>` + JS play-enforcer |
 | JS | Vanilla ES6 (modular IIFEs, documented) |
 | 3D/Motion | CSS `perspective` + `transform3d` + `requestAnimationFrame` |
+| Authentication API | Node.js 22 · Express 5 · Zod · Helmet |
+| Database | Built-in `node:sqlite` · migrations · WAL · foreign keys |
+| Account security | bcrypt · JWT · signed CSRF · rotating token families |
+| Email | Nodemailer SMTP with explicit development fallback |
 
 ---
 
@@ -143,7 +165,10 @@ notin/
 
 - HTML validated (no unclosed tags, single `h1` per page, no broken anchors)
 - JS syntax-checked; all modules guard missing elements
-- CSS organized with a table of contents; dead code removed (74KB → 28KB)
+- CSS organized with a table of contents and source/compiled mirrors kept synchronized
+- Authentication setup and database preflight run before startup
+- 47 isolated security/integration checks cover CSRF, OTP, lockout, session replay, recovery, and scoped notes
+- Dependency audit currently reports zero known vulnerabilities
 - No fake numbers anywhere — every value is real or part of the design replica
 
 ---

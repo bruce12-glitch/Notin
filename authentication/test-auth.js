@@ -2,173 +2,225 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-// Keep the suite self-contained: no local .env or persistent database required.
 const TEST_DB = path.join(os.tmpdir(), `notin-auth-test-${process.pid}-${Date.now()}.db`);
-process.env.ACCESS_TOKEN_SECRET ||= "test-only-access-secret-not-for-production-0123456789";
-process.env.REFRESH_TOKEN_SECRET ||= "test-only-refresh-secret-not-for-production-9876543210";
-process.env.DB_PATH = TEST_DB;
+Object.assign(process.env, {
+  NODE_ENV: "test",
+  ACCESS_TOKEN_SECRET: "test-access-secret-0123456789-ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  REFRESH_TOKEN_SECRET: "test-refresh-secret-9876543210-ZYXWVUTSRQPONMLKJIHGFEDCBA",
+  CSRF_SECRET: "test-csrf-secret-0123456789-ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  OTP_PEPPER: "test-otp-pepper-0123456789-ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+  DB_PATH: TEST_DB,
+  BCRYPT_ROUNDS: "4",
+  OTP_RESEND_SECONDS: "0",
+  LOGIN_MAX_ATTEMPTS: "5",
+  LOGIN_LOCK_MINUTES: "15",
+});
 
-const app = require("./server.js");
+const app = require("./server");
 const db = require("./db");
 
+let server;
+const cookies = new Map();
+const results = [];
 const base = () => `http://127.0.0.1:${server.address().port}`;
+const unsafe = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-let server, cookies = "";
-
-function setCookies(res) {
-  const sc = res.headers.getSetCookie?.() || [];
-  if (sc.length) cookies = sc.map((c) => c.split(";")[0]).join("; ");
+function check(name, condition, extra = "") {
+  results.push([condition ? "PASS" : "FAIL", name, extra]);
 }
 
-async function req(method, path, body, useCookies = true) {
-  const res = await fetch(base() + path, {
+function applyCookies(res) {
+  const values = res.headers.getSetCookie?.() || [];
+  for (const value of values) {
+    const [pair] = value.split(";");
+    const split = pair.indexOf("=");
+    const name = pair.slice(0, split);
+    const content = pair.slice(split + 1);
+    if (!content || /max-age=0/i.test(value)) cookies.delete(name);
+    else cookies.set(name, content);
+  }
+  return values;
+}
+
+function cookieHeader(source = cookies) {
+  return [...source.entries()].map(([name, value]) => `${name}=${value}`).join("; ");
+}
+
+async function req(method, route, body, options = {}) {
+  const headers = { ...(options.headers || {}) };
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (options.useCookies !== false && cookies.size) headers.Cookie = cookieHeader();
+  if (unsafe.has(method) && options.csrf !== false && cookies.get("notin_csrf")) {
+    headers["X-CSRF-Token"] = cookies.get("notin_csrf");
+  }
+  const res = await fetch(base() + route, {
     method,
-    headers: { "Content-Type": "application/json", ...(useCookies && cookies ? { Cookie: cookies } : {}) },
-    body: body ? JSON.stringify(body) : undefined,
+    headers,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
   });
-  setCookies(res);
+  const setCookies = options.applyCookies === false ? (res.headers.getSetCookie?.() || []) : applyCookies(res);
   let data = null;
   try { data = await res.json(); } catch {}
-  return { status: res.status, data };
+  return { status: res.status, data, headers: res.headers, setCookies };
 }
 
-const results = [];
-
-function check(name, cond, extra = "") {
-  results.push([cond ? "PASS" : "FAIL", name, extra]);
+async function freshCsrf() {
+  const response = await req("GET", "/auth/csrf");
+  return response.data?.csrfToken;
 }
 
 (async () => {
-  server = app.listen(0);
+  server = app.listen(0, "127.0.0.1");
   await new Promise((resolve) => server.once("listening", resolve));
 
-  // register step 1 -> OTP required (user NOT created yet)
-  let r = await req("POST", "/auth/register", {
-    email: "test@notin.app",
-    password: "password123",
-    displayName: "Tester",
-  });
-  check("register returns verify-otp step", r.data?.step === "verify-otp");
-  check("dev OTP code returned", /^\d{6}$/.test(r.data?.devCode || ""));
+  let r = await req("GET", "/health");
+  check("health includes database readiness", r.status === 200 && r.data?.database === "ok");
+  check("security headers include CSP", !!r.headers.get("content-security-policy"));
+  check("server identity header removed", !r.headers.get("x-powered-by"));
+
+  const csrf = await freshCsrf();
+  check("CSRF endpoint issues signed token", /^[-\w]+\.[-\w]+$/.test(csrf || "") && cookies.get("notin_csrf") === csrf);
+
+  r = await req("POST", "/auth/register", { email: "blocked@notin.app", password: "SecurePass123!" }, { csrf: false });
+  check("state-changing request without CSRF is blocked", r.status === 403 && r.data?.code === "CSRF_INVALID");
+
+  const primaryEmail = "secure-test@notin.app";
+  const firstPassword = "SecurePass123!";
+  r = await req("POST", "/auth/register", { email: primaryEmail, password: firstPassword, displayName: "Secure Tester" });
+  check("registration starts OTP verification", r.status === 200 && r.data?.step === "verify-otp");
+  check("development OTP returned", /^\d{6}$/.test(r.data?.devCode || ""));
   const signupCode = r.data.devCode;
 
-  // login blocked before verifying
-  r = await req("POST", "/auth/login", {
-    email: "test@notin.app",
-    password: "password123",
-  }, false);
-  check("login blocked before OTP verify (401)", r.status === 401);
+  r = await req("POST", "/auth/login", { email: primaryEmail, password: firstPassword });
+  check("pending account cannot log in", r.status === 401 && r.data?.error === "Invalid email or password");
 
-  // register step 2 -> verify OTP -> account created + logged in
-  r = await req("POST", "/auth/verify-otp", {
-    email: "test@notin.app",
-    code: signupCode,
-  });
-  check("verify-otp creates account (201)", r.status === 201);
-  check("returns user w/ display_name", r.data?.user?.display_name === "Tester");
-  check("user is verified", r.data?.user?.is_verified === 1);
-  check("no password in response", !("password_hash" in (r.data?.user || {})));
+  r = await req("POST", "/auth/verify-otp", { email: primaryEmail, code: "000000" });
+  check("wrong OTP reports remaining attempts", r.status === 400 && r.data?.remaining === 4);
 
-  // duplicate (real account now exists)
-  r = await req("POST", "/auth/register", {
-    email: "test@notin.app",
-    password: "password123",
-  }, false);
-  check("duplicate email 409", r.status === 409);
+  r = await req("POST", "/auth/verify-otp", { email: primaryEmail, code: signupCode });
+  check("OTP creates verified account", r.status === 201 && r.data?.user?.is_verified === 1);
+  check("public user excludes password hash", !("password_hash" in (r.data?.user || {})));
+  check("auth cookies are HttpOnly", r.setCookies.filter((item) => /accessToken|refreshToken/.test(item)).every((item) => /HttpOnly/i.test(item)));
+  check("CSRF cookie remains browser-readable", r.setCookies.some((item) => /^notin_csrf=/.test(item) && !/HttpOnly/i.test(item)));
 
-  // validation
-  r = await req("POST", "/auth/register", { email: "bad", password: "short" }, false);
-  check("bad input 400", r.status === 400);
+  r = await req("POST", "/auth/register", { email: primaryEmail, password: firstPassword });
+  check("duplicate email rejected", r.status === 409);
+  r = await req("POST", "/auth/register", { email: "weak@notin.app", password: "password123" });
+  check("weak/common password rejected", r.status === 400 && r.data?.field === "password");
 
-  // me
   r = await req("GET", "/auth/me");
-  check("me returns user", r.data?.user?.email === "test@notin.app");
+  check("authenticated profile returned", r.data?.user?.email === primaryEmail);
+  r = await req("PATCH", "/auth/me", { displayName: "Renamed Securely" });
+  check("profile update validated", r.data?.user?.display_name === "Renamed Securely");
 
-  // update profile
-  r = await req("PATCH", "/auth/me", { displayName: "Renamed" });
-  check("update profile", r.data?.user?.display_name === "Renamed");
-
-  // notes CRUD
-  r = await req("POST", "/notes", { title: "N1", body: "b" });
+  r = await req("POST", "/notes", { title: "Security", body: "Scoped note" });
   const noteId = r.data?.id;
-  check("create note", r.status === 201 && noteId);
-
+  check("validated note created", r.status === 201 && Number.isInteger(noteId));
   r = await req("GET", "/notes");
-  check("list notes = 1", Array.isArray(r.data) && r.data.length === 1);
+  check("notes list is user scoped", Array.isArray(r.data) && r.data.length === 1);
+  r = await req("PUT", `/notes/${noteId}`, { title: "Security updated" });
+  check("note update succeeds", r.data?.title === "Security updated");
+  r = await req("GET", "/notes/not-a-number");
+  check("invalid note id rejected", r.status === 400);
+  r = await req("POST", "/notes", { title: "x".repeat(201), body: "" });
+  check("oversized note title rejected", r.status === 400);
 
-  r = await req("PUT", "/notes/" + noteId, { title: "N1-edit" });
-  check("update note", r.data?.title === "N1-edit");
+  const savedCookies = new Map(cookies);
+  cookies.clear();
+  r = await req("GET", "/notes", undefined, { useCookies: false });
+  check("notes require authentication", r.status === 401);
+  for (const [key, value] of savedCookies) cookies.set(key, value);
 
-  r = await req("DELETE", "/notes/" + noteId);
-  check("delete note", r.data?.ok === true);
+  r = await req("GET", "/auth/sessions");
+  const activeSession = r.data?.sessions?.find((session) => session.active === 1);
+  check("session inventory lists active device", r.status === 200 && !!activeSession);
 
-  // notes without auth
-  const saved = cookies;
-  cookies = "";
-  r = await req("GET", "/notes", null, false);
-  check("notes no-auth 401", r.status === 401);
-  cookies = saved;
+  r = await req("POST", "/auth/change-password", { currentPassword: "WrongPassword123!", newPassword: "AnotherSecure456!" });
+  check("password change requires current password", r.status === 401);
+  const oldAccessToken = cookies.get("accessToken");
+  r = await req("POST", "/auth/change-password", { currentPassword: firstPassword, newPassword: "AnotherSecure456!" });
+  check("password change revokes sessions", r.status === 200 && r.data?.ok === true && !cookies.has("refreshToken"));
 
-  // change password
-  r = await req("POST", "/auth/change-password", {
-    currentPassword: "password123",
-    newPassword: "newpassword123",
-  });
-  check("change password", r.data?.ok === true);
+  const staleAccess = await fetch(base() + "/auth/me", { headers: { Authorization: `Bearer ${oldAccessToken}` } });
+  check("old access token rejected after password change", staleAccess.status === 401);
 
-  cookies = ""; // cookies were cleared
-  r = await req("POST", "/auth/login", {
-    email: "test@notin.app",
-    password: "newpassword123",
-  });
-  check("login with NEW password", r.status === 200);
+  await freshCsrf();
+  r = await req("POST", "/auth/login", { email: primaryEmail, password: "AnotherSecure456!" });
+  check("new password logs in", r.status === 200);
 
-  // refresh rotation
-  const before = cookies;
+  const oldRefresh = cookies.get("refreshToken");
   r = await req("POST", "/auth/refresh");
-  check("refresh ok", r.data?.ok === true);
-  check("cookies rotated", cookies !== before);
+  const rotatedRefresh = cookies.get("refreshToken");
+  check("refresh rotation succeeds", r.status === 200 && rotatedRefresh && rotatedRefresh !== oldRefresh);
 
-  // logout revokes
-  r = await req("POST", "/auth/logout");
-  check("logout ok", r.data?.ok === true);
-
-  // forgot + reset password
-  r = await req("POST", "/auth/forgot-password", { email: "test@notin.app" }, false);
-  const resetToken = r.data?.devResetToken;
-  check("forgot returns token", !!resetToken);
-
-  r = await req("POST", "/auth/reset-password", {
-    token: resetToken,
-    newPassword: "resetpass123",
-  }, false);
-  check("reset password", r.data?.ok === true);
-
-  r = await req("POST", "/auth/login", {
-    email: "test@notin.app",
-    password: "resetpass123",
-  }, false);
-  check("login after reset", r.status === 200);
-
-  setCookies({ headers: { getSetCookie: () => [] } });
-
-  // delete account (need fresh login cookies)
-  const dl = await fetch(base() + "/auth/login", {
+  const replayCookies = new Map([
+    ["refreshToken", oldRefresh],
+    ["notin_csrf", cookies.get("notin_csrf")],
+  ]);
+  const replay = await fetch(base() + "/auth/refresh", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: "test@notin.app", password: "resetpass123" }),
+    headers: {
+      Cookie: cookieHeader(replayCookies),
+      "X-CSRF-Token": cookies.get("notin_csrf"),
+      "Content-Type": "application/json",
+    },
   });
-  cookies = (dl.headers.getSetCookie?.() || []).map((c) => c.split(";")[0]).join("; ");
+  const replayData = await replay.json();
+  check("refresh-token replay is detected", replay.status === 401 && replayData.code === "TOKEN_REUSE");
+  r = await req("POST", "/auth/refresh");
+  check("replay revokes entire token family", r.status === 401);
 
-  r = await req("DELETE", "/auth/me");
-  check("delete account", r.data?.ok === true);
+  cookies.clear();
+  await freshCsrf();
+  r = await req("POST", "/auth/login", { email: primaryEmail, password: "AnotherSecure456!" });
+  check("login recovers after replay defense", r.status === 200);
+  r = await req("POST", "/auth/logout");
+  check("logout clears browser session", r.status === 200 && !cookies.has("accessToken"));
 
-  cookies = "";
-  r = await req("POST", "/auth/login", {
-    email: "test@notin.app",
-    password: "resetpass123",
-  }, false);
-  check("login after delete fails", r.status === 401);
+  await freshCsrf();
+  r = await req("POST", "/auth/forgot-password", { email: "missing@notin.app" });
+  const unknownMessage = r.data?.message;
+  check("unknown recovery request is generic", r.status === 200 && !r.data?.devResetToken);
+  r = await req("POST", "/auth/forgot-password", { email: primaryEmail });
+  const resetToken = r.data?.devResetToken;
+  check("known recovery response remains generic", r.data?.message === unknownMessage);
+  check("development reset token available only in dev", !!resetToken);
+  r = await req("POST", "/auth/reset-password", { token: resetToken, newPassword: "weakpassword" });
+  check("weak reset password rejected", r.status === 400);
+  r = await req("POST", "/auth/reset-password", { token: resetToken, newPassword: "ResetSecure789!" });
+  check("password reset succeeds", r.status === 200 && r.data?.ok === true);
+  await freshCsrf();
+  r = await req("POST", "/auth/reset-password", { token: resetToken, newPassword: "ReuseSecure789!" });
+  check("reset token cannot be reused", r.status === 400);
+
+  r = await req("POST", "/auth/login", { email: primaryEmail, password: "ResetSecure789!" });
+  check("reset password logs in", r.status === 200);
+  r = await req("DELETE", "/auth/me", {});
+  check("account deletion requires password body", r.status === 400);
+  r = await req("DELETE", "/auth/me", { currentPassword: "WrongSecure789!" });
+  check("account deletion rejects wrong password", r.status === 401);
+  r = await req("DELETE", "/auth/me", { currentPassword: "ResetSecure789!" });
+  check("account deletion succeeds with reauthentication", r.status === 200 && r.data?.ok === true);
+  await freshCsrf();
+  r = await req("POST", "/auth/login", { email: primaryEmail, password: "ResetSecure789!" });
+  check("deleted account cannot log in", r.status === 401);
+
+  // Dedicated account-lockout coverage.
+  const lockEmail = "lock-test@notin.app";
+  r = await req("POST", "/auth/register", { email: lockEmail, password: "LockSecure123!" });
+  const lockCode = r.data?.devCode;
+  r = await req("POST", "/auth/verify-otp", { email: lockEmail, code: lockCode });
+  check("lockout fixture account created", r.status === 201);
+  await req("POST", "/auth/logout");
+  await freshCsrf();
+  for (let index = 0; index < 5; index++) {
+    await req("POST", "/auth/login", { email: lockEmail, password: "WrongSecure123!" });
+  }
+  r = await req("POST", "/auth/login", { email: lockEmail, password: "LockSecure123!" });
+  check("account locks after repeated failures", r.status === 429 && r.data?.code === "ACCOUNT_LOCKED");
+
+  const hostile = await fetch(base() + "/auth/csrf", { headers: { Origin: "https://evil.example" } });
+  check("untrusted browser origin rejected", hostile.status === 403);
 
   await new Promise((resolve) => server.close(resolve));
   db.close();
@@ -177,11 +229,17 @@ function check(name, cond, extra = "") {
   }
 
   console.log("\n==================== RESULTS ====================");
-  let pass = 0, fail = 0;
+  let passed = 0;
+  let failed = 0;
   for (const [status, name, extra] of results) {
     console.log(`${status === "PASS" ? "✅" : "❌"} ${status}  ${name} ${extra}`);
-    status === "PASS" ? pass++ : fail++;
+    status === "PASS" ? passed++ : failed++;
   }
-  console.log(`\n${pass} passed, ${fail} failed`);
-  process.exit(fail ? 1 : 0);
-})();
+  console.log(`\n${passed} passed, ${failed} failed`);
+  process.exit(failed ? 1 : 0);
+})().catch(async (error) => {
+  console.error(error);
+  try { if (server) await new Promise((resolve) => server.close(resolve)); } catch {}
+  try { db.close(); } catch {}
+  process.exit(1);
+});

@@ -1,66 +1,101 @@
 // ============================================================
-// tokens.js — JWT signing/verifying + token issuance helpers
+// tokens.js — constrained JWTs and rotating refresh-token families
 // ============================================================
-require("dotenv").config({ quiet: true });
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
+const db = require("./db");
+const config = require("./config");
 const tokenModel = require("./models/token.model");
 
-const ACCESS_SECRET = process.env.ACCESS_TOKEN_SECRET;
-const REFRESH_SECRET = process.env.REFRESH_TOKEN_SECRET;
-const ACCESS_TTL = process.env.ACCESS_TOKEN_TTL || "15m";
-const REFRESH_TTL = process.env.REFRESH_TOKEN_TTL || "7d";
-
-if (!ACCESS_SECRET || !REFRESH_SECRET) {
-  throw new Error("Missing ACCESS_TOKEN_SECRET or REFRESH_TOKEN_SECRET in .env");
-}
+const commonSignOptions = {
+  algorithm: "HS256",
+  issuer: config.JWT_ISSUER,
+  audience: config.JWT_AUDIENCE,
+};
+const commonVerifyOptions = {
+  algorithms: ["HS256"],
+  issuer: config.JWT_ISSUER,
+  audience: config.JWT_AUDIENCE,
+};
 
 function signAccessToken(user) {
   return jwt.sign(
-    { sub: user.id, email: user.email, role: user.role },
-    ACCESS_SECRET,
-    { expiresIn: ACCESS_TTL }
+    { sub: String(user.id), email: user.email, role: user.role, ver: Number(user.tokenVersion || 0), type: "access" },
+    config.ACCESS_TOKEN_SECRET,
+    { ...commonSignOptions, expiresIn: config.ACCESS_TOKEN_TTL, jwtid: crypto.randomUUID() }
   );
 }
 
-function signRefreshToken(userId) {
-  const jti = crypto.randomBytes(16).toString("hex");
-  return jwt.sign({ sub: userId, jti }, REFRESH_SECRET, { expiresIn: REFRESH_TTL });
+function signRefreshToken(userId, familyId) {
+  return jwt.sign(
+    { sub: String(userId), type: "refresh", family: familyId },
+    config.REFRESH_TOKEN_SECRET,
+    { ...commonSignOptions, expiresIn: config.REFRESH_TOKEN_TTL, jwtid: crypto.randomUUID() }
+  );
 }
 
 function verifyAccessToken(token) {
-  return jwt.verify(token, ACCESS_SECRET);
+  const payload = jwt.verify(token, config.ACCESS_TOKEN_SECRET, commonVerifyOptions);
+  if (payload.type !== "access") throw new Error("Invalid token type");
+  return payload;
 }
 
 function verifyRefreshToken(token) {
-  return jwt.verify(token, REFRESH_SECRET);
+  const payload = jwt.verify(token, config.REFRESH_TOKEN_SECRET, commonVerifyOptions);
+  if (payload.type !== "refresh") throw new Error("Invalid token type");
+  return payload;
 }
 
-function issueRefreshToken(userId, meta = {}) {
-  const token = signRefreshToken(userId);
+function storeSignedRefreshToken(userId, token, familyId, meta) {
   const decoded = jwt.decode(token);
   const expiresAt = new Date(decoded.exp * 1000).toISOString();
   tokenModel.storeRefreshToken({
-    userId, token, expiresAt,
+    userId,
+    token,
+    familyId,
+    expiresAt,
     userAgent: meta.userAgent || "",
     ip: meta.ip || "",
   });
+}
+
+function issueRefreshToken(userId, meta = {}) {
+  const familyId = meta.familyId || crypto.randomUUID();
+  const token = signRefreshToken(userId, familyId);
+  storeSignedRefreshToken(userId, token, familyId, meta);
   return token;
 }
 
+function rotateRefreshToken(oldToken, userId, familyId, meta = {}) {
+  return db.transaction(() => {
+    const token = signRefreshToken(userId, familyId);
+    storeSignedRefreshToken(userId, token, familyId, meta);
+    tokenModel.rotateRefreshToken(oldToken, token);
+    return token;
+  });
+}
+
 function issueResetToken(userId, ttlMinutes = 30) {
-  const token = crypto.randomBytes(32).toString("hex");
+  const token = crypto.randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000).toISOString();
   tokenModel.storeResetToken({ userId, token, expiresAt });
   return token;
 }
 
 module.exports = {
-  signAccessToken, signRefreshToken, verifyAccessToken, verifyRefreshToken,
-  issueRefreshToken, issueResetToken,
+  signAccessToken,
+  verifyAccessToken,
+  verifyRefreshToken,
+  issueRefreshToken,
+  rotateRefreshToken,
+  issueResetToken,
+  getRefreshTokenRecord: tokenModel.getRefreshTokenRecord,
   isRefreshTokenActive: tokenModel.isRefreshTokenActive,
   revokeRefreshToken: tokenModel.revokeRefreshToken,
   revokeAllForUser: tokenModel.revokeAllForUser,
+  revokeFamily: tokenModel.revokeFamily,
+  listSessions: tokenModel.listSessions,
+  revokeSession: tokenModel.revokeSession,
   findValidResetToken: tokenModel.findValidResetToken,
   markResetTokenUsed: tokenModel.markResetTokenUsed,
 };

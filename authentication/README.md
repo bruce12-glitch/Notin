@@ -1,82 +1,115 @@
 # Notin Authentication Service
 
-Express + SQLite authentication service for Notin. It provides email/password accounts, email OTP verification, rotating JWT sessions in HttpOnly cookies, account management, password resets, and user-scoped notes.
+Hardened Express + SQLite authentication for Notin. The service includes verified email/password accounts, rotating JWT sessions, account lockout, CSRF protection, password recovery, device-session management, and protected user-scoped notes.
 
 ## Requirements
 
-- Node.js 22.5 or newer (`node:sqlite` is used)
+- **Node.js 22.5+** (`node:sqlite` is used)
 - npm
-- An SMTP account for real verification emails (optional during local development)
+- SMTP credentials for production email verification and password recovery
 
-> `node:sqlite` may print an experimental-feature warning on some Node 22 releases.
+Some Node 22 releases print an experimental warning for `node:sqlite`; this does not indicate a failed startup.
 
-## Setup
+## First-time setup
 
 ```bash
 cd authentication
 npm install
-cp .env.example .env
-```
-
-Replace both token secrets in `.env` with different random values:
-
-```bash
-node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
-```
-
-Run that command twice, then set `ACCESS_TOKEN_SECRET` and `REFRESH_TOKEN_SECRET`.
-
-Start the service:
-
-```bash
+npm run setup
 npm start
 ```
 
-The web app and API are available at `http://localhost:4000` by default. Check service health at `GET /health`.
+`npm run setup` performs the prerequisites automatically:
+
+1. Checks the Node.js version.
+2. Creates an ignored `.env` with four independent 48-byte secrets when one does not exist.
+3. Creates the SQLite database and parent directory.
+4. Runs idempotent schema migrations.
+5. Enables WAL, foreign keys, a busy timeout, and normal synchronous mode.
+6. Runs SQLite `quick_check` and removes expired security records.
+
+The service and web client are available at `http://localhost:4000` by default.
+
+Useful commands:
+
+```bash
+npm run db:check        # environment, database, and production-mail preflight
+npm run check           # syntax checks and integration tests
+npm run security:audit  # production dependency audit
+npm test                # isolated security/integration suite
+```
+
+`npm start` automatically runs the preflight check before opening the server.
 
 ## Configuration
 
+Copy `.env.example` manually only when you do not want the setup script. Never commit `.env` or the SQLite database.
+
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `ACCESS_TOKEN_SECRET` | required | Access-token signing secret |
-| `REFRESH_TOKEN_SECRET` | required | Refresh-token signing secret; must differ from the access secret |
-| `ACCESS_TOKEN_TTL` | `15m` | Access-token lifetime |
-| `REFRESH_TOKEN_TTL` | `7d` | Refresh-token lifetime |
+| `NODE_ENV` | `development` | Runtime mode; production tightens secret and SMTP requirements |
 | `PORT` | `4000` | HTTP port |
-| `DB_PATH` | `authentication/auth.db` | SQLite database path |
-| `COOKIE_SECURE` | `false` | Force cookies to use the Secure attribute |
-| `CORS_ORIGINS` | local development origins | Comma-separated credentialed origins |
-| `SMTP_HOST` | empty | SMTP server; empty enables OTP development mode |
-| `SMTP_PORT` | `587` | SMTP port (`465` automatically uses TLS) |
-| `SMTP_USER` | empty | SMTP username |
-| `SMTP_PASS` | empty | SMTP password |
-| `SMTP_FROM` | `Notin <no-reply@notin.app>` | From address |
+| `TRUST_PROXY` | `1` | Express proxy hop configuration |
+| `DB_PATH` | `./auth.db` | SQLite path, resolved from `authentication/` |
+| `APP_URL` | `http://localhost:4000` | Public URL used in password-reset links |
+| `ACCESS_TOKEN_SECRET` | required | Independent access-JWT secret; 48+ characters in production |
+| `REFRESH_TOKEN_SECRET` | required | Independent refresh-JWT secret |
+| `CSRF_SECRET` | derived when omitted | HMAC secret for signed double-submit CSRF tokens |
+| `OTP_PEPPER` | derived when omitted | HMAC pepper for six-digit verification codes |
+| `ACCESS_TOKEN_TTL` | `15m` | Short-lived access-token lifetime |
+| `REFRESH_TOKEN_TTL` | `7d` | Rotating session lifetime |
+| `JWT_ISSUER` | `notin-auth` | Required JWT issuer |
+| `JWT_AUDIENCE` | `notin-web` | Required JWT audience |
+| `BCRYPT_ROUNDS` | `12` | Password hash cost (`4` in isolated tests) |
+| `LOGIN_MAX_ATTEMPTS` | `5` | Failed attempts before account lockout |
+| `LOGIN_LOCK_MINUTES` | `15` | Account lock duration |
 | `OTP_TTL_MINUTES` | `10` | Verification-code lifetime |
+| `OTP_MAX_ATTEMPTS` | `5` | Incorrect codes before pending signup deletion |
+| `OTP_RESEND_SECONDS` | `30` | Server-enforced resend cooldown |
+| `COOKIE_SECURE` | `false` | Force Secure cookies; HTTPS proxies are detected automatically |
+| `COOKIE_DOMAIN` | empty | Optional production cookie domain |
+| `CORS_ORIGINS` | local origins | Exact comma-separated browser-origin allowlist |
+| `SMTP_*` | empty | SMTP transport; mandatory in production |
 
-When SMTP is not configured, registration responses include `devCode` so the OTP flow can be exercised locally. Do not expose development responses on a public deployment.
+Development mode returns OTP/reset values in responses for local testing. Production mode never returns them and refuses readiness when SMTP is absent.
+
+## Browser security and CSRF
+
+Before any `POST`, `PUT`, `PATCH`, or `DELETE`, browser clients obtain a token:
+
+```http
+GET /auth/csrf
+```
+
+The server sets `notin_csrf` and returns the same signed value. Send it as `X-CSRF-Token` on unsafe requests. The included frontend handles acquisition, rotation, and one automatic retry.
+
+Bearer-only API requests without ambient authentication cookies are exempt from cookie-CSRF validation.
 
 ## API
 
-### Public authentication
+### Public/browser authentication
 
+- `GET /auth/csrf` — issue a signed browser CSRF token
 - `POST /auth/register` — create a pending signup and send a six-digit OTP
-- `POST /auth/verify-otp` — verify the OTP, create the account, and log in
-- `POST /auth/resend-otp` — replace and resend a pending signup code
-- `POST /auth/login` — log in
-- `POST /auth/refresh` — rotate the refresh token and issue a new session
-- `POST /auth/logout` — revoke the current refresh token
-- `POST /auth/forgot-password` — request a password reset
-- `POST /auth/reset-password` — consume a reset token
+- `POST /auth/verify-otp` — consume the OTP, create the account, and log in
+- `POST /auth/resend-otp` — resend after the server-enforced cooldown
+- `POST /auth/login` — constant-time credential verification and protected login
+- `POST /auth/refresh` — rotate the current refresh token
+- `POST /auth/logout` — revoke the current session
+- `POST /auth/forgot-password` — send a generic recovery response
+- `POST /auth/reset-password` — consume a single-use reset token
 
-### Authenticated account routes
+### Authenticated account and session routes
 
-- `GET /auth/me` — get the current public user profile
-- `PATCH /auth/me` — update the display name
-- `DELETE /auth/me` — delete the account and all user-owned data
-- `POST /auth/change-password` — change the password and revoke all sessions
-- `POST /auth/logout-all` — revoke every refresh token for the account
+- `GET /auth/me` — public account profile
+- `PATCH /auth/me` — update display name
+- `DELETE /auth/me` — password-confirmed account deletion
+- `POST /auth/change-password` — reauthenticate, change password, and revoke all sessions
+- `POST /auth/logout-all` — revoke all refresh-token families
+- `GET /auth/sessions` — list current/revoked device sessions
+- `DELETE /auth/sessions/:id` — revoke one device session
 
-### Authenticated notes routes
+### Protected notes
 
 - `GET /notes`
 - `POST /notes`
@@ -84,7 +117,33 @@ When SMTP is not configured, registration responses include `devCode` so the OTP
 - `PUT /notes/:id`
 - `DELETE /notes/:id`
 
-Every notes query is scoped to the authenticated user.
+Every query includes the authenticated user ID. Titles, bodies, IDs, and update payloads are bounded and validated.
+
+### Operations
+
+- `GET /health` — process and SQLite health
+- `GET /ready` — production readiness, including SMTP
+
+## Security controls
+
+- Bcrypt password hashing with configurable cost.
+- Strong password policy and common-password rejection.
+- Constant-work unknown-user login path to reduce account timing leaks.
+- Per-IP rate limits plus per-account failed-login lockout.
+- Short-lived JWT access tokens constrained by algorithm, issuer, audience, type, JTI, and account token version.
+- HttpOnly access/refresh cookies with proxy-aware `Secure` and `SameSite` policy.
+- Signed double-submit CSRF protection for every cookie-authenticated unsafe request.
+- Exact trusted-origin enforcement and deny-by-default credentialed CORS.
+- Refresh-token family rotation, SHA-256 database storage, replay detection, and family-wide revocation.
+- Live account security-state checks invalidate access tokens after password changes.
+- HMAC-peppered OTP storage, constant-time comparison, expiry, attempt deletion, and resend cooldown.
+- Single-use reset tokens; older outstanding reset tokens are invalidated.
+- Generic password-recovery responses to limit account enumeration.
+- Password confirmation before account deletion.
+- Strict Zod request schemas and bounded JSON/note sizes.
+- Helmet headers with a real Content Security Policy, no server identity header, and restricted browser permissions.
+- SQLite migrations, foreign keys, WAL, indexed expiry fields, cleanup, and graceful shutdown.
+- No-store headers on authentication and notes APIs.
 
 ## Tests
 
@@ -92,24 +151,21 @@ Every notes query is scoped to the authenticated user.
 npm test
 ```
 
-The test suite uses an isolated temporary SQLite database and test-only secrets. It covers the two-step signup flow, account validation, profile management, notes CRUD, password changes and resets, refresh rotation, logout, and account deletion.
+The suite creates an isolated temporary database and currently performs **47 checks**, including CSRF rejection, password policy, OTP limits, cookie flags, scoped CRUD, token-version invalidation, refresh replay defense, generic recovery responses, reset-token reuse prevention, password-confirmed deletion, account lockout, CSP, and hostile-origin rejection.
 
 Expected result:
 
 ```text
-26 passed, 0 failed
+47 passed, 0 failed
 ```
 
-## Security behavior
+## Production checklist
 
-- Passwords are hashed with bcrypt.
-- Access and refresh JWTs are stored in HttpOnly cookies.
-- Cookies automatically use `Secure` and `SameSite=None` behind an HTTPS proxy.
-- Refresh tokens are SHA-256 hashed in SQLite, rotated on use, and revocable.
-- OTPs and reset tokens are stored only as hashes.
-- OTPs expire and are removed after too many failed attempts.
-- Zod validates authentication request bodies.
-- Helmet and authentication rate limiting are enabled.
-- SQLite foreign keys cascade deletion of user-owned notes and tokens.
-
-For production, configure HTTPS, real SMTP, deployment-specific CORS origins, high-entropy secrets, database backups, centralized monitoring, and a real password-reset email workflow.
+- Run behind HTTPS and set `NODE_ENV=production`.
+- Use four independent randomly generated secrets.
+- Configure SMTP and the externally reachable `APP_URL`.
+- Restrict `CORS_ORIGINS` and `COOKIE_DOMAIN` to deployed domains.
+- Keep proxy hop configuration exact; do not use an unrestricted proxy setting.
+- Back up SQLite safely (or migrate the persistence models to a managed SQL database).
+- Add centralized logs, alerts, and rate-limit storage for multi-instance deployments.
+- Rotate signing secrets and invalidate sessions using a controlled deployment procedure.

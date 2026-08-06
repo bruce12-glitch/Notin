@@ -14,7 +14,8 @@ This folder will hold the Notin backend.
 
 - [ ] Scaffold API server
 - [ ] Database schema
-- [ ] Auth integration (see `../authentication/`)
+- [x] Standalone auth + protected notes service (implemented in `../authentication/`)
+- [ ] Integrate future sync APIs with the existing auth service
 - [ ] Sync protocol
 - [ ] Search service
 
