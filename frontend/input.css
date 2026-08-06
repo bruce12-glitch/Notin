@@ -102,9 +102,18 @@
 .hero-title {
   font-family: "Figtree", var(--font-display);
   font-optical-sizing: auto;
+  font-size: 64px;
   font-style: normal;
-  letter-spacing: -0.045em;
+  font-weight: 700;
+  line-height: 72px;
+  letter-spacing: -0.02em;
   text-wrap: balance;
+}
+@media (max-width: 640px) {
+  .hero-title {
+    font-size: 48px;
+    line-height: 54px;
+  }
 }
 
 /* Task checkbox rows in the hero mockup */
