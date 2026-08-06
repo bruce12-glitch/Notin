@@ -140,8 +140,8 @@
 
     <!-- CTA stack (Log in · Start for free · Theme) -->
     <div class="hidden items-center gap-3 md:flex">
-      <a href="#" class="whitespace-nowrap rounded-full px-4 py-2 text-[15px] font-semibold text-text-secondary transition hover:text-brand-600">Log in</a>
-      <a href="#" class="btn-3d btn-3d-sm whitespace-nowrap text-[15px]">Start for free</a>
+      <a href="#" data-auth-mode="login" class="whitespace-nowrap rounded-full px-4 py-2 text-[15px] font-semibold text-text-secondary transition hover:text-brand-600">Log in</a>
+      <a href="#" data-auth-mode="register" class="btn-3d btn-3d-sm whitespace-nowrap text-[15px]">Start for free</a>
       <button id="themeToggle" class="theme-toggle flex cursor-pointer items-center gap-1.5 rounded-full border border-stroke-buttons bg-surface px-3.5 py-2 text-[13px] font-bold transition hover:border-brand-500 hover:text-brand-500" title="Switch theme" aria-label="Switch between Green and Neon theme">
         <span class="theme-toggle-dot"></span>
         <span id="themeToggleLabel">Switch to Neon</span>
@@ -168,13 +168,13 @@
         schedules, all in one place.
       </p>
       <div class="flex flex-wrap items-center gap-4">
-        <a href="#" class="btn-3d text-base">Get Notin free</a>
+        <a href="#" data-auth-mode="register" class="btn-3d text-base">Get Notin free</a>
         <a id="heroSmartDownload" href="#download" class="btn-outline-evernote inline-flex items-center justify-center gap-2">
           <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           <span id="heroDownloadLabel">Download</span>
         </a>
       </div>
-      <a href="#" class="text-[16px] font-semibold text-text-secondary transition hover:text-brand-600">Already have an account? Log in <svg class="inline h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+      <a href="#" data-auth-mode="login" class="text-[16px] font-semibold text-text-secondary transition hover:text-brand-600">Already have an account? Log in <svg class="inline h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
 
     </div>
 

@@ -23,6 +23,29 @@
 // Works on index.html and context.html (guards for missing elements)
 // ============================================================
 
+// Authentication destination. Production can set window.AUTH_URL (or
+// window.NOTIN_AUTH_URL) before this script loads. Local and Arena previews
+// are inferred automatically so browser code never points at 127.0.0.1.
+const AUTH_URL = (() => {
+  const configured = String(window.AUTH_URL || window.NOTIN_AUTH_URL || '').trim();
+  if (configured) return configured.replace(/\/$/, '');
+
+  const { protocol, hostname } = window.location;
+  const arenaHost = hostname.match(/^\d+-(.+\.e2b\.app)$/i);
+  if (arenaHost) return `${protocol}//4000-${arenaHost[1]}`;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return `${protocol}//${hostname}:4000`;
+  }
+
+  return 'https://auth.notin.app';
+})();
+
+const authHref = (mode) => `${AUTH_URL}/?mode=${encodeURIComponent(mode)}`;
+
+document.querySelectorAll('[data-auth-mode]').forEach((link) => {
+  link.setAttribute('href', authHref(link.dataset.authMode || 'login'));
+});
+
 // Navbar border on scroll
 const nav = document.getElementById('nav');
 if (nav) {
@@ -94,11 +117,13 @@ if (navToggle && mobilePanel) {
       }
     });
     const login = document.createElement('a');
-    login.href = '#';
+    login.href = authHref('login');
+    login.dataset.authMode = 'login';
     login.textContent = 'Log in';
     login.className = 'mt-2 text-[15px] font-semibold text-text-secondary transition hover:text-brand-500';
     const cta = document.createElement('a');
-    cta.href = '#';
+    cta.href = authHref('register');
+    cta.dataset.authMode = 'register';
     cta.textContent = 'Start for free';
     cta.className = 'rounded-full bg-gradient-to-r from-brand-500 to-brand-400 px-5 py-2.5 text-center text-[15px] font-semibold text-[#2c2d2a] shadow-[0_8px_20px_rgba(255,125,66,0.35)]';
     mobilePanel.append(login, cta);
