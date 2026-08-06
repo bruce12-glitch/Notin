@@ -35,7 +35,7 @@
      Theme tokens live in @theme inside input.css — swap colors there,
      re-run the build command, done.
      ============================================================ -->
-<link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="styles.css?v=20260806-hero3" />
 
 <!-- Structured data -->
 <script type="application/ld+json">
@@ -155,30 +155,30 @@
 <!-- ============ HERO (centered copy · centered product demo) ============ -->
 <section id="top" data-sentry-component="Hero" data-sentry-source-file="sections/Hero.tsx"
   class="relative flex min-h-screen items-center overflow-hidden bg-bg-primary">
-  <div class="relative mx-auto flex w-full max-w-6xl flex-col items-center gap-10 px-6 py-12 text-center md:gap-12 md:py-16">
+  <div class="hero-layout relative mx-auto flex w-full max-w-6xl flex-col items-center gap-10 px-6 py-12 text-center md:gap-12 md:py-16">
     <!-- CENTERED: website copy (headline, login, CTAs) -->
-    <div class="reveal flex max-w-5xl flex-col items-center gap-6 text-center">
-      <span class="inline-flex items-center gap-2 rounded-full border border-brand-500/25 bg-brand-100 px-4 py-2 text-[15px] font-semibold text-brand-700"><svg class="h-4 w-4 text-brand-500" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3l1.9 5.8 5.8 1.9-5.8 1.9L12 18.4l-1.9-5.8-5.8-1.9 5.8-1.9z"/><path d="M18.6 13.5l.8 2.4 2.4.8-2.4.8-.8 2.4-.8-2.4-2.4-.8 2.4-.8z"/></svg> New — AI-powered search is here</span>
+    <div class="hero-copy reveal flex max-w-5xl flex-col items-center gap-6 text-center">
+      <span class="hero-kicker inline-flex items-center gap-2 rounded-full border border-brand-500/25 bg-brand-100 px-4 py-2 text-[15px] font-semibold text-brand-700"><svg class="h-4 w-4 text-brand-500" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3l1.9 5.8 5.8 1.9-5.8 1.9L12 18.4l-1.9-5.8-5.8-1.9 5.8-1.9z"/><path d="M18.6 13.5l.8 2.4 2.4.8-2.4.8-.8 2.4-.8-2.4-2.4-.8 2.4-.8z"/></svg> New — AI-powered search is here</span>
       <h1 class="hero-title">
         Your <span class="gradient-animate bg-gradient-to-r from-brand-600 via-brand-500 to-brand-600 bg-clip-text text-transparent">second brain</span>
       </h1>
-      <p class="mx-auto max-w-[700px] text-2xl text-text-secondary">
+      <p class="hero-description mx-auto max-w-[760px] text-2xl text-text-secondary">
         Remember everything and tackle any project — notes, tasks, and
         schedules, all in one place.
       </p>
-      <div class="flex flex-wrap items-center justify-center gap-4">
+      <div class="hero-actions flex flex-wrap items-center justify-center gap-4">
         <a href="#" data-auth-mode="register" class="btn-3d text-base">Get Notin free</a>
         <a id="heroSmartDownload" href="#download" class="btn-outline-evernote inline-flex items-center justify-center gap-2">
           <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           <span id="heroDownloadLabel">Download</span>
         </a>
       </div>
-      <a href="#" data-auth-mode="login" class="text-[18px] font-semibold text-text-secondary transition hover:text-brand-600">Already have an account? Log in <svg class="inline h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+      <a href="#" data-auth-mode="login" class="hero-login text-[18px] font-semibold text-text-secondary transition hover:text-brand-600">Already have an account? Log in <svg class="inline h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
 
     </div>
 
     <!-- CENTER: OUR VIDEO + 3D floating assets -->
-    <div class="relative flex min-h-[560px] w-full max-w-[900px] items-center justify-center">
+    <div class="hero-demo-composition relative flex min-h-[560px] w-full max-w-[900px] items-center justify-center">
       <!-- 3D floating assets around the video -->
       <div class="hero-3d hero-3d--note-a" aria-hidden="true">
         <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -195,7 +195,7 @@
       <div class="hero-3d hero-3d--badge" aria-hidden="true">✦ AI</div>
       <div class="hero-3d hero-3d--ring" aria-hidden="true"></div>
 
-      <div class="mx-auto w-full max-w-[760px]">
+      <div class="hero-demo-frame mx-auto w-full max-w-[760px]">
         <div class="aspect-[8/5] w-full overflow-hidden rounded-2xl border border-stroke-cards bg-surface shadow-[0_30px_70px_rgba(26,20,16,0.18)]">
           <video id="heroDemoVideo" class="hero-video" src="assets/hero-demo-full.mp4"
                  poster="assets/hero-demo-poster.jpg"
@@ -1008,6 +1008,6 @@
     if (label) label.textContent = isNeon ? 'Switch to Green' : 'Switch to Neon';
   })();
 </script>
-<script src="script.js"></script>
+<script src="script.js?v=20260806-hero3"></script>
 </body>
 </html>
