@@ -2481,3 +2481,259 @@ section[data-sentry-component="CallToAction"] .text-\[\#94e130\] {
   border-color: rgba(143,227,51,0.55);
 }
 #pricing article.border-2:hover { box-shadow: 0 0 45px rgba(143,227,51,0.4); }
+
+/* ============================================================================
+   NEON IMMERSIVE LAYER — neon-only ambient motion and dimensional polish
+   Adds depth without changing the Green edition or replacing existing behavior.
+   ============================================================================ */
+.theme-neon {
+  color-scheme: dark;
+  --neon-pointer-x: 50vw;
+  --neon-pointer-y: 30vh;
+  --neon-demo-rx: 0deg;
+  --neon-demo-ry: 0deg;
+}
+.theme-neon body {
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(143, 227, 51, .07), transparent 34%),
+    #0f0f0f;
+}
+.neon-cursor-aura {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 42;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(143, 227, 51, .14), rgba(143, 227, 51, .045) 36%, transparent 70%);
+  opacity: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  transform: translate3d(var(--neon-pointer-x), var(--neon-pointer-y), 0) translate(-50%, -50%);
+  transition: opacity .28s ease;
+  will-change: transform, opacity;
+}
+.neon-pointer-active .neon-cursor-aura { opacity: 1; }
+
+/* Glass navbar with a shallow luminous underside. */
+.theme-neon #nav {
+  background: rgba(8, 10, 8, .78) !important;
+  border-bottom-color: rgba(143, 227, 51, .14);
+  box-shadow: 0 10px 34px rgba(0, 0, 0, .34), 0 1px 0 rgba(143, 227, 51, .11);
+  backdrop-filter: blur(18px) saturate(135%);
+  transform: translateZ(0);
+}
+.theme-neon #nav.scrolled {
+  border-bottom-color: rgba(143, 227, 51, .42);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, .5), 0 1px 0 rgba(143, 227, 51, .24);
+}
+.theme-neon .brand-icon-3d {
+  filter: drop-shadow(0 0 9px rgba(143, 227, 51, .24));
+}
+.theme-neon .nav-features-btn {
+  border: 1px solid rgba(143, 227, 51, .28);
+  box-shadow: 0 4px 0 #000, 0 10px 24px rgba(143, 227, 51, .14);
+}
+
+/* Hero aurora, luminous typography, and floating product frame. */
+.theme-neon #top {
+  background:
+    radial-gradient(ellipse at 50% 10%, rgba(143, 227, 51, .13), transparent 30%),
+    radial-gradient(circle at 11% 48%, rgba(89, 255, 194, .055), transparent 22%),
+    radial-gradient(circle at 88% 55%, rgba(167, 108, 255, .055), transparent 24%),
+    #0f0f0f;
+}
+.theme-neon #top::before {
+  border-color: rgba(143, 227, 51, .25);
+  box-shadow: inset 0 0 60px rgba(143, 227, 51, .035), 0 0 80px rgba(143, 227, 51, .035);
+  animation: neon-orbit-left 11s ease-in-out infinite alternate;
+}
+.theme-neon #top::after {
+  background: radial-gradient(circle, rgba(143, 227, 51, .10), transparent 68%);
+  animation: neon-orbit-right 13s ease-in-out -3s infinite alternate;
+}
+.theme-neon .hero-kicker {
+  border-color: rgba(143, 227, 51, .42);
+  background: rgba(20, 35, 15, .78);
+  box-shadow: 0 0 0 1px rgba(143, 227, 51, .08), 0 0 30px rgba(143, 227, 51, .13), inset 0 1px 0 rgba(255, 255, 255, .07);
+  animation: neon-kicker-pulse 4.5s ease-in-out infinite;
+}
+.theme-neon #top .hero-title {
+  text-shadow: 0 4px 24px rgba(0, 0, 0, .55), 0 0 44px rgba(143, 227, 51, .08);
+  animation: neon-title-breathe 5.5s ease-in-out infinite;
+}
+.theme-neon #top .hero-title .gradient-animate {
+  filter: drop-shadow(0 0 13px rgba(143, 227, 51, .28));
+}
+.theme-neon .hero-description {
+  color: #b8b8b8;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, .8);
+}
+.theme-neon .hero-actions .btn-3d {
+  box-shadow: 0 0 0 1px rgba(143, 227, 51, .22), 0 0 28px rgba(143, 227, 51, .22), 0 8px 0 #050505;
+}
+.theme-neon .hero-actions .btn-3d:hover {
+  box-shadow: 0 0 0 1px rgba(143, 227, 51, .55), 0 0 44px rgba(143, 227, 51, .46), 0 10px 0 #4b8d0d;
+}
+.theme-neon .hero-demo-composition {
+  perspective: 1300px;
+  transform-style: preserve-3d;
+}
+.theme-neon .hero-demo-frame {
+  position: relative;
+  transform-style: preserve-3d;
+  animation: neon-demo-float 6s ease-in-out infinite;
+  will-change: transform;
+}
+.theme-neon .hero-demo-frame::before,
+.theme-neon .hero-demo-frame::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  border-radius: 24px;
+}
+.theme-neon .hero-demo-frame::before {
+  inset: -2px;
+  z-index: -1;
+  background: linear-gradient(120deg, rgba(143, 227, 51, .75), rgba(143, 227, 51, .05) 36%, rgba(174, 111, 255, .35) 72%, rgba(143, 227, 51, .7));
+  filter: blur(1px);
+  opacity: .62;
+}
+.theme-neon .hero-demo-frame::after {
+  inset: 5% 8% -6%;
+  z-index: -2;
+  background: rgba(143, 227, 51, .16);
+  filter: blur(42px);
+  opacity: .75;
+}
+.theme-neon .hero-demo-frame > div {
+  background: #111;
+  box-shadow: 0 34px 90px rgba(0, 0, 0, .68), 0 0 48px rgba(143, 227, 51, .13);
+}
+.theme-neon .hero-3d {
+  backdrop-filter: blur(14px);
+  animation-duration: 5.2s;
+}
+
+/* Section atmosphere and stronger depth cues. */
+.theme-neon #features,
+.theme-neon #pricing,
+.theme-neon #download,
+.theme-neon #faq {
+  background-image: radial-gradient(circle at 50% 0%, rgba(143, 227, 51, .035), transparent 28%);
+}
+.theme-neon #features h2,
+.theme-neon #pricing h2,
+.theme-neon #download h2,
+.theme-neon #faq h2 {
+  text-shadow: 0 5px 26px rgba(0, 0, 0, .65), 0 0 28px rgba(143, 227, 51, .07);
+}
+.theme-neon .carousel-arrow-btn {
+  backdrop-filter: blur(14px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .42), 0 0 16px rgba(143, 227, 51, .11);
+  transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s ease, border-color .2s ease;
+}
+.theme-neon .carousel-arrow-btn:hover {
+  transform: translateY(-4px) translateZ(18px);
+  border-color: rgba(143, 227, 51, .7);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, .5), 0 0 28px rgba(143, 227, 51, .28);
+}
+
+/* The reference feature cards become dark glass only in Neon mode. */
+.theme-neon #featuresTrack a.motion-feature-card .motion-feature-slide {
+  background: linear-gradient(145deg, rgba(28, 31, 27, .96), rgba(14, 16, 14, .98));
+  border-color: rgba(143, 227, 51, .22);
+  color: #fff;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, .3), 0 18px 38px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(255, 255, 255, .035);
+}
+.theme-neon #featuresTrack a.motion-feature-card:hover .motion-feature-slide {
+  border-color: rgba(143, 227, 51, .48);
+  box-shadow: 0 18px 28px rgba(0, 0, 0, .48), 0 38px 68px rgba(0, 0, 0, .58), 0 0 34px rgba(143, 227, 51, .12);
+}
+.theme-neon .notebook-slide__copy h5,
+.theme-neon .collaborate-slide__copy h5,
+.theme-neon .designed-feature-slide__copy h5 {
+  color: #fff;
+  text-shadow: 0 8px 18px rgba(0, 0, 0, .55);
+}
+.theme-neon .notebook-slide__copy p,
+.theme-neon .collaborate-slide__copy p,
+.theme-neon .designed-feature-slide__copy p { color: #aaa; }
+.theme-neon .notebook-slide__arrow,
+.theme-neon .collaborate-slide__arrow,
+.theme-neon .designed-feature-slide__arrow { stroke: #f5f5f5; }
+.theme-neon .notebook-bubble,
+.theme-neon .collaborate-bubble,
+.theme-neon .designed-feature-bubble {
+  background: rgba(143, 227, 51, .075);
+  box-shadow: inset 0 0 36px rgba(143, 227, 51, .035);
+}
+
+/* Existing content cards gain glass depth without markup changes. */
+.theme-neon #pricing article,
+.theme-neon .platform-card,
+.theme-neon .carousel-slide,
+.theme-neon .faq-item,
+.theme-neon .ai-chip {
+  transform-style: preserve-3d;
+  backdrop-filter: blur(12px);
+}
+.theme-neon #pricing article,
+.theme-neon .platform-card,
+.theme-neon .carousel-slide {
+  box-shadow: 0 18px 42px rgba(0, 0, 0, .34), inset 0 1px 0 rgba(255, 255, 255, .025);
+}
+.theme-neon #pricing article:hover,
+.theme-neon .platform-card:hover,
+.theme-neon .carousel-slide:hover {
+  box-shadow: 0 0 38px rgba(143, 227, 51, .19), 0 30px 62px rgba(0, 0, 0, .62);
+}
+.theme-neon .price-card.popular {
+  animation: neon-popular-breathe 4.8s ease-in-out infinite;
+}
+.theme-neon .organize-showcase__visual {
+  perspective: 1200px;
+  transform-style: preserve-3d;
+}
+.theme-neon .organize-showcase__photo-wrap {
+  box-shadow: 0 32px 80px rgba(0, 0, 0, .58), 0 0 50px rgba(143, 227, 51, .09);
+}
+
+@keyframes neon-orbit-left {
+  from { transform: translate3d(-18px, -10px, 0) rotate(-6deg); opacity: .5; }
+  to { transform: translate3d(46px, 34px, 0) rotate(8deg) scale(1.08); opacity: 1; }
+}
+@keyframes neon-orbit-right {
+  from { transform: translate3d(18px, -18px, 0) scale(.92); opacity: .45; }
+  to { transform: translate3d(-48px, 38px, 0) scale(1.12); opacity: .85; }
+}
+@keyframes neon-kicker-pulse {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(143, 227, 51, .08), 0 0 24px rgba(143, 227, 51, .10), inset 0 1px 0 rgba(255, 255, 255, .07); }
+  50% { box-shadow: 0 0 0 1px rgba(143, 227, 51, .19), 0 0 38px rgba(143, 227, 51, .2), inset 0 1px 0 rgba(255, 255, 255, .1); }
+}
+@keyframes neon-title-breathe {
+  0%, 100% { text-shadow: 0 4px 24px rgba(0, 0, 0, .55), 0 0 34px rgba(143, 227, 51, .06); }
+  50% { text-shadow: 0 4px 24px rgba(0, 0, 0, .55), 0 0 52px rgba(143, 227, 51, .15); }
+}
+@keyframes neon-demo-float {
+  0%, 100% { transform: perspective(1250px) rotateX(var(--neon-demo-rx)) rotateY(var(--neon-demo-ry)) translate3d(0, 0, 0); }
+  50% { transform: perspective(1250px) rotateX(var(--neon-demo-rx)) rotateY(var(--neon-demo-ry)) translate3d(0, -11px, 18px); }
+}
+@keyframes neon-popular-breathe {
+  0%, 100% { box-shadow: 0 0 28px rgba(143, 227, 51, .17), 0 20px 46px rgba(0, 0, 0, .42); }
+  50% { box-shadow: 0 0 48px rgba(143, 227, 51, .3), 0 28px 58px rgba(0, 0, 0, .56); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-neon #top::before,
+  .theme-neon #top::after,
+  .theme-neon .hero-kicker,
+  .theme-neon #top .hero-title,
+  .theme-neon .hero-demo-frame,
+  .theme-neon .price-card.popular {
+    animation: none !important;
+  }
+  .neon-cursor-aura { display: none; }
+}
