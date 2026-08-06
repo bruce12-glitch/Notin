@@ -78,7 +78,6 @@ if (navToggle && mobilePanel) {
       { label: 'Pro — ₹199/mo', href: '#pricing' },
       { label: 'Team — ₹399/user/mo', href: '#pricing' },
     ]},
-    { label: 'Enterprise', href: '#' },
     { label: 'About', href: 'context.html' },
   ];
 
