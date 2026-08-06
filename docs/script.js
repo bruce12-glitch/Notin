@@ -275,8 +275,8 @@ if (track && prevBtn && nextBtn) {
 
   // Reference feature slides: pointer-driven 3D tilt plus a visible bubble
   // sequence before continuing to the linked section. Applies to loop copies.
-  track.querySelectorAll('.notebook-feature-card, .collaborate-feature-card').forEach((link) => {
-    const slide = link.querySelector('.notebook-slide, .collaborate-slide');
+  track.querySelectorAll('.motion-feature-card').forEach((link) => {
+    const slide = link.querySelector('.motion-feature-slide');
     if (!slide) return;
 
     let tiltFrame = null;
