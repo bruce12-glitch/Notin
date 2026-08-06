@@ -158,10 +158,12 @@
   text-wrap: balance;
 }
 .hero-description {
+  width: 100%;
+  max-width: 940px !important;
   font-size: clamp(20px, 2vw, 25px) !important;
   line-height: 1.45;
   letter-spacing: -.018em;
-  text-wrap: balance;
+  text-wrap: wrap;
 }
 .hero-actions {
   margin-top: 4px;
