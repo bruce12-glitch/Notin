@@ -1486,6 +1486,116 @@ h1, h2, h3, h4, h5,
 .notebook-slide.is-bubbling .notebook-slide__arrow {
   transform: translateX(7px);
 }
+
+/* --- tactile 3D depth + pointer/touch motion --- */
+#featuresTrack a.notebook-feature-card {
+  perspective: 1400px;
+  transform-style: preserve-3d;
+}
+#featuresTrack a.notebook-feature-card .notebook-slide {
+  --nb-rx: 0deg;
+  --nb-ry: 0deg;
+  --nb-glare-x: 50%;
+  --nb-glare-y: 35%;
+  transform: perspective(1100px) rotateX(var(--nb-rx)) rotateY(var(--nb-ry)) translate3d(0, 0, 0);
+  transform-style: preserve-3d;
+  transform-origin: center 55%;
+  transition: transform .16s ease-out, box-shadow .22s ease, border-color .22s ease;
+  will-change: transform;
+}
+#featuresTrack a.notebook-feature-card:hover .notebook-slide {
+  transform: perspective(1100px) rotateX(var(--nb-rx)) rotateY(var(--nb-ry)) translate3d(0, -9px, 16px) scale(1.018);
+  box-shadow: 0 12px 20px rgba(28, 25, 21, .10), 0 34px 58px rgba(28, 25, 21, .16);
+}
+#featuresTrack a.notebook-feature-card .notebook-slide.is-pressed {
+  transform: perspective(1100px) rotateX(var(--nb-rx)) rotateY(var(--nb-ry)) translate3d(0, -2px, 5px) scale(.985);
+  transition-duration: .08s;
+  box-shadow: 0 5px 10px rgba(28, 25, 21, .10), 0 14px 24px rgba(28, 25, 21, .10);
+}
+#featuresTrack a.notebook-feature-card .notebook-slide.is-bubbling {
+  transform: perspective(1100px) rotateX(var(--nb-rx)) rotateY(var(--nb-ry)) translate3d(0, -11px, 20px) scale(1.022);
+}
+#featuresTrack a.notebook-feature-card .notebook-slide::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at var(--nb-glare-x) var(--nb-glare-y), rgba(255, 255, 255, .72), transparent 23%),
+    linear-gradient(115deg, transparent 28%, rgba(255, 255, 255, .22) 47%, transparent 64%);
+  opacity: 0;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+  transition: opacity .2s ease;
+}
+#featuresTrack a.notebook-feature-card:hover .notebook-slide::after,
+#featuresTrack a.notebook-feature-card .notebook-slide.is-bubbling::after {
+  opacity: .72;
+}
+#featuresTrack a.notebook-feature-card .notebook-slide__foreground {
+  transform: translateZ(24px);
+  transform-style: preserve-3d;
+}
+#featuresTrack a.notebook-feature-card .notebook-slide__icon {
+  transform: translateZ(66px) rotateY(-5deg);
+  filter: drop-shadow(0 10px 10px rgba(88, 153, 20, .20));
+  transition: transform .28s cubic-bezier(.22, 1, .36, 1), filter .28s ease;
+}
+#featuresTrack a.notebook-feature-card:hover .notebook-slide__icon {
+  transform: translateZ(82px) translateY(-5px) rotateY(-10deg) rotateX(4deg);
+  filter: drop-shadow(0 15px 12px rgba(88, 153, 20, .27));
+}
+#featuresTrack a.notebook-feature-card .notebook-slide__spine {
+  box-shadow: 3px 4px 0 #6fc817, 7px 9px 14px rgba(88, 153, 20, .18);
+}
+#featuresTrack a.notebook-feature-card .notebook-slide__cover {
+  box-shadow: 4px 5px 0 #73cf1a, 10px 13px 18px rgba(88, 153, 20, .18);
+}
+#featuresTrack a.notebook-feature-card .notebook-slide__copy {
+  transform: translateZ(48px);
+  transition: transform .28s cubic-bezier(.22, 1, .36, 1);
+}
+#featuresTrack a.notebook-feature-card:hover .notebook-slide__copy {
+  transform: translateZ(62px) translateY(-2px);
+}
+#featuresTrack a.notebook-feature-card .notebook-slide__copy h5 {
+  text-shadow: 0 7px 16px rgba(25, 25, 25, .08);
+}
+#featuresTrack a.notebook-feature-card .notebook-slide__arrow {
+  transform: translateZ(68px);
+  filter: drop-shadow(0 8px 8px rgba(25, 25, 25, .14));
+}
+#featuresTrack a.notebook-feature-card:hover .notebook-slide__arrow,
+#featuresTrack a.notebook-feature-card .notebook-slide.is-bubbling .notebook-slide__arrow {
+  transform: translateZ(78px) translateX(9px);
+}
+#featuresTrack a.notebook-feature-card .notebook-bubble {
+  animation: notebook-bubble-idle 6.5s ease-in-out infinite alternate;
+}
+#featuresTrack a.notebook-feature-card .notebook-bubble--bottom { animation-delay: -2.2s; }
+#featuresTrack a.notebook-feature-card .notebook-bubble--edge { animation-delay: -4.1s; }
+#featuresTrack a.notebook-feature-card:hover .notebook-bubble {
+  animation: notebook-bubble-drift 3.2s ease-in-out infinite alternate;
+}
+#featuresTrack a.notebook-feature-card .notebook-slide.is-bubbling .notebook-bubble {
+  animation: notebook-bubble-tap 1.45s cubic-bezier(.22, 1, .36, 1) both;
+}
+#featuresTrack a.notebook-feature-card .notebook-slide.is-bubbling .notebook-bubble--bottom { animation-delay: .06s; }
+#featuresTrack a.notebook-feature-card .notebook-slide.is-bubbling .notebook-bubble--edge { animation-delay: .12s; }
+#featuresTrack a.notebook-feature-card .notebook-slide.is-bubbling .notebook-slide__icon {
+  animation: notebook-icon-pop 1.25s cubic-bezier(.22, 1, .36, 1) both;
+}
+@keyframes notebook-bubble-idle {
+  from { transform: translate3d(-3px, -2px, 0) scale(.99); }
+  to { transform: translate3d(var(--drift-x), var(--drift-y), 0) scale(1.035); }
+}
+@keyframes notebook-icon-pop {
+  0%, 100% { transform: translateZ(66px) rotateY(-5deg) scale(1); }
+  35% { transform: translateZ(96px) translateY(-10px) rotateY(-14deg) rotateX(7deg) scale(1.08); }
+  68% { transform: translateZ(78px) translateY(2px) rotateY(4deg) scale(.98); }
+}
+
 @media (max-width: 420px) {
   .notebook-slide__icon { left: 46px; }
   .notebook-slide__copy { left: 34px; }
@@ -1494,9 +1604,18 @@ h1, h2, h3, h4, h5,
   .notebook-slide__arrow { right: 29px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .notebook-feature-card:hover .notebook-bubble,
-  .notebook-slide.is-bubbling .notebook-bubble {
-    animation: none;
+  #featuresTrack a.notebook-feature-card .notebook-slide,
+  #featuresTrack a.notebook-feature-card:hover .notebook-slide,
+  #featuresTrack a.notebook-feature-card .notebook-slide.is-pressed,
+  #featuresTrack a.notebook-feature-card .notebook-slide.is-bubbling {
+    transform: none !important;
+    transition: none;
+  }
+  #featuresTrack a.notebook-feature-card .notebook-bubble,
+  #featuresTrack a.notebook-feature-card:hover .notebook-bubble,
+  #featuresTrack a.notebook-feature-card .notebook-slide.is-bubbling .notebook-bubble,
+  #featuresTrack a.notebook-feature-card .notebook-slide.is-bubbling .notebook-slide__icon {
+    animation: none !important;
   }
 }
 

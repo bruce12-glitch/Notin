@@ -273,21 +273,70 @@ if (track && prevBtn && nextBtn) {
   next.addEventListener('click', () => go(1));
   prev.addEventListener('click', () => go(-1));
 
-  // Notebooks slide: let the clipped corner bubbles float visibly before
-  // continuing to the linked section. Applies to both infinite-loop copies.
+  // Notebooks slide: pointer-driven 3D tilt plus a visible bubble sequence
+  // before continuing to the linked section. Applies to both loop copies.
   track.querySelectorAll('.notebook-feature-card').forEach((link) => {
+    const slide = link.querySelector('.notebook-slide');
+    if (!slide) return;
+
+    let tiltFrame = null;
+    let pendingTilt = null;
+
+    const paintTilt = () => {
+      tiltFrame = null;
+      if (!pendingTilt) return;
+      const { rotateX, rotateY, glareX, glareY } = pendingTilt;
+      slide.style.setProperty('--nb-rx', `${rotateX.toFixed(2)}deg`);
+      slide.style.setProperty('--nb-ry', `${rotateY.toFixed(2)}deg`);
+      slide.style.setProperty('--nb-glare-x', `${glareX.toFixed(1)}%`);
+      slide.style.setProperty('--nb-glare-y', `${glareY.toFixed(1)}%`);
+    };
+
+    const resetTilt = () => {
+      pendingTilt = null;
+      if (tiltFrame) cancelAnimationFrame(tiltFrame);
+      tiltFrame = null;
+      slide.classList.remove('is-pressed');
+      slide.style.removeProperty('--nb-rx');
+      slide.style.removeProperty('--nb-ry');
+      slide.style.removeProperty('--nb-glare-x');
+      slide.style.removeProperty('--nb-glare-y');
+    };
+
+    if (!reduced) {
+      link.addEventListener('pointermove', (event) => {
+        if (event.pointerType === 'touch') return;
+        const rect = slide.getBoundingClientRect();
+        const x = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+        const y = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
+        pendingTilt = {
+          rotateX: (0.5 - y) * 10,
+          rotateY: (x - 0.5) * 12,
+          glareX: x * 100,
+          glareY: y * 100,
+        };
+        if (!tiltFrame) tiltFrame = requestAnimationFrame(paintTilt);
+      });
+      link.addEventListener('pointerdown', () => slide.classList.add('is-pressed'));
+      link.addEventListener('pointerup', () => slide.classList.remove('is-pressed'));
+      link.addEventListener('pointercancel', resetTilt);
+      link.addEventListener('pointerleave', resetTilt);
+      link.addEventListener('blur', resetTilt);
+    }
+
     link.addEventListener('click', (event) => {
       if (reduced || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
 
       event.preventDefault();
-      const slide = link.querySelector('.notebook-slide');
-      if (!slide || slide.classList.contains('is-bubbling')) return;
+      if (slide.classList.contains('is-bubbling')) return;
 
       stopAuto();
+      slide.classList.remove('is-pressed');
       slide.classList.add('is-bubbling');
 
       window.setTimeout(() => {
         slide.classList.remove('is-bubbling');
+        resetTilt();
         const href = link.getAttribute('href') || '';
         const destination = href.startsWith('#') ? document.querySelector(href) : null;
         if (destination) {
