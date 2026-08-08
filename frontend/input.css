@@ -1577,3 +1577,15 @@ section[id], [id="top"] { scroll-margin-top: 88px; }
 @media (prefers-reduced-motion: reduce) {
   .nav-features-btn { transition: none; }
 }
+
+/* ============================================================
+   POINTER MOTION LAYER — additive cursor glow, trail and magnetic depth
+   ============================================================ */
+.cursor-orb { position: fixed; left: 0; top: 0; width: 18px; height: 18px; border: 1px solid rgba(143,227,51,.75); border-radius: 50%; pointer-events: none; z-index: 9999; opacity: 0; transform: translate3d(-50%,-50%,0); transition: width .25s ease, height .25s ease, opacity .25s ease, background .25s ease; mix-blend-mode: multiply; }
+.cursor-orb.is-visible { opacity: 1; }
+.cursor-orb.is-hovering { width: 56px; height: 56px; background: rgba(143,227,51,.12); border-color: rgba(143,227,51,.95); }
+.cursor-trail { position: fixed; left: 0; top: 0; width: 7px; height: 7px; border-radius: 50%; pointer-events: none; z-index: 9998; background: #8fe333; box-shadow: 0 0 18px rgba(143,227,51,.8); opacity: 0; transform: translate3d(-50%,-50%,0); }
+.magnetic-3d { transform-style: preserve-3d; will-change: transform; transition: transform .18s cubic-bezier(.22,1,.36,1), box-shadow .25s ease; }
+.magnetic-3d::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; background: radial-gradient(circle at var(--glare-x,50%) var(--glare-y,50%), rgba(255,255,255,.24), transparent 34%); transition: opacity .2s ease; }
+.magnetic-3d.is-magnetic::after { opacity: 1; }
+@media (pointer: coarse), (prefers-reduced-motion: reduce) { .cursor-orb, .cursor-trail { display:none; } .magnetic-3d { transform:none !important; } }

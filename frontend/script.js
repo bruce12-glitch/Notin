@@ -1033,3 +1033,51 @@ if (yearEl) yearEl.textContent = new Date().getFullYear();
     });
   }
 })();
+
+// ============================================================
+// POINTER MOTION LAYER — additive only, disabled for touch/reduced motion
+// ============================================================
+(function () {
+  const fine = window.matchMedia('(pointer: fine)').matches;
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!fine || reduced) return;
+
+  const orb = document.createElement('div'); orb.className = 'cursor-orb';
+  const trail = document.createElement('div'); trail.className = 'cursor-trail';
+  document.body.append(orb, trail);
+  let x = -100, y = -100, tx = x, ty = y, frame;
+  const move = (e) => { tx = e.clientX; ty = e.clientY; orb.classList.add('is-visible'); };
+  const render = () => {
+    x += (tx - x) * .22; y += (ty - y) * .22;
+    orb.style.transform = `translate3d(${tx}px,${ty}px,0) translate3d(-50%,-50%,0)`;
+    trail.style.opacity = '0.65'; trail.style.transform = `translate3d(${x}px,${y}px,0) translate3d(-50%,-50%,0)`;
+    frame = requestAnimationFrame(render);
+  };
+  window.addEventListener('pointermove', move, { passive: true });
+  render();
+  const targets = document.querySelectorAll('a, button, .hero-3d, #featuresTrack article, .platform-card, #pricing article, .carousel-slide');
+  targets.forEach((el) => {
+    el.classList.add('magnetic-3d');
+    el.addEventListener('pointermove', (e) => {
+      const r = el.getBoundingClientRect(); const px = (e.clientX-r.left)/r.width-.5; const py = (e.clientY-r.top)/r.height-.5;
+      el.style.setProperty('--glare-x', `${(px+.5)*100}%`); el.style.setProperty('--glare-y', `${(py+.5)*100}%`);
+      el.style.transform = `perspective(700px) translate3d(${px*5}px,${py*4}px,8px) rotateX(${py*-3}deg) rotateY(${px*3}deg)`;
+      el.classList.add('is-magnetic'); orb.classList.add('is-hovering');
+    });
+    el.addEventListener('pointerleave', () => { el.style.removeProperty('transform'); el.classList.remove('is-magnetic'); orb.classList.remove('is-hovering'); });
+  });
+  window.addEventListener('blur', () => { orb.classList.remove('is-visible'); trail.style.opacity = '0'; });
+})();
+
+// AUTH UI — connects the landing page to the separate JWT/Google OTP service
+(function () {
+  const api = window.NOTIN_AUTH_API || `${location.protocol}//${location.hostname}:8787`;
+  const modal = document.createElement('div'); modal.className='auth-modal'; modal.innerHTML=`<div class="auth-panel auth-3d" role="dialog" aria-modal="true" aria-labelledby="authTitle"><button class="auth-close" aria-label="Close">×</button><div class="auth-orbit"></div><p class="auth-kicker">SECURE ACCESS</p><h2 id="authTitle">Sign in to Notin</h2><p class="auth-copy">Continue with Google. We’ll send a one-time code to your verified Gmail.</p><button class="auth-google">Continue with Google</button><div class="auth-otp" hidden><label>Enter your 6-digit code<input inputmode="numeric" maxlength="6" autocomplete="one-time-code" class="auth-code"></label><button class="auth-verify">Verify code</button><button class="auth-resend">Resend code</button><p class="auth-status"></p></div></div>`; document.body.appendChild(modal);
+  const open=()=>modal.classList.add('is-open'), close=()=>modal.classList.remove('is-open');
+  document.querySelectorAll('a').forEach(a=>{if(a.textContent.trim().toLowerCase()==='log in'){a.addEventListener('click',e=>{e.preventDefault();open();});}});
+  modal.querySelector('.auth-close').onclick=close; modal.addEventListener('click',e=>{if(e.target===modal)close();});
+  const status=modal.querySelector('.auth-status'); const otp=modal.querySelector('.auth-otp');
+  modal.querySelector('.auth-google').onclick=()=>{ window.location.href=`${api}/auth/google`; };
+  modal.querySelector('.auth-verify').onclick=async()=>{const challenge=new URLSearchParams(location.search).get('challenge'); const code=modal.querySelector('.auth-code').value; try{const r=await fetch(`${api}/auth/otp/verify`,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({challenge,code})});const d=await r.json();if(!r.ok)throw Error(d.error);sessionStorage.setItem('notin_access_token',d.accessToken);status.textContent='Signed in successfully.';setTimeout(close,900);}catch(e){status.textContent=e.message;}};
+  if(new URLSearchParams(location.search).get('auth')==='otp'){open();otp.hidden=false;modal.querySelector('.auth-google').hidden=true;status.textContent='Code sent to your Gmail.';}
+})();
