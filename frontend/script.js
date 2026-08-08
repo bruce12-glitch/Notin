@@ -1033,3 +1033,38 @@ if (yearEl) yearEl.textContent = new Date().getFullYear();
     });
   }
 })();
+
+// ============================================================
+// POINTER MOTION LAYER — additive only, disabled for touch/reduced motion
+// ============================================================
+(function () {
+  const fine = window.matchMedia('(pointer: fine)').matches;
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!fine || reduced) return;
+
+  const orb = document.createElement('div'); orb.className = 'cursor-orb';
+  const trail = document.createElement('div'); trail.className = 'cursor-trail';
+  document.body.append(orb, trail);
+  let x = -100, y = -100, tx = x, ty = y, frame;
+  const move = (e) => { tx = e.clientX; ty = e.clientY; orb.classList.add('is-visible'); };
+  const render = () => {
+    x += (tx - x) * .22; y += (ty - y) * .22;
+    orb.style.transform = `translate3d(${tx}px,${ty}px,0) translate3d(-50%,-50%,0)`;
+    trail.style.opacity = '0.65'; trail.style.transform = `translate3d(${x}px,${y}px,0) translate3d(-50%,-50%,0)`;
+    frame = requestAnimationFrame(render);
+  };
+  window.addEventListener('pointermove', move, { passive: true });
+  render();
+  const targets = document.querySelectorAll('a, button, .hero-3d, #featuresTrack article, .platform-card, #pricing article, .carousel-slide');
+  targets.forEach((el) => {
+    el.classList.add('magnetic-3d');
+    el.addEventListener('pointermove', (e) => {
+      const r = el.getBoundingClientRect(); const px = (e.clientX-r.left)/r.width-.5; const py = (e.clientY-r.top)/r.height-.5;
+      el.style.setProperty('--glare-x', `${(px+.5)*100}%`); el.style.setProperty('--glare-y', `${(py+.5)*100}%`);
+      el.style.transform = `perspective(700px) translate3d(${px*5}px,${py*4}px,8px) rotateX(${py*-3}deg) rotateY(${px*3}deg)`;
+      el.classList.add('is-magnetic'); orb.classList.add('is-hovering');
+    });
+    el.addEventListener('pointerleave', () => { el.style.removeProperty('transform'); el.classList.remove('is-magnetic'); orb.classList.remove('is-hovering'); });
+  });
+  window.addEventListener('blur', () => { orb.classList.remove('is-visible'); trail.style.opacity = '0'; });
+})();
