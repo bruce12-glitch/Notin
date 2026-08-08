@@ -1,1 +1,59 @@
-const toast=document.getElementById('toast'), email=document.getElementById('email'), form=document.getElementById('authForm');function show(t){toast.textContent=t;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),3500)}email.addEventListener('input',()=>document.querySelector('.continue').style.background=email.validity.valid?'#141414':'#ccc');form.addEventListener('submit',e=>{e.preventDefault();show('Your OTP flow is ready — continue with Google for secure access.')});const AUTH_API=window.NOTIN_AUTH_API||`${location.protocol}//${location.hostname}:8787`;document.getElementById('googleBtn').onclick=()=>{show('Connecting to secure Google authentication…');setTimeout(()=>{location.href=AUTH_API+'/auth/google'},650)};document.getElementById('login').onclick=e=>{e.preventDefault();show('Enter your email to continue.')};document.addEventListener('pointermove',e=>{const x=e.clientX/innerWidth-.5,y=e.clientY/innerHeight-.5;document.querySelectorAll('.blob').forEach((el,i)=>el.style.translate=`${x*(i+1)*10}px ${y*(i+1)*8}px`);document.querySelector('.visual-word').style.transform=`perspective(700px) rotateY(${x*-12}deg) rotateX(${y*6}deg) translateZ(12px)`},{passive:true});
+// Notin Authentication Page - Final Version
+
+const emailInput = document.getElementById('email');
+const continueBtn = document.getElementById('continueBtn');
+const form = document.getElementById('authForm');
+const googleBtn = document.getElementById('googleBtn');
+
+// Enable/Disable Continue button
+emailInput.addEventListener('input', () => {
+  const isValid = emailInput.validity.valid && emailInput.value.length > 0;
+  continueBtn.disabled = !isValid;
+  continueBtn.style.background = isValid ? '#151515' : '#cecece';
+});
+
+// Form submission
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const email = emailInput.value.trim();
+  if (!email) return;
+
+  continueBtn.disabled = true;
+  continueBtn.textContent = 'Please wait...';
+
+  // Simulate API call
+  await new Promise(resolve => setTimeout(resolve, 800));
+  
+  alert(`OTP flow ready for: ${email}\n(Connect to your backend)`);
+  
+  continueBtn.textContent = 'Continue';
+  continueBtn.disabled = false;
+});
+
+// Google button
+googleBtn.addEventListener('click', () => {
+  const authUrl = window.NOTIN_AUTH_API || 'http://localhost:8787';
+  window.location.href = `${authUrl}/auth/google`;
+});
+
+// Login link
+document.querySelector('.login-text a').addEventListener('click', (e) => {
+  e.preventDefault();
+  alert('Login flow would open here.');
+});
+
+// Keyboard accessibility
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && document.activeElement === emailInput) {
+    if (!continueBtn.disabled) {
+      form.dispatchEvent(new Event('submit'));
+    }
+  }
+});
+
+// Initial state
+window.addEventListener('load', () => {
+  continueBtn.disabled = true;
+  continueBtn.style.background = '#cecece';
+});
