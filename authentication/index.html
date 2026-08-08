@@ -1,1 +1,109 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Notin — Create your account</title><link rel="stylesheet" href="styles.css"></head><body><div class="scene"><div class="blob blob-green"></div><div class="blob blob-lilac"></div><div class="blob blob-blue"></div><div class="blob blob-orange"></div><div class="grain"></div></div><main class="auth-layout"><section class="auth-copy"><div class="brand-mark">N<span>•</span></div><h1>Welcome to <strong>Notin!</strong></h1><p class="subtitle">Sign up and start taking notes.</p><form class="auth-form" id="authForm"><input id="email" type="email" placeholder="Email address" autocomplete="email" required><button class="continue" type="submit">Continue</button></form><div class="or"><i></i><span>or</span><i></i></div><div class="socials"><button class="social google" id="googleBtn"><b>G</b> Continue with Google</button><button class="social apple"><b>●</b> Continue with Apple</button></div><p class="legal">By creating an account, you are agreeing to our <a>Terms of<br>Service</a> and acknowledging receipt of our <a>Privacy Policy.</a></p><p class="login">Already have an account? <a href="#" id="login">Log in</a></p><div class="foot">© 2026 Notin. All rights reserved.</div></section><section class="visual"><div class="visual-word">Your<br><span>second</span><br>brain</div><div class="cursor-hint">↗</div><div class="visual-orbit orbit-a"></div><div class="visual-orbit orbit-b"></div></section></main><div class="toast" id="toast"></div><script src="script.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notin — Create your account</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Decorative Shapes -->
+  <div class="decorative-shapes">
+    <!-- Green burst (top center-right) -->
+    <div class="shape green-burst"></div>
+    
+    <!-- Purple flower (top right) -->
+    <div class="shape purple-flower"></div>
+    
+    <!-- Blue burst (bottom left-center) -->
+    <div class="shape blue-burst"></div>
+    
+    <!-- Orange circles (bottom right) -->
+    <div class="shape orange-1"></div>
+    <div class="shape orange-2"></div>
+    <div class="shape orange-3"></div>
+  </div>
+
+  <div class="auth-container">
+    <!-- LEFT SIDE - Form -->
+    <div class="left-panel">
+      <div class="form-wrapper">
+        <!-- Logo -->
+        <div class="logo">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M24 4L43 13.5V33L24 42.5L5 33V13.5L24 4Z" fill="#00A82D"/>
+            <path d="M24 14L35 19.5V30L24 35.5L13 30V19.5L24 14Z" fill="#8FE333"/>
+          </svg>
+        </div>
+
+        <!-- Heading -->
+        <h1>Welcome to <strong>Notin!</strong></h1>
+        <p class="subtitle">Sign up and start taking notes.</p>
+
+        <!-- Form -->
+        <form id="authForm">
+          <input type="email" id="email" placeholder="Email address" required>
+          <button type="submit" class="btn-primary" id="continueBtn" disabled>Continue</button>
+        </form>
+
+        <!-- Divider -->
+        <div class="divider"><span>or</span></div>
+
+        <!-- Social Buttons -->
+        <div class="social-buttons">
+          <button type="button" class="btn-social google" id="googleBtn">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908C16.658 14.845 17.64 12.272 17.64 9.2z" fill="#4285F4"/>
+              <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.723H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/>
+              <path d="M3.964 10.71c-.18-.54-.286-1.117-.286-1.71s.107-1.17.286-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+              <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C14.463.891 11.923 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.15 6.656 3.58 9 3.58z" fill="#EA4335"/>
+            </svg>
+            Continue with Google
+          </button>
+          <button type="button" class="btn-social apple">
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
+              <path d="M14.5 9.5c0 3.5-2.5 6-5.5 6-3 0-5.5-2.5-5.5-6s2.5-6 5.5-6c3 0 5.5 2.5 5.5 6z"/>
+            </svg>
+            Continue with Apple
+          </button>
+        </div>
+
+        <!-- Legal -->
+        <p class="legal">
+          By creating an account, you are agreeing to our 
+          <a href="#">Terms of Service</a> and acknowledging receipt of our 
+          <a href="#">Privacy Policy</a>.
+        </p>
+
+        <!-- Login Prompt -->
+        <p class="login-text">
+          Already have an account? <a href="#">Log in</a>
+        </p>
+      </div>
+
+      <!-- Footer -->
+      <div class="footer">
+        <span>© 2026 Notin. All rights reserved.</span>
+        <div class="footer-links">
+          <a href="#">Security</a>
+          <a href="#">Legal</a>
+          <a href="#">Privacy</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT SIDE - Hero -->
+    <div class="right-panel">
+      <div class="hero-text">
+        <div>Your</div>
+        <div class="highlight-wrapper">
+          <span class="highlight">second</span>
+        </div>
+        <div>brain</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

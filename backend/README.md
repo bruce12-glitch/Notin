@@ -1,21 +1,43 @@
-# Notin — Backend (coming soon)
+# Notin Backend (PostgreSQL + Prisma)
 
-This folder will hold the Notin backend.
+Clean, modern, and stable backend for Notin.
 
-## Planned contents
+## Tech Stack
+- PostgreSQL + Prisma ORM
+- Express.js
+- JWT + bcrypt
 
-- **API** — REST/GraphQL endpoints for notes, notebooks, tags, tasks
-- **Storage** — database schema & migrations (notes, users, sync state)
-- **Sync** — real-time cross-device note sync + offline conflict resolution
-- **Search** — full-text search service (instant, PDF-aware)
-- **AI features** — AI search / rewrite / meeting-notes services
+## Setup
 
-## Status
+```bash
+cd backend
+npm install
+cp .env.example .env
+```
 
-- [ ] Scaffold API server
-- [ ] Database schema
-- [ ] Auth integration (see `../authentication/`)
-- [ ] Sync protocol
-- [ ] Search service
+Edit `.env` with your PostgreSQL URL.
 
-Nothing has been built yet — the frontend is the current focus.
+### Run migrations
+```bash
+npx prisma generate
+npx prisma migrate dev --name init
+```
+
+### Start server
+```bash
+npm run dev
+```
+
+## API Endpoints
+
+### Auth
+- `POST /api/users/signup`
+- `POST /api/users/signin`
+
+### Notes (Protected)
+- `GET    /api/notes`
+- `POST   /api/notes`
+- `PUT    /api/notes/:id`
+- `DELETE /api/notes/:id`
+
+All note routes require `Authorization: Bearer <token>` header.
