@@ -1,59 +1,62 @@
-// Notin Authentication Page - Final Version
+// Notin Authentication — behavior preserved; UI corrected separately
 
 const emailInput = document.getElementById('email');
 const continueBtn = document.getElementById('continueBtn');
 const form = document.getElementById('authForm');
 const googleBtn = document.getElementById('googleBtn');
+const appleBtn = document.getElementById('appleBtn');
+const loginLink = document.getElementById('loginLink');
 
-// Enable/Disable Continue button
-emailInput.addEventListener('input', () => {
-  const isValid = emailInput.validity.valid && emailInput.value.length > 0;
+function setContinueEnabled(isValid) {
   continueBtn.disabled = !isValid;
-  continueBtn.style.background = isValid ? '#151515' : '#cecece';
+}
+
+emailInput.addEventListener('input', () => {
+  const isValid = emailInput.validity.valid && emailInput.value.trim().length > 0;
+  setContinueEnabled(isValid);
 });
 
-// Form submission
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
-  
+
   const email = emailInput.value.trim();
-  if (!email) return;
+  if (!email || !emailInput.validity.valid) return;
 
   continueBtn.disabled = true;
+  const original = continueBtn.textContent;
   continueBtn.textContent = 'Please wait...';
 
-  // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 800));
-  
+  // Stub — connect to backend later
+  await new Promise((resolve) => setTimeout(resolve, 800));
+
   alert(`OTP flow ready for: ${email}\n(Connect to your backend)`);
-  
-  continueBtn.textContent = 'Continue';
-  continueBtn.disabled = false;
+
+  continueBtn.textContent = original;
+  setContinueEnabled(true);
 });
 
-// Google button
 googleBtn.addEventListener('click', () => {
   const authUrl = window.NOTIN_AUTH_API || 'http://localhost:8787';
   window.location.href = `${authUrl}/auth/google`;
 });
 
-// Login link
-document.querySelector('.login-text a').addEventListener('click', (e) => {
-  e.preventDefault();
-  alert('Login flow would open here.');
-});
+if (appleBtn) {
+  appleBtn.addEventListener('click', () => {
+    // Visual parity with Evernote; SIWA not wired yet
+    alert('Continue with Apple — coming soon.');
+  });
+}
 
-// Keyboard accessibility
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && document.activeElement === emailInput) {
-    if (!continueBtn.disabled) {
-      form.dispatchEvent(new Event('submit'));
+if (loginLink) {
+  loginLink.addEventListener('click', (e) => {
+    // login.html may not exist yet — keep soft fallback
+    if (!loginLink.getAttribute('href') || loginLink.getAttribute('href') === '#') {
+      e.preventDefault();
+      alert('Login flow would open here.');
     }
-  }
-});
+  });
+}
 
-// Initial state
 window.addEventListener('load', () => {
-  continueBtn.disabled = true;
-  continueBtn.style.background = '#cecece';
+  setContinueEnabled(false);
 });

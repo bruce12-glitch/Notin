@@ -1,24 +1,22 @@
 {
   "name": "notin-backend",
   "version": "1.0.0",
-  "description": "Notin Backend - Clean PostgreSQL + Prisma API",
+  "description": "Notin Backend - Clean PostgreSQL API (Prisma schema + pg driver)",
   "main": "src/server.js",
   "type": "module",
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio"
+    "db:migrate": "node src/db/migrate.js",
+    "db:generate": "echo 'Schema is applied via npm run db:migrate (pg driver). prisma/schema.prisma is the source of truth for the data model.'"
   },
   "dependencies": {
-    "@prisma/client": "^5.22.0",
-    "bcrypt": "^5.1.1",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
-    "prisma": "^5.22.0"
+    "pg": "^8.13.1"
   }
 }
