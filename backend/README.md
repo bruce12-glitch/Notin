@@ -1,11 +1,12 @@
-# Notin Backend (PostgreSQL + Prisma)
+# Notin Backend (PostgreSQL)
 
 Clean, modern, and stable backend for Notin.
 
 ## Tech Stack
-- PostgreSQL + Prisma ORM
+- PostgreSQL
 - Express.js
-- JWT + bcrypt
+- JWT + bcryptjs
+- Data model defined in `prisma/schema.prisma` (applied via `npm run db:migrate` using the `pg` driver)
 
 ## Setup
 
@@ -19,8 +20,7 @@ Edit `.env` with your PostgreSQL URL.
 
 ### Run migrations
 ```bash
-npx prisma generate
-npx prisma migrate dev --name init
+npm run db:migrate
 ```
 
 ### Start server

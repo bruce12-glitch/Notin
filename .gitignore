@@ -27,3 +27,8 @@ Thumbs.db
 # Temporary / cache
 .cache/
 .tmp/
+
+# Auth local DB
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

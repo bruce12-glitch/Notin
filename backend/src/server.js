@@ -18,10 +18,10 @@ app.use('/api/users', userRoutes);
 app.use('/api/notes', noteRoutes);
 
 app.get('/', (req, res) => {
-  res.json({ 
-    message: 'Notin Backend API', 
+  res.json({
+    message: 'Notin Backend API',
     status: 'running',
-    database: 'PostgreSQL + Prisma'
+    database: 'PostgreSQL',
   });
 });
 
@@ -35,8 +35,8 @@ const start = async () => {
     await prisma.$connect();
     console.log('✅ Connected to PostgreSQL');
 
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
     });
   } catch (error) {
     console.error('❌ Database connection failed:', error);
