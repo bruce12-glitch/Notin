@@ -18,6 +18,8 @@ let editor = null;
 let currentFilter = 'active'; // 'active' | 'trash'
 let currentQuery = ''; // WP-APP-004 — active search string ('' = no search)
 let searchDebounce = null; // debounce timer for search input
+let notebooks = []; // WP-APP-005 — user's notebooks
+let currentNotebookId = null; // WP-APP-005 — null = All notes (no notebook filter)
 
 // DOM
 const emailEl = document.getElementById('appEmail');
@@ -33,6 +35,15 @@ const searchInput = document.getElementById('searchInput');
 const searchClear = document.getElementById('searchClear');
 const emptySearchEl = document.getElementById('emptySearch');
 const clearSearchEmptyBtn = document.getElementById('clearSearchEmpty');
+// WP-APP-005 — notebooks (minimal organize)
+const newNotebookBtn = document.getElementById('newNotebookBtn');
+const newNotebookForm = document.getElementById('newNotebookForm');
+const newNotebookInput = document.getElementById('newNotebookInput');
+const newNotebookAdd = document.getElementById('newNotebookAdd');
+const newNotebookCancel = document.getElementById('newNotebookCancel');
+const newNotebookErr = document.getElementById('newNotebookErr');
+const notebookListEl = document.getElementById('notebookList');
+const nbSelect = document.getElementById('noteNotebookSelect');
 const titleInput = document.getElementById('editorTitle');
 const saveBtn = document.getElementById('saveBtn');
 const saveStatus = document.getElementById('saveStatus');
@@ -169,12 +180,15 @@ function setSaveStatus(text, cls){
   saveStatus.className = 'app-save-status' + (cls ? ' ' + cls : '');
 }
 function updateNav(){
-  if(navAll) navAll.classList.toggle('is-active', currentFilter==='active');
+  if(navAll) navAll.classList.toggle('is-active', currentFilter==='active' && !currentNotebookId);
   if(navTrash) navTrash.classList.toggle('is-active', currentFilter==='trash');
-  if(navAll) navAll.setAttribute('aria-current', currentFilter==='active'?'page':'false');
+  if(navAll) navAll.setAttribute('aria-current', currentFilter==='active' && !currentNotebookId ? 'page' : 'false');
   if(navTrash) navTrash.setAttribute('aria-current', currentFilter==='trash'?'page':'false');
-  if(listTitleEl) listTitleEl.textContent = currentFilter==='trash' ? 'Trash' : 'All Notes';
+  // WP-APP-005 — list title reflects the selected notebook (Trash keeps its title)
+  const nb = currentNotebookId ? notebooks.find(x=>x.id===currentNotebookId) : null;
+  if(listTitleEl) listTitleEl.textContent = currentFilter==='trash' ? 'Trash' : (nb ? nb.name : 'All Notes');
   if(newWrap) newWrap.hidden = currentFilter==='trash';
+  renderNotebooks(); // keep sidebar active states in sync
 }
 async function updateCounts(){
   try{
@@ -268,7 +282,10 @@ async function loadNotes(){
   setError('');
   try{
     // WP-APP-004 — append q only when searching; empty q = today's list behavior
-    const qs = `/api/notes?filter=${currentFilter}` + (currentQuery ? `&q=${encodeURIComponent(currentQuery)}` : '');
+    // WP-APP-005 — notebook filter composes with search + trash
+    const qs = `/api/notes?filter=${currentFilter}`
+      + (currentQuery ? `&q=${encodeURIComponent(currentQuery)}` : '')
+      + (currentNotebookId ? `&notebookId=${encodeURIComponent(currentNotebookId)}` : '');
     const res = await fetchWithAuth(API_BASE + qs, {method:'GET'});
     if(!res.ok){
       const j = await res.json().catch(()=>({}));
@@ -279,9 +296,11 @@ async function loadNotes(){
     notes.sort((a,b)=> new Date(b.updatedAt||b.createdAt) - new Date(a.updatedAt||a.createdAt));
     renderList();
     await updateCounts(); // refresh sidebar counts (totals, unfiltered)
-    if(currentQuery && countEl){
-      // While searching, the list-header counter shows matches found
-      countEl.textContent = `${notes.length} ${notes.length===1?'match':'matches'}`;
+    if(countEl && (currentQuery || currentNotebookId)){
+      // While filtering (search and/or notebook), the list-header counter shows what's listed
+      countEl.textContent = currentQuery
+        ? `${notes.length} ${notes.length===1?'match':'matches'}`
+        : `${notes.length} ${notes.length===1?'note':'notes'}`;
     }
     if(notes.length===0){
       selectedId = null;
@@ -347,6 +366,11 @@ function updateEditorForSelection(note){
   const hasSelection = !!note;
   // Title and editor
   updateEditorDisabled(!hasSelection || isTrashed);
+  // WP-APP-005 — notebook picker reflects selection; disabled for trashed/empty
+  if(nbSelect){
+    nbSelect.disabled = !hasSelection || isTrashed;
+    nbSelect.value = (note && note.notebookId) || '';
+  }
   // Buttons
   if(trashBtn) trashBtn.hidden = !hasSelection || isTrashed;
   if(restoreBtn) restoreBtn.hidden = !isTrashed;
@@ -408,7 +432,8 @@ async function createNote(){
     const emptyDoc = createEmptyDoc();
     const res = await fetchWithAuth(API_BASE + '/api/notes', {
       method:'POST',
-      body: JSON.stringify({ title: 'Untitled', description: '', contentJson: emptyDoc, contentText: '' })
+      // WP-APP-005: a new note lands in the notebook you're currently viewing
+      body: JSON.stringify({ title: 'Untitled', description: '', contentJson: emptyDoc, contentText: '', ...(currentNotebookId ? { notebookId: currentNotebookId } : {}) })
     });
     if(!res.ok){
       const j = await res.json().catch(()=>({}));
@@ -621,8 +646,9 @@ if(modalConfirm) modalConfirm.addEventListener('click', deleteForever);
 document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && deleteModal && !deleteModal.hidden) hideDeleteModal(); });
 
 if(navAll) navAll.addEventListener('click', async ()=>{
-  if(currentFilter==='active') return;
+  if(currentFilter==='active' && !currentNotebookId) return;
   currentFilter='active';
+  currentNotebookId=null; // WP-APP-005: All Notes = every notebook
   updateNav();
   selectedId=null;
   titleInput.value='';
@@ -640,6 +666,134 @@ if(navTrash) navTrash.addEventListener('click', async ()=>{
   updateEditorForSelection(null);
   await loadNotes();
 });
+// ── WP-APP-005 — notebooks (minimal organize: sidebar list + filter + editor picker) ──
+async function loadNotebooks(){
+  try{
+    const res = await fetchWithAuth(API_BASE + '/api/notebooks', {method:'GET'});
+    if(!res.ok) throw new Error(`Fetch failed ${res.status}`);
+    const data = await res.json();
+    notebooks = Array.isArray(data) ? data : [];
+  }catch(e){ notebooks = []; }
+  renderNotebooks();
+  populateNbSelect();
+}
+function renderNotebooks(){
+  if(!notebookListEl) return;
+  notebookListEl.innerHTML = '';
+  if(notebooks.length===0){
+    const d = document.createElement('div');
+    d.className = 'app-nb-empty';
+    d.textContent = 'No notebooks yet';
+    notebookListEl.appendChild(d);
+    return;
+  }
+  notebooks.forEach(nb=>{
+    const row = document.createElement('div');
+    row.className = 'app-nb-item' + (currentNotebookId===nb.id && currentFilter==='active' ? ' is-active' : '');
+    row.dataset.id = nb.id;
+    row.innerHTML = `
+      <button type="button" class="app-nb-open" title="Show notes in ${escapeHtml(nb.name)}">
+        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M4 3.5h12a1 1 0 011 1v11a1 1 0 01-1 1H4a1 1 0 01-1-1v-11a1 1 0 011-1zm2 4v6l2.5-1.8L11 13.5v-6H6z" fill="currentColor" opacity=".85"/></svg>
+        <span class="app-nb-name">${escapeHtml(nb.name)}</span>
+        <span class="app-nb-count">${Number(nb.noteCount)||0}</span>
+      </button>
+      <button type="button" class="app-nb-del" title="Delete notebook" aria-label="Delete notebook ${escapeHtml(nb.name)}">×</button>`;
+    row.querySelector('.app-nb-open').addEventListener('click', ()=> selectNotebook(nb.id));
+    row.querySelector('.app-nb-del').addEventListener('click', ()=> confirmDeleteNotebook(row, nb));
+    notebookListEl.appendChild(row);
+  });
+}
+async function selectNotebook(id){
+  if(currentNotebookId===id && currentFilter==='active') return;
+  currentNotebookId = id;
+  if(currentFilter!=='active') currentFilter='active'; // notebooks organize non-trashed notes
+  updateNav();
+  selectedId=null; titleInput.value='';
+  if(editor) editor.commands.setContent(createEmptyDoc(), false);
+  updateEditorForSelection(null);
+  await loadNotes();
+}
+function confirmDeleteNotebook(row, nb){
+  // Inline confirm (no alert()): swap the row into confirm mode
+  row.classList.add('is-confirming');
+  row.innerHTML = `
+    <div class="app-nb-confirm">
+      <div class="app-nb-confirm-text">Delete “${escapeHtml(nb.name)}”?<span>Notes are kept (unfiled).</span></div>
+      <div class="app-nb-confirm-actions">
+        <button type="button" class="app-nb-yes">Delete</button>
+        <button type="button" class="app-nb-no">Cancel</button>
+      </div>
+    </div>`;
+  row.querySelector('.app-nb-no').addEventListener('click', ()=> renderNotebooks());
+  row.querySelector('.app-nb-yes').addEventListener('click', async ()=>{
+    setError('');
+    try{
+      const res = await fetchWithAuth(API_BASE + `/api/notebooks/${nb.id}`, {method:'DELETE'});
+      if(!res.ok){ const j=await res.json().catch(()=>({})); throw new Error(j.message || `Delete failed ${res.status}`); }
+      if(currentNotebookId===nb.id) currentNotebookId=null;
+      await loadNotebooks();
+      updateNav();
+      await loadNotes();
+    }catch(e){ setError(e.message || 'Could not delete notebook'); renderNotebooks(); }
+  });
+}
+function showNotebookForm(){
+  if(!newNotebookForm) return;
+  newNotebookForm.hidden = false;
+  if(newNotebookErr) newNotebookErr.textContent = '';
+  if(newNotebookInput){ newNotebookInput.value=''; newNotebookInput.focus(); }
+}
+function hideNotebookForm(){
+  if(newNotebookForm) newNotebookForm.hidden = true;
+  if(newNotebookErr) newNotebookErr.textContent='';
+}
+async function submitNotebook(){
+  const name = (newNotebookInput?.value || '').trim();
+  if(!name){ if(newNotebookErr) newNotebookErr.textContent = 'Name your notebook.'; return; }
+  if(newNotebookAdd) newNotebookAdd.disabled = true;
+  try{
+    const res = await fetchWithAuth(API_BASE + '/api/notebooks', {method:'POST', body: JSON.stringify({name})});
+    const j = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(j.message || `Create failed ${res.status}`);
+    hideNotebookForm();
+    await loadNotebooks();
+    if(j.id) selectNotebook(j.id); // jump straight into the new notebook
+  }catch(e){ if(newNotebookErr) newNotebookErr.textContent = e.message || 'Could not create notebook'; }
+  finally{ if(newNotebookAdd) newNotebookAdd.disabled = false; }
+}
+// Editor notebook picker: rebuild options (values synced in updateEditorForSelection)
+function populateNbSelect(){
+  if(!nbSelect) return;
+  nbSelect.innerHTML = '<option value="">None</option>' + notebooks.map(nb=>`<option value="${nb.id}">${escapeHtml(nb.name)}</option>`).join('');
+  const cur = notes.find(n=>n.id===selectedId);
+  nbSelect.value = cur?.notebookId || '';
+}
+if(newNotebookBtn) newNotebookBtn.addEventListener('click', ()=>{ (newNotebookForm && !newNotebookForm.hidden) ? hideNotebookForm() : showNotebookForm(); });
+if(newNotebookCancel) newNotebookCancel.addEventListener('click', hideNotebookForm);
+if(newNotebookAdd) newNotebookAdd.addEventListener('click', submitNotebook);
+if(newNotebookInput) newNotebookInput.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter') submitNotebook();
+  if(e.key==='Escape') hideNotebookForm();
+});
+// Changing the editor dropdown saves notebookId immediately (explicit save)
+if(nbSelect) nbSelect.addEventListener('change', async ()=>{
+  if(!selectedId || nbSelect.disabled) return;
+  setError('');
+  try{
+    const res = await fetchWithAuth(API_BASE + `/api/notes/${selectedId}`, {
+      method:'PUT',
+      body: JSON.stringify({ notebookId: nbSelect.value || null })
+    });
+    const j = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(j.message || `Move failed ${res.status}`);
+    const idx = notes.findIndex(n=>n.id===selectedId);
+    if(idx>=0) notes[idx] = j;
+    setSaveStatus('Saved', 'is-saved');
+    await loadNotebooks(); // sidebar counts
+    await loadNotes();     // note may drop out of the active notebook filter
+  }catch(e){ setError(e.message || 'Could not move note'); }
+});
+
 // ── WP-APP-004 — search wiring (debounced 300ms, no page reload) ──
 function applySearch(value){
   currentQuery = String(value ?? '');
@@ -691,6 +845,7 @@ initEditor();
     return;
   }
   updateEditorDisabled(true);
+  await loadNotebooks(); // WP-APP-005 — sidebar notebooks
   updateNav();
   await loadNotes();
   await updateCounts();

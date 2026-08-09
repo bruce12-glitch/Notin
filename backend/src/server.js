@@ -9,6 +9,7 @@ import db from './config/db.js';
 
 import userRoutes from './routes/userRoutes.js';
 import noteRoutes from './routes/noteRoutes.js';
+import notebookRoutes from './routes/notebookRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import { signup, signin } from './controllers/userController.js';
 
@@ -78,6 +79,7 @@ app.post('/api/auth/signup', signup);
 app.post('/api/auth/signin', signin);
 
 app.use('/api/notes', noteRoutes);
+app.use('/api/notebooks', notebookRoutes);
 
 app.get('/', (req, res) => {
   // If request accepts html and auth index exists, serve it; otherwise JSON

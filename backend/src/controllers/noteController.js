@@ -1,12 +1,19 @@
 import prisma from '../config/db.js';
 
 export const createNote = async (req, res) => {
-  const { title, description, contentJson, contentText } = req.body;
+  const { title, description, contentJson, contentText, notebookId } = req.body;
   const userId = req.userId;
 
   try {
+    // WP-APP-005: optional notebook assignment on create (ownership-checked)
+    let nbId = null;
+    if (notebookId !== undefined && notebookId !== null && notebookId !== '') {
+      const nb = await prisma.notebook.findFirst({ where: { id: String(notebookId), userId } });
+      if (!nb) return res.status(400).json({ message: 'Unknown notebook' });
+      nbId = nb.id;
+    }
     const note = await prisma.note.create({
-      data: { title: title || 'Untitled', description: description || contentText || '', contentJson, contentText: contentText || description || '', userId },
+      data: { title: title || 'Untitled', description: description || contentText || '', contentJson, contentText: contentText || description || '', notebookId: nbId, userId },
     });
     res.status(201).json(note);
   } catch (error) {
@@ -19,7 +26,8 @@ export const getNotes = async (req, res) => {
   const userId = req.userId;
   // Support ?filter=active|trash|all and legacy ?trash=0|1, ?isTrashed, ?trashed
   // WP-APP-004: optional ?q=<string> — full-text search (title / contentText / description)
-  const { filter, trash, trashed, isTrashed: isTrashedQ, q } = req.query;
+  // WP-APP-005: optional ?notebookId=<id|none> — 'none'/'unfiled' = notebookId IS NULL
+  const { filter, trash, trashed, isTrashed: isTrashedQ, q, notebookId: nbParam } = req.query;
   let isTrashed;
   if (filter === 'trash') isTrashed = true;
   else if (filter === 'active') isTrashed = false;
@@ -32,9 +40,22 @@ export const getNotes = async (req, res) => {
   // Empty/missing q → same list behavior as today (no search clause)
   const needle = typeof q === 'string' ? q.trim() : '';
 
+  // Notebook filter (omitted = all notebooks; ownership enforced)
   try {
+    let nbFilter; // undefined = no notebook filter
+    if (nbParam !== undefined && nbParam !== '') {
+      const p = String(nbParam).toLowerCase();
+      if (p === 'none' || p === 'unfiled') {
+        nbFilter = null;
+      } else {
+        const nb = await prisma.notebook.findFirst({ where: { id: String(nbParam), userId } });
+        if (!nb) return res.status(400).json({ message: 'Unknown notebook' });
+        nbFilter = nb.id;
+      }
+    }
+
     const notes = await prisma.note.findMany({
-      where: { userId, ...(isTrashed !== undefined ? { isTrashed } : {}), ...(needle ? { q: needle } : {}) },
+      where: { userId, ...(isTrashed !== undefined ? { isTrashed } : {}), ...(needle ? { q: needle } : {}), ...(nbFilter !== undefined ? { notebookId: nbFilter } : {}) },
       orderBy: { createdAt: 'desc' },
       limit: 100, // WP-APP-004 result cap
     });
@@ -47,7 +68,7 @@ export const getNotes = async (req, res) => {
 
 export const updateNote = async (req, res) => {
   const { id } = req.params;
-  const { title, description, contentJson, contentText, isTrashed, trashedAt } = req.body;
+  const { title, description, contentJson, contentText, isTrashed, trashedAt, notebookId } = req.body;
   const userId = req.userId;
 
   try {
@@ -70,6 +91,16 @@ export const updateNote = async (req, res) => {
       data.trashedAt = data.isTrashed ? (trashedAt || new Date().toISOString()) : null;
     } else if (trashedAt !== undefined) {
       data.trashedAt = trashedAt;
+    }
+    // WP-APP-005: notebookId may be set ('' / null = move to unfiled)
+    if (notebookId !== undefined) {
+      if (notebookId === null || notebookId === '') {
+        data.notebookId = null;
+      } else {
+        const nb = await prisma.notebook.findFirst({ where: { id: String(notebookId), userId } });
+        if (!nb) return res.status(400).json({ message: 'Unknown notebook' });
+        data.notebookId = nb.id;
+      }
     }
 
     // If no fields to update, return existing

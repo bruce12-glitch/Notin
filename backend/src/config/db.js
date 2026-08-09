@@ -172,18 +172,77 @@ const db = {
       return rows[0];
     },
   },
+  // WP-APP-005 — Notebooks (minimal)
+  notebook: {
+    async findMany({ where: { userId } }) {
+      // Include a count of non-trashed notes per notebook for the sidebar badge
+      const { rows } = await query(
+        `SELECT nb.id, nb."userId", nb.name, nb."createdAt", nb."updatedAt",
+                (SELECT COUNT(*) FROM "Note" n WHERE n."notebookId" = nb.id AND n."isTrashed" = ${usePostgres ? 'FALSE' : '0'}) AS "noteCount"
+         FROM "Notebook" nb WHERE nb."userId" = $1 ORDER BY nb.name ASC`,
+        [userId]
+      );
+      return rows.map(r => ({ ...r, noteCount: Number(r.noteCount) || 0 }));
+    },
+    async findFirst({ where: { id, userId } }) {
+      const { rows } = await query(
+        `SELECT id, "userId", name, "createdAt", "updatedAt" FROM "Notebook" WHERE id = $1 AND "userId" = $2 LIMIT 1`,
+        [id, userId]
+      );
+      return rows[0] || null;
+    },
+    async findByName(userId, name) {
+      // Case-insensitive name lookup (uniqueness per user enforced in controller)
+      const { rows } = await query(
+        `SELECT id, "userId", name, "createdAt", "updatedAt" FROM "Notebook" WHERE "userId" = $1 AND LOWER(name) = LOWER($2) LIMIT 1`,
+        [userId, String(name).trim()]
+      );
+      return rows[0] || null;
+    },
+    async create({ data: { name, userId } }) {
+      const id = randomId();
+      const now = new Date().toISOString();
+      const { rows } = await query(
+        `INSERT INTO "Notebook" (id, "userId", name, "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id, "userId", name, "createdAt", "updatedAt"`,
+        [id, userId, String(name).trim(), now, now]
+      );
+      return rows[0];
+    },
+    async update({ where: { id }, data: { name } }) {
+      const now = new Date().toISOString();
+      const { rows } = await query(
+        `UPDATE "Notebook" SET name = $1, "updatedAt" = $2 WHERE id = $3
+         RETURNING id, "userId", name, "createdAt", "updatedAt"`,
+        [String(name).trim(), now, id]
+      );
+      return rows[0];
+    },
+    async unfileNotes(id) {
+      // Notes become unfiled (notebookId NULL) — never deleted
+      const { rowCount } = await query(
+        `UPDATE "Note" SET "notebookId" = NULL WHERE "notebookId" = $1`, [id]
+      );
+      return rowCount || 0;
+    },
+    async delete({ where: { id } }) {
+      await query(`DELETE FROM "Notebook" WHERE id = $1`, [id]);
+      return { id };
+    },
+  },
   note: {
-    async create({ data: { title, description, contentJson, contentText, userId } }) {
+    async create({ data: { title, description, contentJson, contentText, userId, notebookId } }) {
       const id = randomId();
       const now = new Date().toISOString();
       const jsonStr = contentJson ? (typeof contentJson === 'string' ? contentJson : JSON.stringify(contentJson)) : null;
       const textStr = contentText != null ? String(contentText) : (description != null ? String(description) : '');
       const desc = description != null ? String(description) : (textStr || '');
       const { rows } = await query(
-        `INSERT INTO "Note" (id, title, description, "contentJson", "contentText", "isTrashed", "trashedAt", "userId", "createdAt", "updatedAt")
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-         RETURNING id, title, description, "contentJson", "contentText", "isTrashed", "trashedAt", "userId", "createdAt", "updatedAt"`,
-        [id, title || 'Untitled', desc, jsonStr, textStr, 0, null, userId, now, now]
+        `INSERT INTO "Note" (id, title, description, "contentJson", "contentText", "isTrashed", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         RETURNING id, title, description, "contentJson", "contentText", "isTrashed", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt"`,
+        [id, title || 'Untitled', desc, jsonStr, textStr, 0, null, notebookId || null, userId, now, now]
       );
       const row = rows[0];
       if(row){
@@ -192,9 +251,9 @@ const db = {
       }
       return row;
     },
-    async findMany({ where: { userId, isTrashed, q }, orderBy, limit } = {}) {
+    async findMany({ where: { userId, isTrashed, q, notebookId }, orderBy, limit } = {}) {
       const order = orderBy?.createdAt === 'desc' ? '"createdAt" DESC' : '"createdAt" ASC';
-      let sql = `SELECT id, title, description, "contentJson", "contentText", "isTrashed", "trashedAt", "userId", "createdAt", "updatedAt" FROM "Note" WHERE "userId" = $1`;
+      let sql = `SELECT id, title, description, "contentJson", "contentText", "isTrashed", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt" FROM "Note" WHERE "userId" = $1`;
       const params = [userId];
       let idx = 2;
       if(isTrashed !== undefined){
@@ -204,6 +263,15 @@ const db = {
         } else {
           sql += ` AND "isTrashed" = $${idx++}`;
           params.push(isTrashed ? 1 : 0);
+        }
+      }
+      // WP-APP-005 — notebook filter: null = unfiled only, string = that notebook
+      if (notebookId !== undefined) {
+        if (notebookId === null) {
+          sql += ` AND "notebookId" IS NULL`;
+        } else {
+          sql += ` AND "notebookId" = $${idx++}`;
+          params.push(notebookId);
         }
       }
       // WP-APP-004 — full-text search only.
@@ -241,7 +309,7 @@ const db = {
     },
     async findFirst({ where: { id, userId } }) {
       const { rows } = await query(
-        `SELECT id, title, description, "contentJson", "contentText", "isTrashed", "trashedAt", "userId", "createdAt", "updatedAt" FROM "Note" WHERE id = $1 AND "userId" = $2 LIMIT 1`,
+        `SELECT id, title, description, "contentJson", "contentText", "isTrashed", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt" FROM "Note" WHERE id = $1 AND "userId" = $2 LIMIT 1`,
         [id, userId]
       );
       const row = rows[0] || null;
@@ -275,11 +343,15 @@ const db = {
       } else if(data.trashedAt !== undefined){
         sets.push(`"trashedAt" = $${idx++}`); params.push(data.trashedAt);
       }
+      // WP-APP-005 — assign/unfile notebook (null = unfiled)
+      if (data.notebookId !== undefined){
+        sets.push(`"notebookId" = $${idx++}`); params.push(data.notebookId || null);
+      }
       sets.push(`"updatedAt" = $${idx++}`); params.push(now);
       params.push(id);
       const setClause = sets.join(', ');
       const { rows } = await query(
-        `UPDATE "Note" SET ${setClause} WHERE id = $${idx} RETURNING id, title, description, "contentJson", "contentText", "isTrashed", "trashedAt", "userId", "createdAt", "updatedAt"`,
+        `UPDATE "Note" SET ${setClause} WHERE id = $${idx} RETURNING id, title, description, "contentJson", "contentText", "isTrashed", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt"`,
         params
       );
       const row = rows[0];

@@ -82,6 +82,27 @@ async function migratePostgres(pool) {
   await pool.query(`CREATE INDEX IF NOT EXISTS "Note_userId_idx" ON "Note" ("userId");`);
   await pool.query(`CREATE INDEX IF NOT EXISTS "Note_isTrashed_idx" ON "Note" ("isTrashed");`);
 
+  // WP-APP-005 — Notebooks (minimal): table + nullable FK on Note (unfiled = NULL)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "Notebook" (
+      id TEXT PRIMARY KEY DEFAULT cuid(),
+      "userId" TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "Notebook_userId_idx" ON "Notebook" ("userId");`);
+  await pool.query(`
+    DO $$ BEGIN
+      BEGIN
+        ALTER TABLE "Note" ADD COLUMN "notebookId" TEXT REFERENCES "Notebook"(id) ON DELETE SET NULL;
+      EXCEPTION WHEN duplicate_column THEN NULL;
+      END;
+    $$;
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "Note_notebookId_idx" ON "Note" ("notebookId");`);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS otp_challenges (
       id TEXT PRIMARY KEY,
@@ -153,6 +174,20 @@ function migrateSqlite(dbPath) {
   try{ db.exec(`UPDATE "Note" SET "isTrashed" = 0 WHERE "isTrashed" IS NULL`); }catch{}
   db.exec(`CREATE INDEX IF NOT EXISTS "Note_userId_idx" ON "Note" ("userId");`);
   try{ db.exec(`CREATE INDEX IF NOT EXISTS "Note_isTrashed_idx" ON "Note" ("isTrashed")`); }catch{}
+
+  // WP-APP-005 — Notebooks (minimal): table + nullable FK on Note (unfiled = NULL)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS "Notebook" (
+      id TEXT PRIMARY KEY,
+      "userId" TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      "createdAt" TEXT NOT NULL DEFAULT (datetime('now')),
+      "updatedAt" TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS "Notebook_userId_idx" ON "Notebook" ("userId");`);
+  try{ db.exec(`ALTER TABLE "Note" ADD COLUMN "notebookId" TEXT REFERENCES "Notebook"(id) ON DELETE SET NULL`); }catch(e){ if(!String(e.message).includes('duplicate column')) throw e; }
+  db.exec(`CREATE INDEX IF NOT EXISTS "Note_notebookId_idx" ON "Note" ("notebookId");`);
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS otp_challenges (
