@@ -22,91 +22,159 @@
             </svg>
           </div>
 
-          <h1 class="auth-title">Sign in</h1>
-          <p class="auth-subtitle">to continue to your Notin account.</p>
+          <h1 class="auth-title" id="authTitle">Sign in</h1>
+          <p class="auth-subtitle" id="authSubtitle">to continue to your Notin account.</p>
 
-          <form id="authForm" class="auth-form" novalidate>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              class="auth-input"
-              placeholder="Email address"
-              autocomplete="email"
-              inputmode="email"
-              required
-            >
-            <button type="submit" class="btn-continue" id="continueBtn" disabled>Continue</button>
-          </form>
+          <!-- Email step -->
+          <div id="emailStep" class="auth-step">
+            <form id="authForm" class="auth-form" novalidate>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                class="auth-input"
+                placeholder="Email address"
+                autocomplete="email"
+                inputmode="email"
+                required
+              >
+              <div class="auth-error" id="emailError" aria-live="polite"></div>
+              <button type="submit" class="btn-continue" id="continueBtn" disabled>Continue</button>
+            </form>
 
-          <div class="auth-divider" aria-hidden="true">
-            <span class="auth-divider-line"></span>
-            <span class="auth-divider-text">or</span>
-            <span class="auth-divider-line"></span>
+            <div class="auth-divider" aria-hidden="true">
+              <span class="auth-divider-line"></span>
+              <span class="auth-divider-text">or</span>
+              <span class="auth-divider-line"></span>
+            </div>
+
+            <div class="social-row">
+              <button type="button" class="btn-social" id="googleBtn">
+                <svg class="social-icon" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+                  <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908C16.658 14.845 17.64 12.272 17.64 9.2z" fill="#4285F4"/>
+                  <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.723H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/>
+                  <path d="M3.964 10.71c-.18-.54-.286-1.117-.286-1.71s.107-1.17.286-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
+                  <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C14.463.891 11.923 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.15 6.656 3.58 9 3.58z" fill="#EA4335"/>
+                </svg>
+                <span>Continue with Google</span>
+              </button>
+              <button type="button" class="btn-social" id="appleBtn">
+                <svg class="social-icon apple-icon" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+                  <path fill="#111" d="M14.73 12.36c-.24.56-.53 1.07-.86 1.54-.45.64-.82 1.08-1.1 1.33-.44.42-.91.63-1.42.64-.36 0-.8-.1-1.31-.31-.52-.2-.99-.3-1.42-.3-.45 0-.94.1-1.47.31-.53.2-.96.31-1.29.32-.49.02-.98-.2-1.45-.65-.31-.28-.7-.74-1.16-1.39-.5-.69-.9-1.49-1.23-2.4C1.68 10.25 1.5 9.1 1.5 8c0-1.26.27-2.34.82-3.24.43-.72 1-1.29 1.71-1.71.71-.42 1.48-.64 2.3-.65.4 0 .93.12 1.59.37.65.25 1.07.37 1.25.37.14 0 .6-.15 1.39-.44.74-.27 1.37-.38 1.88-.34 1.39.11 2.43.66 3.12 1.64-1.24.75-1.85 1.8-1.83 3.14.02 1.05.39 1.92 1.11 2.61.33.32.69.56 1.1.73-.09.25-.18.49-.29.72zM12.1 1.2c0 .82-.3 1.59-.9 2.29-.72.84-1.6 1.32-2.55 1.25-.01-.1-.02-.2-.02-.31 0-.79.34-1.63.95-2.32.3-.35.69-.64 1.15-.87.46-.22.89-.35 1.3-.38.01.11.02.22.02.34z"/>
+                </svg>
+                <span>Continue with Apple</span>
+              </button>
+            </div>
+
+            <p class="auth-switch" style="margin-top:36px;">
+              Don’t have an account? <a href="index.html">Sign up</a>
+            </p>
+            <p class="auth-switch" style="margin-top:12px;">
+              <a href="#" id="cantSignInLink">Can't sign in? Click here</a>
+            </p>
+            <div class="auth-error" id="cantSignInMsg" aria-live="polite" style="margin-top:8px;"></div>
           </div>
 
-          <div class="social-row">
-            <button type="button" class="btn-social" id="googleBtn">
-              <svg class="social-icon" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-                <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.716v2.259h2.908C16.658 14.845 17.64 12.272 17.64 9.2z" fill="#4285F4"/>
-                <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.723H.957v2.332C2.438 15.983 5.482 18 9 18z" fill="#34A853"/>
-                <path d="M3.964 10.71c-.18-.54-.286-1.117-.286-1.71s.107-1.17.286-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z" fill="#FBBC05"/>
-                <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C14.463.891 11.923 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.15 6.656 3.58 9 3.58z" fill="#EA4335"/>
-              </svg>
-              <span>Continue with Google</span>
-            </button>
-            <button type="button" class="btn-social" id="appleBtn">
-              <svg class="social-icon apple-icon" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
-                <path fill="#111" d="M14.73 12.36c-.24.56-.53 1.07-.86 1.54-.45.64-.82 1.08-1.1 1.33-.44.42-.91.63-1.42.64-.36 0-.8-.1-1.31-.31-.52-.2-.99-.3-1.42-.3-.45 0-.94.1-1.47.31-.53.2-.96.31-1.29.32-.49.02-.98-.2-1.45-.65-.31-.28-.7-.74-1.16-1.39-.5-.69-.9-1.49-1.23-2.4C1.68 10.25 1.5 9.1 1.5 8c0-1.26.27-2.34.82-3.24.43-.72 1-1.29 1.71-1.71.71-.42 1.48-.64 2.3-.65.4 0 .93.12 1.59.37.65.25 1.07.37 1.25.37.14 0 .6-.15 1.39-.44.74-.27 1.37-.38 1.88-.34 1.39.11 2.43.66 3.12 1.64-1.24.75-1.85 1.8-1.83 3.14.02 1.05.39 1.92 1.11 2.61.33.32.69.56 1.1.73-.09.25-.18.49-.29.72zM12.1 1.2c0 .82-.3 1.59-.9 2.29-.72.84-1.6 1.32-2.55 1.25-.01-.1-.02-.2-.02-.31 0-.79.34-1.63.95-2.32.3-.35.69-.64 1.15-.87.46-.22.89-.35 1.3-.38.01.11.02.22.02.34z"/>
-              </svg>
-              <span>Continue with Apple</span>
-            </button>
+          <!-- Password step — login only -->
+          <div id="passwordStep" class="auth-step password-step" hidden>
+            <p class="otp-help">Enter your password for <span id="pwdEmailMasked"></span></p>
+            <form id="passwordForm" class="auth-form" novalidate>
+              <div class="password-input-row">
+                <input type="password" id="passwordInput" class="auth-input" placeholder="Password" autocomplete="current-password" required>
+                <button type="button" class="pwd-toggle" id="pwdToggle" aria-label="Show password">Show</button>
+              </div>
+              <div class="auth-error" id="pwdError" aria-live="polite"></div>
+              <button type="submit" class="btn-continue" id="pwdContinueBtn">Sign in</button>
+            </form>
+            <div class="otp-resend-row">
+              <button type="button" class="btn-link" id="emailCodeBtn">Email me a code instead</button>
+            </div>
+            <p class="auth-switch"><a href="#" id="pwdBackBtn">Back to email</a></p>
           </div>
 
-          <p class="auth-switch" style="margin-top: 36px;">
-            Don’t have an account? <a href="index.html">Sign up</a>
-          </p>
-          <p class="auth-switch" style="margin-top: 12px;">
-            <a href="#">Can't sign in? Click here</a>
-          </p>
+          <!-- OTP step — shared -->
+          <div id="otpStep" class="auth-step otp-step" hidden>
+            <p class="otp-help">Enter the <strong>6-digit code</strong> we sent to <span id="otpEmailMasked2">your email</span></p>
+            <form id="otpForm" class="auth-form" novalidate>
+              <div class="otp-field-row">
+                <input id="otpInput" class="auth-input otp-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" placeholder="123456" aria-label="6-digit code">
+              </div>
+              <div class="otp-error" id="otpError2" aria-live="polite"></div>
+              <button type="submit" class="btn-continue" id="otpVerifyBtn2">Verify code</button>
+            </form>
+            <div class="otp-resend-row">
+              <button type="button" class="btn-link" id="otpResendBtn2">Resend code</button>
+              <span class="otp-cooldown" id="otpCooldown2"></span>
+            </div>
+            <p class="otp-meta" id="otpMeta2"></p>
+            <p class="auth-switch"><a href="#" id="otpBackBtn2">Back to email</a></p>
+          </div>
         </div>
       </section>
 
       <section class="art-region" aria-hidden="true">
         <div class="artwork-canvas">
-          <svg class="art art-green" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <svg class="art art-green" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <linearGradient id="gGreen" x1="20%" y1="0%" x2="80%" y2="100%">
+              <linearGradient id="gGreen2" x1="18%" y1="0%" x2="82%" y2="100%">
                 <stop offset="0%" stop-color="#B6F45C"/>
-                <stop offset="55%" stop-color="#8FE333"/>
+                <stop offset="52%" stop-color="#8FE333"/>
                 <stop offset="100%" stop-color="#6DBF1C"/>
               </linearGradient>
             </defs>
-            <path fill="url(#gGreen)" d="
-              M100 12 C108 28 118 36 130 28 C142 20 156 28 152 44
-              C148 58 160 68 172 64 C186 58 196 74 184 86 C174 96 178 110 190 118
-              C202 128 192 144 176 140 C162 136 152 148 156 162 C160 178 142 188 130 174
-              C120 164 106 170 100 186 C94 200 78 192 80 174 C82 160 68 152 54 160
-              C38 170 28 152 40 140 C50 130 44 116 30 110 C14 102 22 84 40 86
-              C54 88 64 76 58 62 C52 46 70 34 84 46 C94 54 106 46 110 30
-              C114 18 96 4 100 12 Z"/>
+            <path fill="url(#gGreen2)" d="
+              M110 8
+              C122 26 138 22 150 34
+              C164 48 182 42 178 68
+              C174 90 190 102 176 120
+              C162 136 172 156 152 166
+              C132 176 122 196 104 196
+              C86 196 76 176 56 166
+              C36 156 46 136 32 120
+              C18 102 34 90 30 68
+              C26 42 44 48 58 34
+              C70 22 88 26 100 8
+              C104 2 106 2 110 8 Z
+            "/>
+            <path fill="#C8F38A" opacity="0.35" d="
+              M110 42
+              C124 52 134 48 142 58
+              C150 68 162 64 158 78
+              C154 90 162 98 152 106
+              C142 114 146 126 134 132
+              C122 138 116 150 104 150
+              C92 150 86 138 74 132
+              C62 126 66 114 56 106
+              C46 98 54 90 50 78
+              C46 64 58 68 66 58
+              C74 48 84 52 98 42
+              C102 38 106 38 110 42 Z
+            "/>
           </svg>
-          <svg class="art art-purple" viewBox="0 0 240 240" xmlns="http://www.w3.org/2000/svg">
+          <svg class="art art-purple" viewBox="0 0 260 260" xmlns="http://www.w3.org/2000/svg">
             <defs>
-              <linearGradient id="gPurple" x1="15%" y1="10%" x2="90%" y2="90%">
-                <stop offset="0%" stop-color="#E0B6F8"/>
-                <stop offset="45%" stop-color="#C992F0"/>
-                <stop offset="100%" stop-color="#B57AE8"/>
+              <linearGradient id="gPurple2b" x1="14%" y1="8%" x2="86%" y2="92%">
+                <stop offset="0%" stop-color="#E8C6FF"/>
+                <stop offset="46%" stop-color="#CC96F0"/>
+                <stop offset="100%" stop-color="#B07AE2"/>
               </linearGradient>
             </defs>
-            <path fill="url(#gPurple)" d="
-              M120 20 C148 20 168 48 168 72 C168 88 184 100 204 100
-              C228 100 236 128 220 152 C208 170 208 190 220 208
-              C236 232 208 248 180 236 C164 228 144 236 132 252
-              C116 272 88 260 88 232 C88 216 72 204 52 208
-              C28 214 16 184 32 162 C44 146 40 124 28 108
-              C12 84 40 60 68 72 C84 80 104 68 112 48
-              C118 34 120 20 120 20 Z"/>
+            <path fill="url(#gPurple2b)" d="
+              M130 14
+              C158 14 180 38 180 66
+              C180 82 192 96 214 96
+              C238 96 252 118 238 144
+              C226 164 226 186 242 208
+              C258 234 230 258 200 244
+              C182 236 162 242 148 262
+              C132 284 100 272 100 242
+              C100 224 86 212 64 216
+              C36 222 18 196 32 172
+              C44 152 40 128 24 108
+              C8 84 36 58 66 72
+              C82 80 104 68 114 46
+              C120 28 126 14 130 14 Z
+            "/>
           </svg>
           <div class="hero-copy">
             <div class="hero-line">Your</div>
@@ -119,14 +187,31 @@
             </div>
             <div class="hero-line">brain</div>
           </div>
-          <svg class="art art-blue" viewBox="0 0 420 360" xmlns="http://www.w3.org/2000/svg">
-            <path fill="#5B73F0" d="
-              M210 10 C236 42 268 28 292 48 C322 72 360 58 372 96
-              C384 132 410 150 398 190 C386 230 408 262 378 292
-              C348 322 330 350 286 340 C250 332 230 360 190 348
-              C150 336 120 358 90 330 C60 302 20 310 18 266
-              C16 228 -6 200 18 166 C42 132 20 100 48 72
-              C76 44 90 8 132 20 C164 30 182 -8 210 10 Z"/>
+          <svg class="art art-blue" viewBox="0 0 440 380" xmlns="http://www.w3.org/2000/svg">
+            <path fill="#5B71F5" d="
+              M220 18
+              C242 44 270 34 292 56
+              C318 80 356 68 370 104
+              C384 138 410 156 398 196
+              C386 236 412 266 380 298
+              C350 330 328 360 284 350
+              C248 340 224 368 184 354
+              C144 340 112 366 80 334
+              C48 302 10 314 8 270
+              C6 232  -8 204 16 170
+              C40 136 18 104 46 76
+              C74 48 92 14 134 26
+              C166 36 190 6 220 18 Z
+            "/>
+            <path fill="#6E84FF" opacity="0.52" d="
+              M220 76
+              C250 84 280 104 300 134
+              C320 164 338 194 320 232
+              C302 270 264 292 224 302
+              C184 312 142 292 122 254
+              C102 216 112 166 142 136
+              C172 106 188 72 220 76 Z
+            "/>
           </svg>
           <div class="art art-orange">
             <span class="orange-disk o1"></span>
