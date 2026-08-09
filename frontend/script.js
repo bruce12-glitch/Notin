@@ -1071,7 +1071,9 @@ if (yearEl) yearEl.textContent = new Date().getFullYear();
 
 // AUTH UI — connects the landing page to the separate JWT/Google OTP service
 (function () {
-  const api = window.NOTIN_AUTH_API || `${location.protocol}//${location.hostname}:8787`;
+  // Same-origin default: the dev server proxies /auth + /api to the unified API.
+  // (file:// fallback keeps the old standalone auth port for local double-click use)
+  const api = window.NOTIN_AUTH_API || (location.protocol.startsWith('http') ? location.origin : 'http://localhost:8787');
   const modal = document.createElement('div'); modal.className='auth-modal'; modal.innerHTML=`<div class="auth-panel auth-3d" role="dialog" aria-modal="true" aria-labelledby="authTitle"><button class="auth-close" aria-label="Close">×</button><div class="auth-orbit"></div><p class="auth-kicker">SECURE ACCESS</p><h2 id="authTitle">Sign in to Notin</h2><p class="auth-copy">Continue with Google. We’ll send a one-time code to your verified Gmail.</p><button class="auth-google">Continue with Google</button><div class="auth-otp" hidden><label>Enter your 6-digit code<input inputmode="numeric" maxlength="6" autocomplete="one-time-code" class="auth-code"></label><button class="auth-verify">Verify code</button><button class="auth-resend">Resend code</button><p class="auth-status"></p></div></div>`; document.body.appendChild(modal);
   const open=()=>modal.classList.add('is-open'), close=()=>modal.classList.remove('is-open');
   document.querySelectorAll('a').forEach(a=>{if(a.textContent.trim().toLowerCase()==='log in'){a.addEventListener('click',e=>{e.preventDefault();open();});}});

@@ -20,6 +20,77 @@
 .app-list-header{ padding:14px 14px 10px; display:flex; align-items:center; justify-content:space-between; gap:10px; border-bottom:1px solid #e8e8e3; background:#f6f7f5; position:sticky; top:0; z-index:1; }
 .app-list-title{ font-weight:700; font-size:15px; letter-spacing:-0.02em; color:#111; }
 .app-list-count{ font-size:12px; color:#6b6b6b; background:#fff; border:1px solid #e8e8e3; padding:3px 8px; border-radius:999px; }
+/* WP-APP-007 — sort control (list header); pinned notes always stay on top regardless */
+.app-list-tools{ display:flex; align-items:center; gap:8px; flex:none; }
+.app-sort{ height:26px; max-width:96px; padding:0 6px; border:1px solid #e8e8e3; border-radius:999px; background:#fff; color:#6b6b6b; font-size:11.5px; font-family:inherit; cursor:pointer; }
+.app-sort:hover{ color:#111; }
+.app-sort:focus{ outline:none; border-color:#00a82d; box-shadow:0 0 0 3px rgba(0,168,45,0.12); }
+/* WP-APP-004 — search box above the note list (All Notes + Trash) */
+.app-search{ display:flex; align-items:center; gap:8px; margin:10px 14px 0; padding:0 10px; height:38px; background:#fff; border:1px solid #e8e8e3; border-radius:8px; color:#6b6b6b; }
+.app-search:focus-within{ border-color:#00a82d; box-shadow:0 0 0 3px rgba(0,168,45,0.12); color:#111; }
+.app-search svg{ width:16px; height:16px; flex:none; }
+.app-search input{ flex:1; min-width:0; height:100%; border:none; outline:none; background:transparent; font-size:14px; color:#111; font-family:inherit; }
+.app-search input::placeholder{ color:#9a9a9a; }
+.app-search-clear{ flex:none; width:24px; height:24px; border:none; border-radius:999px; background:#efefec; color:#6b6b6b; font-size:15px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
+.app-search-clear:hover{ background:#e3e3de; color:#111; }
+
+/* WP-APP-005 — Notebooks (sidebar organize section) */
+.app-nb{ margin-top:14px; padding-top:10px; border-top:1px solid #e8e8e3; }
+.app-nb-head{ display:flex; align-items:center; justify-content:space-between; padding:2px 6px 8px; }
+.app-nb-title{ font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#8a8a85; }
+.app-nb-add{ width:24px; height:24px; border:none; border-radius:6px; background:transparent; color:#6b6b6b; font-size:17px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.app-nb-add:hover{ background:#eceeeb; color:#00a82d; }
+.app-nb-form{ padding:2px 6px 10px; display:flex; flex-direction:column; gap:8px; }
+.app-nb-form input{ height:34px; padding:0 10px; border:1px solid #e8e8e3; border-radius:8px; font-size:13px; color:#111; background:#fff; outline:none; font-family:inherit; }
+.app-nb-form input:focus{ border-color:#00a82d; box-shadow:0 0 0 3px rgba(0,168,45,0.12); }
+.app-nb-form-row{ display:flex; gap:8px; }
+.app-nb-ok{ flex:1; height:30px; border:none; border-radius:7px; background:#00a82d; color:#fff; font-weight:600; font-size:13px; cursor:pointer; }
+.app-nb-ok:hover{ background:#009326; }
+.app-nb-ok:disabled{ background:#cfcfcf; cursor:not-allowed; }
+.app-nb-cancel{ height:30px; padding:0 12px; border:1px solid #e8e8e3; border-radius:7px; background:#fff; color:#6b6b6b; font-size:13px; cursor:pointer; }
+.app-nb-cancel:hover{ background:#f4f4f1; }
+.app-nb-err{ font-size:12px; color:#c0392b; min-height:0; }
+.app-nb-err:empty{ display:none; }
+.app-nb-empty{ padding:4px 10px; font-size:12.5px; color:#9a9a9a; }
+.app-nb-list{ display:flex; flex-direction:column; gap:2px; }
+.app-nb-item{ position:relative; display:flex; align-items:center; }
+.app-nb-open{ flex:1; min-width:0; display:flex; align-items:center; gap:8px; padding:7px 26px 7px 10px; border:none; border-radius:8px; background:transparent; color:#333; font-size:13.5px; cursor:pointer; text-align:left; }
+.app-nb-open svg{ width:15px; height:15px; flex:none; color:#8a8a85; }
+.app-nb-open:hover{ background:#eceeeb; }
+.app-nb-item.is-active .app-nb-open{ background:#e3f3e7; color:#0b6b2f; font-weight:600; }
+.app-nb-item.is-active .app-nb-open svg{ color:#00a82d; }
+.app-nb-name{ flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.app-nb-count{ flex:none; font-size:11px; color:#8a8a85; background:#fff; border:1px solid #e8e8e3; border-radius:999px; padding:1px 7px; }
+.app-nb-item.is-active .app-nb-count{ background:#fff; color:#0b6b2f; border-color:#cfe8d6; }
+.app-nb-del{ position:absolute; right:4px; top:50%; transform:translateY(-50%); width:20px; height:20px; border:none; border-radius:6px; background:transparent; color:#b0b0ab; font-size:14px; line-height:1; cursor:pointer; display:none; align-items:center; justify-content:center; }
+.app-nb-item:hover .app-nb-del{ display:flex; }
+.app-nb-del:hover{ background:#f6e3e1; color:#c0392b; }
+.app-nb-item.is-confirming{ display:block; }
+.app-nb-confirm{ padding:8px 10px; background:#fdf6f5; border:1px solid #f0d6d2; border-radius:8px; }
+.app-nb-confirm-text{ font-size:12.5px; color:#333; line-height:1.4; }
+.app-nb-confirm-text span{ display:block; color:#8a8a85; font-size:11.5px; margin-top:2px; }
+.app-nb-confirm-actions{ display:flex; gap:6px; margin-top:8px; }
+.app-nb-yes{ height:26px; padding:0 12px; border:none; border-radius:6px; background:#c0392b; color:#fff; font-size:12px; font-weight:600; cursor:pointer; }
+.app-nb-yes:hover{ background:#a93226; }
+.app-nb-no{ height:26px; padding:0 10px; border:1px solid #e8e8e3; border-radius:6px; background:#fff; color:#6b6b6b; font-size:12px; cursor:pointer; }
+
+/* WP-APP-005 — editor notebook picker */
+.app-nb-select{ height:32px; max-width:150px; padding:0 8px; border:1px solid #e8e8e3; border-radius:8px; background:#fff; color:#333; font-size:12.5px; font-family:inherit; cursor:pointer; }
+.app-nb-select:disabled{ opacity:0.45; cursor:not-allowed; }
+.app-nb-select:focus{ outline:none; border-color:#00a82d; box-shadow:0 0 0 3px rgba(0,168,45,0.12); }
+
+/* WP-APP-006 — tags: sidebar hash icon + editor chips row */
+.app-tag-hash{ flex:none; font-size:13px; font-weight:700; color:#8a8a85; }
+.app-nb-item.is-active .app-tag-hash{ color:#00a82d; }
+.app-tag-row{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:8px 18px; border-bottom:1px solid #eee; background:#fbfbfa; }
+.app-tag-chips{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
+.app-chip{ display:inline-flex; align-items:center; gap:3px; height:24px; padding:0 6px 0 8px; background:#e8f4ec; color:#0b6b2f; border:1px solid #cfe8d6; border-radius:999px; font-size:12px; font-weight:600; line-height:1; }
+.app-chip-hash{ font-weight:700; opacity:0.7; margin-right:1px; }
+.app-chip-x{ width:16px; height:16px; margin-left:2px; border:none; border-radius:999px; background:transparent; color:#0b6b2f; font-size:13px; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; opacity:0.65; }
+.app-chip-x:hover{ background:rgba(0,168,45,0.15); opacity:1; }
+.app-tag-add{ height:24px; padding:0 6px; border:1px dashed #c8cec9; border-radius:999px; background:#fff; color:#6b6b6b; font-size:12px; font-family:inherit; cursor:pointer; }
+.app-tag-add:focus{ outline:none; border-color:#00a82d; }
+.app-tag-add:disabled{ opacity:0.45; cursor:not-allowed; }
 .app-new{ width:100%; padding:10px 14px; border-bottom:1px solid #e8e8e3; }
 .btn-new{ width:100%; height:40px; border-radius:8px; border:none; background:#00a82d; color:#fff; font-weight:700; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
 .btn-new:hover{ background:#009326; }
@@ -31,6 +102,27 @@
 .app-note-title{ font-weight:600; font-size:14px; color:#111; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .app-note-snippet{ font-size:13px; color:#6b6b6b; line-height:1.4; margin-top:4px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:18px; }
 .app-note-meta{ font-size:12px; color:#9a9a9a; margin-top:6px; }
+/* WP-APP-007 — pin notes: row pin control + pinned emphasis */
+.app-note-item{ position:relative; user-select:none; }
+.app-note-item:focus-visible{ outline:2px solid #00a82d; outline-offset:1px; }
+.app-note-pin{ position:absolute; top:8px; right:8px; width:26px; height:26px; border:none; border-radius:7px; background:transparent; color:#b6b6b0; cursor:pointer; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .12s, background .12s, color .12s; padding:0; }
+.app-note-pin svg{ width:15px; height:15px; }
+.app-note-item:hover .app-note-pin,
+.app-note-item:focus-within .app-note-pin{ opacity:1; }
+.app-note-pin:hover{ background:#eef1ec; color:#111; }
+.app-note-pin.is-on{ opacity:1; color:#00a82d; }
+.app-note-pin--static{ cursor:default; }
+.app-note-pin--static:hover{ background:transparent; color:#00a82d; }
+.app-note-item.is-pinned{ background:#f5faf6; border-color:#cfe8d6; }
+.app-note-item.is-pinned:hover{ border-color:#b8dcc4; }
+.app-note-item.is-pinned.is-active{ border-color:#00a82d; }
+/* WP-APP-007 — editor pin action */
+.app-pin-toggle{ height:36px; padding:0 12px; border-radius:8px; border:1px solid #e6e6e6; background:#fff; color:#333; font-weight:600; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-family:inherit; }
+.app-pin-toggle svg{ width:14px; height:14px; color:#8a8a85; }
+.app-pin-toggle:hover{ background:#f4f6f3; }
+.app-pin-toggle.is-pinned{ background:#e8f4ec; border-color:#cfe8d6; color:#0b6b2f; }
+.app-pin-toggle.is-pinned svg{ color:#00a82d; }
+.app-pin-toggle:disabled{ opacity:0.45; cursor:not-allowed; }
 .app-empty{ padding:32px 14px; text-align:center; color:#6b6b6b; }
 .app-empty-cta{ margin-top:12px; display:inline-flex; align-items:center; gap:6px; background:#111; color:#fff; border:none; border-radius:8px; padding:10px 14px; font-weight:600; cursor:pointer; }
 

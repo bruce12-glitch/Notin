@@ -66,6 +66,7 @@
               </button>
             </div>
 
+            <p class="otp-meta" id="resetDoneMsg" aria-live="polite" style="color:#0b6b2f; margin-top:14px;"></p>
             <p class="auth-switch" style="margin-top:36px;">
               Don’t have an account? <a href="index.html">Sign up</a>
             </p>
@@ -90,6 +91,45 @@
               <button type="button" class="btn-link" id="emailCodeBtn">Email me a code instead</button>
             </div>
             <p class="auth-switch"><a href="#" id="pwdBackBtn">Back to email</a></p>
+          </div>
+
+          <!-- WP-AUTH-003 — Forgot password step (email → reset link) -->
+          <div id="forgotStep" class="auth-step" hidden>
+            <p class="otp-help">Enter your account email and we’ll send you a password reset link.</p>
+            <form id="forgotForm" class="auth-form" novalidate>
+              <input
+                type="email"
+                id="forgotEmail"
+                name="forgotEmail"
+                class="auth-input"
+                placeholder="Email address"
+                autocomplete="email"
+                inputmode="email"
+                required
+              >
+              <div class="auth-error" id="forgotError" aria-live="polite"></div>
+              <button type="submit" class="btn-continue" id="forgotSubmitBtn">Send reset link</button>
+            </form>
+            <p class="otp-meta" id="forgotDone" aria-live="polite"></p>
+            <div class="otp-resend-row">
+              <button type="button" class="btn-link" id="forgotDevBtn" hidden>Open reset link (dev mode)</button>
+            </div>
+            <p class="auth-switch"><a href="#" id="forgotBackBtn">Back to sign in</a></p>
+          </div>
+
+          <!-- WP-AUTH-003 — Reset password step (token from email link / dev mode) -->
+          <div id="resetStep" class="auth-step" hidden>
+            <p class="otp-help">Choose a new password for your account. The link works once and expires in 60 minutes.</p>
+            <form id="resetForm" class="auth-form" novalidate>
+              <div class="password-input-row">
+                <input type="password" id="resetPassword" class="auth-input" placeholder="New password (8+ characters)" autocomplete="new-password" required>
+                <button type="button" class="pwd-toggle" id="resetPwdToggle" aria-label="Show password">Show</button>
+              </div>
+              <input type="password" id="resetConfirm" class="auth-input" placeholder="Confirm new password" autocomplete="new-password" required>
+              <div class="auth-error" id="resetError" aria-live="polite"></div>
+              <button type="submit" class="btn-continue" id="resetSubmitBtn">Reset password</button>
+            </form>
+            <p class="auth-switch"><a href="#" id="resetBackBtn">Back to sign in</a></p>
           </div>
 
           <!-- OTP step — shared -->

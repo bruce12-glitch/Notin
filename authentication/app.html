@@ -55,6 +55,38 @@
           <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M6 6.5V5a1.5 1.5 0 011.5-1.5h5A1.5 1.5 0 0114 5v1.5"/><path d="M3.5 6.5h13v8A1.5 1.5 0 0115 16H5a1.5 1.5 0 01-1.5-1.5v-8z" fill="currentColor"/><path d="M8.5 9.5v5M11.5 9.5v5" stroke="#fff" stroke-width="1.3" stroke-linecap="round"/></svg>
           Trash <span class="nav-count" id="countTrash">0</span>
         </button>
+        <!-- WP-APP-005 — Notebooks (minimal organize) -->
+        <div class="app-nb" id="notebookSection">
+          <div class="app-nb-head">
+            <span class="app-nb-title">Notebooks</span>
+            <button type="button" class="app-nb-add" id="newNotebookBtn" title="New notebook" aria-label="New notebook">+</button>
+          </div>
+          <div class="app-nb-form" id="newNotebookForm" hidden>
+            <input id="newNotebookInput" type="text" placeholder="Notebook name" maxlength="100" autocomplete="off" aria-label="Notebook name">
+            <div class="app-nb-form-row">
+              <button type="button" class="app-nb-ok" id="newNotebookAdd">Add</button>
+              <button type="button" class="app-nb-cancel" id="newNotebookCancel">Cancel</button>
+            </div>
+            <div class="app-nb-err" id="newNotebookErr" role="alert"></div>
+          </div>
+          <div class="app-nb-list" id="notebookList"></div>
+        </div>
+        <!-- WP-APP-006 — Tags (minimal) -->
+        <div class="app-nb" id="tagSection">
+          <div class="app-nb-head">
+            <span class="app-nb-title">Tags</span>
+            <button type="button" class="app-nb-add" id="newTagBtn" title="New tag" aria-label="New tag">+</button>
+          </div>
+          <div class="app-nb-form" id="newTagForm" hidden>
+            <input id="newTagInput" type="text" placeholder="Tag name" maxlength="50" autocomplete="off" aria-label="Tag name">
+            <div class="app-nb-form-row">
+              <button type="button" class="app-nb-ok" id="newTagAdd">Add</button>
+              <button type="button" class="app-nb-cancel" id="newTagCancel">Cancel</button>
+            </div>
+            <div class="app-nb-err" id="newTagErr" role="alert"></div>
+          </div>
+          <div class="app-nb-list" id="tagList"></div>
+        </div>
       </nav>
       <div class="app-sidebar-bottom">
         <div class="app-email" id="appEmail" title="">—</div>
@@ -66,7 +98,21 @@
     <section class="app-list" aria-label="Note list">
       <div class="app-list-header">
         <div class="app-list-title" id="listTitle">All Notes</div>
-        <div class="app-list-count" id="noteCount">0 notes</div>
+        <div class="app-list-tools">
+          <!-- WP-APP-007 — sort control (pinned notes always stay on top regardless) -->
+          <select class="app-sort" id="sortSelect" title="Sort notes" aria-label="Sort notes">
+            <option value="updated">Updated</option>
+            <option value="created">Created</option>
+            <option value="title">Title</option>
+          </select>
+          <div class="app-list-count" id="noteCount">0 notes</div>
+        </div>
+      </div>
+      <!-- WP-APP-004 — search (visible in All Notes and Trash) -->
+      <div class="app-search" id="searchWrap">
+        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="9" cy="9" r="5.5" stroke="currentColor" stroke-width="1.6"/><path d="M13.2 13.2L17 17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <input id="searchInput" type="text" placeholder="Search notes" autocomplete="off" spellcheck="false" aria-label="Search notes">
+        <button class="app-search-clear" id="searchClear" type="button" hidden aria-label="Clear search">×</button>
       </div>
       <div class="app-new" id="newNoteWrap">
         <button class="btn-new" id="newNoteBtn"><span>+</span> New note</button>
@@ -80,6 +126,11 @@
       <div class="app-empty" id="emptyTrash" hidden>
         <div style="font-weight:600; color:#111;">Trash is empty</div>
         <div style="font-size:13px; margin-top:4px;">Notes you move to trash will appear here.</div>
+      </div>
+      <div class="app-empty" id="emptySearch" hidden>
+        <div style="font-weight:600; color:#111;">No notes match</div>
+        <div style="font-size:13px; margin-top:4px;">Try different words or clear the search.</div>
+        <button class="app-empty-cta" id="clearSearchEmpty">Clear search</button>
       </div>
     </section>
 
@@ -95,12 +146,27 @@
           <input id="editorTitle" type="text" placeholder="Title" autocomplete="off" disabled>
         </div>
         <div class="app-editor-actions">
+          <!-- WP-APP-007 — pin/unpin the open note -->
+          <button class="app-pin-toggle" id="pinBtn" hidden title="Pin note" aria-label="Pin note" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H16v-2c-1.66 0-3-1.34-3-3z"/></svg>
+            <span class="app-pin-toggle-label">Pin</span>
+          </button>
+          <select class="app-nb-select" id="noteNotebookSelect" title="Notebook" disabled aria-label="Notebook">
+            <option value="">None</option>
+          </select>
           <span class="app-save-status" id="saveStatus"></span>
           <button class="app-save" id="saveBtn" disabled>Save</button>
           <button class="app-btn-trash" id="trashBtn" hidden title="Move to Trash">Trash</button>
           <button class="app-btn-restore" id="restoreBtn" hidden>Restore</button>
           <button class="app-btn-delete" id="deleteBtn" hidden>Delete forever</button>
         </div>
+      </div>
+      <!-- WP-APP-006 — note tags row (chips + add-tag picker) -->
+      <div class="app-tag-row" id="tagRow" hidden>
+        <div class="app-tag-chips" id="tagChips"></div>
+        <select class="app-tag-add" id="tagAddSelect" title="Add tag" aria-label="Add tag">
+          <option value="">+ Tag</option>
+        </select>
       </div>
       <!-- TipTap toolbar -->
       <div class="app-toolbar" id="toolbar" aria-label="Formatting toolbar">
