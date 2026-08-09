@@ -103,6 +103,27 @@ async function migratePostgres(pool) {
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS "Note_notebookId_idx" ON "Note" ("notebookId");`);
 
+  // WP-APP-006 — Tags (minimal): Tag + NoteTag junction (composite PK, CASCADE both sides)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "Tag" (
+      id TEXT PRIMARY KEY DEFAULT cuid(),
+      "userId" TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "Tag_userId_idx" ON "Tag" ("userId");`);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "NoteTag" (
+      "noteId" TEXT NOT NULL REFERENCES "Note"(id) ON DELETE CASCADE,
+      "tagId" TEXT NOT NULL REFERENCES "Tag"(id) ON DELETE CASCADE,
+      "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY ("noteId", "tagId")
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "NoteTag_noteId_idx" ON "NoteTag" ("noteId");`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "NoteTag_tagId_idx" ON "NoteTag" ("tagId");`);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS otp_challenges (
       id TEXT PRIMARY KEY,
@@ -188,6 +209,27 @@ function migrateSqlite(dbPath) {
   db.exec(`CREATE INDEX IF NOT EXISTS "Notebook_userId_idx" ON "Notebook" ("userId");`);
   try{ db.exec(`ALTER TABLE "Note" ADD COLUMN "notebookId" TEXT REFERENCES "Notebook"(id) ON DELETE SET NULL`); }catch(e){ if(!String(e.message).includes('duplicate column')) throw e; }
   db.exec(`CREATE INDEX IF NOT EXISTS "Note_notebookId_idx" ON "Note" ("notebookId");`);
+
+  // WP-APP-006 — Tags (minimal): Tag + NoteTag junction (composite PK, CASCADE both sides)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS "Tag" (
+      id TEXT PRIMARY KEY,
+      "userId" TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      "createdAt" TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS "Tag_userId_idx" ON "Tag" ("userId");`);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS "NoteTag" (
+      "noteId" TEXT NOT NULL REFERENCES "Note"(id) ON DELETE CASCADE,
+      "tagId" TEXT NOT NULL REFERENCES "Tag"(id) ON DELETE CASCADE,
+      "createdAt" TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY ("noteId", "tagId")
+    );
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS "NoteTag_noteId_idx" ON "NoteTag" ("noteId");`);
+  db.exec(`CREATE INDEX IF NOT EXISTS "NoteTag_tagId_idx" ON "NoteTag" ("tagId");`);
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS otp_challenges (

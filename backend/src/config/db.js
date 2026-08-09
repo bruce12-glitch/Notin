@@ -93,6 +93,37 @@ function querySqlite(text, params = []) {
     }
   }
 }
+// WP-APP-006 — attach each note's tags (batched IN query, no N+1)
+async function attachTags(rows) {
+  if (!rows || !rows.length) return rows || [];
+  const ids = rows.map(r => r.id);
+  const placeholders = ids.map((_, i) => `$${i + 1}`).join(', ');
+  const { rows: tagRows } = await query(
+    `SELECT nt."noteId" AS "noteId", t.id AS id, t.name AS name
+     FROM "NoteTag" nt JOIN "Tag" t ON t.id = nt."tagId"
+     WHERE nt."noteId" IN (${placeholders}) ORDER BY t.name ASC`,
+    ids
+  );
+  const byNote = {};
+  for (const tr of tagRows) {
+    (byNote[tr.noteId] ||= []).push({ id: tr.id, name: tr.name });
+  }
+  rows.forEach(r => { r.tags = byNote[r.id] || []; });
+  return rows;
+}
+
+// WP-APP-006 — replace a note's tag set atomically-ish (ownership validated upstream)
+async function setNoteTags(noteId, tagIds) {
+  await query(`DELETE FROM "NoteTag" WHERE "noteId" = $1`, [noteId]);
+  const now = new Date().toISOString();
+  for (const tagId of tagIds) {
+    await query(
+      `INSERT INTO "NoteTag" ("noteId", "tagId", "createdAt") VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+      [noteId, tagId, now]
+    );
+  }
+}
+
 const db = {
   async $connect() {
     if (usePostgres && pool) {
@@ -231,6 +262,63 @@ const db = {
       return { id };
     },
   },
+  // WP-APP-006 — Tags (minimal)
+  tag: {
+    async findMany({ where: { userId } }) {
+      // Include a count of non-trashed notes carrying each tag (sidebar badge)
+      const { rows } = await query(
+        `SELECT t.id, t."userId", t.name, t."createdAt",
+                (SELECT COUNT(*) FROM "NoteTag" nt JOIN "Note" n ON n.id = nt."noteId"
+                  WHERE nt."tagId" = t.id AND n."isTrashed" = ${usePostgres ? 'FALSE' : '0'}) AS "noteCount"
+         FROM "Tag" t WHERE t."userId" = $1 ORDER BY t.name ASC`,
+        [userId]
+      );
+      return rows.map(r => ({ ...r, noteCount: Number(r.noteCount) || 0 }));
+    },
+    async findFirst({ where: { id, userId } }) {
+      const { rows } = await query(
+        `SELECT id, "userId", name, "createdAt" FROM "Tag" WHERE id = $1 AND "userId" = $2 LIMIT 1`,
+        [id, userId]
+      );
+      return rows[0] || null;
+    },
+    async findByName(userId, name) {
+      // Case-insensitive name lookup (uniqueness per user enforced in controller)
+      const { rows } = await query(
+        `SELECT id, "userId", name, "createdAt" FROM "Tag" WHERE "userId" = $1 AND LOWER(name) = LOWER($2) LIMIT 1`,
+        [userId, String(name).trim()]
+      );
+      return rows[0] || null;
+    },
+    // All of the given ids that belong to the user (for tagIds validation)
+    async findManyByIds(userId, ids) {
+      if (!ids.length) return [];
+      const placeholders = ids.map((_, i) => `$${i + 2}`).join(', ');
+      const { rows } = await query(
+        `SELECT id, "userId", name, "createdAt" FROM "Tag" WHERE "userId" = $1 AND id IN (${placeholders})`,
+        [userId, ...ids]
+      );
+      return rows;
+    },
+    async create({ data: { name, userId } }) {
+      const id = randomId();
+      const now = new Date().toISOString();
+      const { rows } = await query(
+        `INSERT INTO "Tag" (id, "userId", name, "createdAt") VALUES ($1, $2, $3, $4)
+         RETURNING id, "userId", name, "createdAt"`,
+        [id, userId, String(name).trim(), now]
+      );
+      return rows[0];
+    },
+    async detachFromNotes(id) {
+      const { rowCount } = await query(`DELETE FROM "NoteTag" WHERE "tagId" = $1`, [id]);
+      return rowCount || 0;
+    },
+    async delete({ where: { id } }) {
+      await query(`DELETE FROM "Tag" WHERE id = $1`, [id]);
+      return { id };
+    },
+  },
   note: {
     async create({ data: { title, description, contentJson, contentText, userId, notebookId } }) {
       const id = randomId();
@@ -248,10 +336,11 @@ const db = {
       if(row){
         if(row.contentJson && typeof row.contentJson === 'string'){ try{ row.contentJson = JSON.parse(row.contentJson); }catch{} }
         row.isTrashed = !!(row.isTrashed === true || row.isTrashed === 1 || row.isTrashed === '1' || row.isTrashed === 't');
+        row.tags = row.tags || []; // WP-APP-006 — new notes start untagged
       }
       return row;
     },
-    async findMany({ where: { userId, isTrashed, q, notebookId }, orderBy, limit } = {}) {
+    async findMany({ where: { userId, isTrashed, q, notebookId, tagId }, orderBy, limit } = {}) {
       const order = orderBy?.createdAt === 'desc' ? '"createdAt" DESC' : '"createdAt" ASC';
       let sql = `SELECT id, title, description, "contentJson", "contentText", "isTrashed", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt" FROM "Note" WHERE "userId" = $1`;
       const params = [userId];
@@ -273,6 +362,11 @@ const db = {
           sql += ` AND "notebookId" = $${idx++}`;
           params.push(notebookId);
         }
+      }
+      // WP-APP-006 — tag filter: notes carrying this tag (AND with other filters)
+      if (tagId !== undefined) {
+        sql += ` AND EXISTS (SELECT 1 FROM "NoteTag" nt WHERE nt."noteId" = "Note".id AND nt."tagId" = $${idx++})`;
+        params.push(tagId);
       }
       // WP-APP-004 — full-text search only.
       // Case-insensitive substring match on title / contentText / description,
@@ -301,11 +395,12 @@ const db = {
       sql += ` LIMIT $${idx++}`;
       params.push(lim);
       const { rows } = await query(sql, params);
-      return rows.map(r=>{
+      const mapped = rows.map(r=>{
         if(r.contentJson && typeof r.contentJson === 'string'){ try{ r.contentJson = JSON.parse(r.contentJson); }catch{} }
         r.isTrashed = !!(r.isTrashed === true || r.isTrashed === 1 || r.isTrashed === '1' || r.isTrashed === 't');
         return r;
       });
+      return attachTags(mapped); // WP-APP-006 — every note row carries tags: [{id,name}]
     },
     async findFirst({ where: { id, userId } }) {
       const { rows } = await query(
@@ -316,6 +411,7 @@ const db = {
       if(row){
         if(row.contentJson && typeof row.contentJson === 'string'){ try{ row.contentJson = JSON.parse(row.contentJson); }catch{} }
         row.isTrashed = !!(row.isTrashed === true || row.isTrashed === 1 || row.isTrashed === '1' || row.isTrashed === 't');
+        await attachTags([row]);
       }
       return row;
     },
@@ -354,14 +450,21 @@ const db = {
         `UPDATE "Note" SET ${setClause} WHERE id = $${idx} RETURNING id, title, description, "contentJson", "contentText", "isTrashed", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt"`,
         params
       );
+      // WP-APP-006 — replace tag set when tagIds provided (ownership validated in controller)
+      if (Array.isArray(data.tagIds)) {
+        await setNoteTags(id, data.tagIds);
+      }
       const row = rows[0];
       if(row){
         if(row.contentJson && typeof row.contentJson === 'string'){ try{ row.contentJson = JSON.parse(row.contentJson); }catch{} }
         row.isTrashed = !!(row.isTrashed === true || row.isTrashed === 1 || row.isTrashed === '1' || row.isTrashed === 't');
+        await attachTags([row]);
       }
       return row;
     },
     async delete({ where: { id } }) {
+      // WP-APP-006 — explicit junction cleanup (SQLite FK actions are off by default)
+      await query('DELETE FROM "NoteTag" WHERE "noteId" = $1', [id]);
       await query('DELETE FROM "Note" WHERE id = $1', [id]);
       return { id };
     },

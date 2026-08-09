@@ -20,6 +20,8 @@ let currentQuery = ''; // WP-APP-004 — active search string ('' = no search)
 let searchDebounce = null; // debounce timer for search input
 let notebooks = []; // WP-APP-005 — user's notebooks
 let currentNotebookId = null; // WP-APP-005 — null = All notes (no notebook filter)
+let tags = []; // WP-APP-006 — user's tags
+let currentTagId = null; // WP-APP-006 — null = no tag filter
 
 // DOM
 const emailEl = document.getElementById('appEmail');
@@ -44,6 +46,17 @@ const newNotebookCancel = document.getElementById('newNotebookCancel');
 const newNotebookErr = document.getElementById('newNotebookErr');
 const notebookListEl = document.getElementById('notebookList');
 const nbSelect = document.getElementById('noteNotebookSelect');
+// WP-APP-006 — tags (minimal organize)
+const newTagBtn = document.getElementById('newTagBtn');
+const newTagForm = document.getElementById('newTagForm');
+const newTagInput = document.getElementById('newTagInput');
+const newTagAdd = document.getElementById('newTagAdd');
+const newTagCancel = document.getElementById('newTagCancel');
+const newTagErr = document.getElementById('newTagErr');
+const tagListEl = document.getElementById('tagList');
+const tagRow = document.getElementById('tagRow');
+const tagChips = document.getElementById('tagChips');
+const tagAddSelect = document.getElementById('tagAddSelect');
 const titleInput = document.getElementById('editorTitle');
 const saveBtn = document.getElementById('saveBtn');
 const saveStatus = document.getElementById('saveStatus');
@@ -184,11 +197,13 @@ function updateNav(){
   if(navTrash) navTrash.classList.toggle('is-active', currentFilter==='trash');
   if(navAll) navAll.setAttribute('aria-current', currentFilter==='active' && !currentNotebookId ? 'page' : 'false');
   if(navTrash) navTrash.setAttribute('aria-current', currentFilter==='trash'?'page':'false');
-  // WP-APP-005 — list title reflects the selected notebook (Trash keeps its title)
+  // WP-APP-005/006 — list title reflects the selected notebook/tag (Trash keeps its title)
   const nb = currentNotebookId ? notebooks.find(x=>x.id===currentNotebookId) : null;
-  if(listTitleEl) listTitleEl.textContent = currentFilter==='trash' ? 'Trash' : (nb ? nb.name : 'All Notes');
+  const tg = currentTagId ? tags.find(x=>x.id===currentTagId) : null;
+  if(listTitleEl) listTitleEl.textContent = currentFilter==='trash' ? 'Trash' : (tg ? `#${tg.name}` : (nb ? nb.name : 'All Notes'));
   if(newWrap) newWrap.hidden = currentFilter==='trash';
   renderNotebooks(); // keep sidebar active states in sync
+  renderTags();      // WP-APP-006
 }
 async function updateCounts(){
   try{
@@ -282,10 +297,11 @@ async function loadNotes(){
   setError('');
   try{
     // WP-APP-004 — append q only when searching; empty q = today's list behavior
-    // WP-APP-005 — notebook filter composes with search + trash
+    // WP-APP-005/006 — notebook + tag filters compose with search + trash
     const qs = `/api/notes?filter=${currentFilter}`
       + (currentQuery ? `&q=${encodeURIComponent(currentQuery)}` : '')
-      + (currentNotebookId ? `&notebookId=${encodeURIComponent(currentNotebookId)}` : '');
+      + (currentNotebookId ? `&notebookId=${encodeURIComponent(currentNotebookId)}` : '')
+      + (currentTagId ? `&tagId=${encodeURIComponent(currentTagId)}` : '');
     const res = await fetchWithAuth(API_BASE + qs, {method:'GET'});
     if(!res.ok){
       const j = await res.json().catch(()=>({}));
@@ -296,7 +312,7 @@ async function loadNotes(){
     notes.sort((a,b)=> new Date(b.updatedAt||b.createdAt) - new Date(a.updatedAt||a.createdAt));
     renderList();
     await updateCounts(); // refresh sidebar counts (totals, unfiltered)
-    if(countEl && (currentQuery || currentNotebookId)){
+    if(countEl && (currentQuery || currentNotebookId || currentTagId)){
       // While filtering (search and/or notebook), the list-header counter shows what's listed
       countEl.textContent = currentQuery
         ? `${notes.length} ${notes.length===1?'match':'matches'}`
@@ -371,6 +387,8 @@ function updateEditorForSelection(note){
     nbSelect.disabled = !hasSelection || isTrashed;
     nbSelect.value = (note && note.notebookId) || '';
   }
+  // WP-APP-006 — tag chips reflect selection (hidden for trashed/empty)
+  renderTagChips(hasSelection ? note : null);
   // Buttons
   if(trashBtn) trashBtn.hidden = !hasSelection || isTrashed;
   if(restoreBtn) restoreBtn.hidden = !isTrashed;
@@ -646,9 +664,10 @@ if(modalConfirm) modalConfirm.addEventListener('click', deleteForever);
 document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && deleteModal && !deleteModal.hidden) hideDeleteModal(); });
 
 if(navAll) navAll.addEventListener('click', async ()=>{
-  if(currentFilter==='active' && !currentNotebookId) return;
+  if(currentFilter==='active' && !currentNotebookId && !currentTagId) return;
   currentFilter='active';
   currentNotebookId=null; // WP-APP-005: All Notes = every notebook
+  currentTagId=null;      // WP-APP-006: All Notes clears tag filter too
   updateNav();
   selectedId=null;
   titleInput.value='';
@@ -794,6 +813,159 @@ if(nbSelect) nbSelect.addEventListener('change', async ()=>{
   }catch(e){ setError(e.message || 'Could not move note'); }
 });
 
+// ── WP-APP-006 — tags (minimal: sidebar list + filter + editor chips) ──
+async function loadTags(){
+  try{
+    const res = await fetchWithAuth(API_BASE + '/api/tags', {method:'GET'});
+    if(!res.ok) throw new Error(`Fetch failed ${res.status}`);
+    const data = await res.json();
+    tags = Array.isArray(data) ? data : [];
+  }catch(e){ tags = []; }
+  renderTags();
+  const cur = notes.find(n=>n.id===selectedId);
+  renderTagChips(cur || null); // add-select options may have changed
+}
+function renderTags(){
+  if(!tagListEl) return;
+  tagListEl.innerHTML = '';
+  if(tags.length===0){
+    const d = document.createElement('div');
+    d.className = 'app-nb-empty';
+    d.textContent = 'No tags yet';
+    tagListEl.appendChild(d);
+    return;
+  }
+  tags.forEach(t=>{
+    const row = document.createElement('div');
+    row.className = 'app-nb-item' + (currentTagId===t.id ? ' is-active' : '');
+    row.dataset.id = t.id;
+    row.innerHTML = `
+      <button type="button" class="app-nb-open" title="Show notes tagged #${escapeHtml(t.name)}">
+        <span class="app-tag-hash" aria-hidden="true">#</span>
+        <span class="app-nb-name">${escapeHtml(t.name)}</span>
+        <span class="app-nb-count">${Number(t.noteCount)||0}</span>
+      </button>
+      <button type="button" class="app-nb-del" title="Delete tag" aria-label="Delete tag ${escapeHtml(t.name)}">×</button>`;
+    row.querySelector('.app-nb-open').addEventListener('click', ()=> selectTag(t.id));
+    row.querySelector('.app-nb-del').addEventListener('click', ()=> confirmDeleteTag(row, t));
+    tagListEl.appendChild(row);
+  });
+}
+async function selectTag(id){
+  // Clicking the active tag again clears the filter (toggle)
+  currentTagId = (currentTagId===id) ? null : id;
+  updateNav();
+  selectedId=null; titleInput.value='';
+  if(editor) editor.commands.setContent(createEmptyDoc(), false);
+  updateEditorForSelection(null);
+  await loadNotes();
+}
+function confirmDeleteTag(row, tag){
+  // Inline confirm (no alert()): swap the row into confirm mode
+  row.classList.add('is-confirming');
+  row.innerHTML = `
+    <div class="app-nb-confirm">
+      <div class="app-nb-confirm-text">Delete “${escapeHtml(tag.name)}”?<span>Notes are kept (tag removed).</span></div>
+      <div class="app-nb-confirm-actions">
+        <button type="button" class="app-nb-yes">Delete</button>
+        <button type="button" class="app-nb-no">Cancel</button>
+      </div>
+    </div>`;
+  row.querySelector('.app-nb-no').addEventListener('click', ()=> renderTags());
+  row.querySelector('.app-nb-yes').addEventListener('click', async ()=>{
+    setError('');
+    try{
+      const res = await fetchWithAuth(API_BASE + `/api/tags/${tag.id}`, {method:'DELETE'});
+      if(!res.ok){ const j=await res.json().catch(()=>({})); throw new Error(j.message || `Delete failed ${res.status}`); }
+      if(currentTagId===tag.id) currentTagId=null;
+      // tag may still be cached on loaded notes — detach locally so chips/filters stay true
+      notes.forEach(n=>{ n.tags = (n.tags||[]).filter(t=>t.id!==tag.id); });
+      await loadTags();
+      updateNav();
+      await loadNotes();
+    }catch(e){ setError(e.message || 'Could not delete tag'); renderTags(); }
+  });
+}
+function showTagForm(){
+  if(!newTagForm) return;
+  newTagForm.hidden = false;
+  if(newTagErr) newTagErr.textContent = '';
+  if(newTagInput){ newTagInput.value=''; newTagInput.focus(); }
+}
+function hideTagForm(){
+  if(newTagForm) newTagForm.hidden = true;
+  if(newTagErr) newTagErr.textContent='';
+}
+async function submitTag(){
+  const name = (newTagInput?.value || '').trim();
+  if(!name){ if(newTagErr) newTagErr.textContent = 'Name your tag.'; return; }
+  if(newTagAdd) newTagAdd.disabled = true;
+  try{
+    const res = await fetchWithAuth(API_BASE + '/api/tags', {method:'POST', body: JSON.stringify({name})});
+    const j = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(j.message || `Create failed ${res.status}`);
+    hideTagForm();
+    await loadTags();
+    if(j.id) selectTag(j.id); // filter to the new tag (shows empty state)
+  }catch(e){ if(newTagErr) newTagErr.textContent = e.message || 'Could not create tag'; }
+  finally{ if(newTagAdd) newTagAdd.disabled = false; }
+}
+// How tags are set on a note: PUT replaces the note's whole tag set (atomic replace-set)
+async function saveNoteTagIds(tagIds){
+  if(!selectedId) return;
+  setError('');
+  const res = await fetchWithAuth(API_BASE + `/api/notes/${selectedId}`, {
+    method:'PUT',
+    body: JSON.stringify({ tagIds })
+  });
+  const j = await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(j.message || `Tag update failed ${res.status}`);
+  const idx = notes.findIndex(n=>n.id===selectedId);
+  if(idx>=0) notes[idx] = j;
+  setSaveStatus('Saved', 'is-saved');
+  await loadTags();  // sidebar counts
+  await loadNotes(); // note may drop out of the active tag filter
+}
+function renderTagChips(note){
+  if(!tagRow || !tagChips) return;
+  const show = !!note && !note.isTrashed;
+  tagRow.hidden = !show;
+  tagChips.innerHTML = '';
+  if(!show) return;
+  const noteTags = Array.isArray(note.tags) ? note.tags : [];
+  noteTags.forEach(t=>{
+    const chip = document.createElement('span');
+    chip.className = 'app-chip';
+    chip.innerHTML = `<span class="app-chip-hash" aria-hidden="true">#</span>${escapeHtml(t.name)}<button type="button" class="app-chip-x" title="Remove tag" aria-label="Remove tag ${escapeHtml(t.name)}">×</button>`;
+    chip.querySelector('.app-chip-x').addEventListener('click', async ()=>{
+      try{
+        await saveNoteTagIds(noteTags.filter(x=>x.id!==t.id).map(x=>x.id));
+      }catch(e){ setError(e.message || 'Could not update tags'); }
+    });
+    tagChips.appendChild(chip);
+  });
+  if(tagAddSelect){
+    const used = new Set(noteTags.map(t=>t.id));
+    const available = tags.filter(t=>!used.has(t.id));
+    tagAddSelect.innerHTML = '<option value="">+ Tag</option>' + available.map(t=>`<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+    tagAddSelect.value = '';
+  }
+}
+if(newTagBtn) newTagBtn.addEventListener('click', ()=>{ (newTagForm && !newTagForm.hidden) ? hideTagForm() : showTagForm(); });
+if(newTagCancel) newTagCancel.addEventListener('click', hideTagForm);
+if(newTagAdd) newTagAdd.addEventListener('click', submitTag);
+if(newTagInput) newTagInput.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter') submitTag();
+  if(e.key==='Escape') hideTagForm();
+});
+if(tagAddSelect) tagAddSelect.addEventListener('change', async ()=>{
+  if(!selectedId || !tagAddSelect.value) { if(tagAddSelect) tagAddSelect.value=''; return; }
+  const cur = notes.find(n=>n.id===selectedId);
+  const ids = [...(cur?.tags || []).map(t=>t.id), tagAddSelect.value];
+  tagAddSelect.value = '';
+  try{ await saveNoteTagIds(ids); }catch(e){ setError(e.message || 'Could not add tag'); }
+});
+
 // ── WP-APP-004 — search wiring (debounced 300ms, no page reload) ──
 function applySearch(value){
   currentQuery = String(value ?? '');
@@ -846,6 +1018,7 @@ initEditor();
   }
   updateEditorDisabled(true);
   await loadNotebooks(); // WP-APP-005 — sidebar notebooks
+  await loadTags();      // WP-APP-006 — sidebar tags
   updateNav();
   await loadNotes();
   await updateCounts();

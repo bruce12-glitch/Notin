@@ -71,6 +71,22 @@
           </div>
           <div class="app-nb-list" id="notebookList"></div>
         </div>
+        <!-- WP-APP-006 — Tags (minimal) -->
+        <div class="app-nb" id="tagSection">
+          <div class="app-nb-head">
+            <span class="app-nb-title">Tags</span>
+            <button type="button" class="app-nb-add" id="newTagBtn" title="New tag" aria-label="New tag">+</button>
+          </div>
+          <div class="app-nb-form" id="newTagForm" hidden>
+            <input id="newTagInput" type="text" placeholder="Tag name" maxlength="50" autocomplete="off" aria-label="Tag name">
+            <div class="app-nb-form-row">
+              <button type="button" class="app-nb-ok" id="newTagAdd">Add</button>
+              <button type="button" class="app-nb-cancel" id="newTagCancel">Cancel</button>
+            </div>
+            <div class="app-nb-err" id="newTagErr" role="alert"></div>
+          </div>
+          <div class="app-nb-list" id="tagList"></div>
+        </div>
       </nav>
       <div class="app-sidebar-bottom">
         <div class="app-email" id="appEmail" title="">—</div>
@@ -131,6 +147,13 @@
           <button class="app-btn-restore" id="restoreBtn" hidden>Restore</button>
           <button class="app-btn-delete" id="deleteBtn" hidden>Delete forever</button>
         </div>
+      </div>
+      <!-- WP-APP-006 — note tags row (chips + add-tag picker) -->
+      <div class="app-tag-row" id="tagRow" hidden>
+        <div class="app-tag-chips" id="tagChips"></div>
+        <select class="app-tag-add" id="tagAddSelect" title="Add tag" aria-label="Add tag">
+          <option value="">+ Tag</option>
+        </select>
       </div>
       <!-- TipTap toolbar -->
       <div class="app-toolbar" id="toolbar" aria-label="Formatting toolbar">
