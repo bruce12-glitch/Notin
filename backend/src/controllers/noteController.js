@@ -18,7 +18,8 @@ export const createNote = async (req, res) => {
 export const getNotes = async (req, res) => {
   const userId = req.userId;
   // Support ?filter=active|trash|all and legacy ?trash=0|1, ?isTrashed, ?trashed
-  const { filter, trash, trashed, isTrashed: isTrashedQ } = req.query;
+  // WP-APP-004: optional ?q=<string> — full-text search (title / contentText / description)
+  const { filter, trash, trashed, isTrashed: isTrashedQ, q } = req.query;
   let isTrashed;
   if (filter === 'trash') isTrashed = true;
   else if (filter === 'active') isTrashed = false;
@@ -28,10 +29,14 @@ export const getNotes = async (req, res) => {
   else if (isTrashedQ !== undefined) isTrashed = isTrashedQ === '1' || isTrashedQ === 'true';
   else isTrashed = false; // default: All Notes excludes trashed
 
+  // Empty/missing q → same list behavior as today (no search clause)
+  const needle = typeof q === 'string' ? q.trim() : '';
+
   try {
     const notes = await prisma.note.findMany({
-      where: { userId, ...(isTrashed !== undefined ? { isTrashed } : {}) },
+      where: { userId, ...(isTrashed !== undefined ? { isTrashed } : {}), ...(needle ? { q: needle } : {}) },
       orderBy: { createdAt: 'desc' },
+      limit: 100, // WP-APP-004 result cap
     });
     res.status(200).json(notes);
   } catch (error) {

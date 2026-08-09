@@ -20,6 +20,14 @@
 .app-list-header{ padding:14px 14px 10px; display:flex; align-items:center; justify-content:space-between; gap:10px; border-bottom:1px solid #e8e8e3; background:#f6f7f5; position:sticky; top:0; z-index:1; }
 .app-list-title{ font-weight:700; font-size:15px; letter-spacing:-0.02em; color:#111; }
 .app-list-count{ font-size:12px; color:#6b6b6b; background:#fff; border:1px solid #e8e8e3; padding:3px 8px; border-radius:999px; }
+/* WP-APP-004 — search box above the note list (All Notes + Trash) */
+.app-search{ display:flex; align-items:center; gap:8px; margin:10px 14px 0; padding:0 10px; height:38px; background:#fff; border:1px solid #e8e8e3; border-radius:8px; color:#6b6b6b; }
+.app-search:focus-within{ border-color:#00a82d; box-shadow:0 0 0 3px rgba(0,168,45,0.12); color:#111; }
+.app-search svg{ width:16px; height:16px; flex:none; }
+.app-search input{ flex:1; min-width:0; height:100%; border:none; outline:none; background:transparent; font-size:14px; color:#111; font-family:inherit; }
+.app-search input::placeholder{ color:#9a9a9a; }
+.app-search-clear{ flex:none; width:24px; height:24px; border:none; border-radius:999px; background:#efefec; color:#6b6b6b; font-size:15px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
+.app-search-clear:hover{ background:#e3e3de; color:#111; }
 .app-new{ width:100%; padding:10px 14px; border-bottom:1px solid #e8e8e3; }
 .btn-new{ width:100%; height:40px; border-radius:8px; border:none; background:#00a82d; color:#fff; font-weight:700; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
 .btn-new:hover{ background:#009326; }

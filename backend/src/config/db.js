@@ -192,7 +192,7 @@ const db = {
       }
       return row;
     },
-    async findMany({ where: { userId, isTrashed }, orderBy } = {}) {
+    async findMany({ where: { userId, isTrashed, q }, orderBy, limit } = {}) {
       const order = orderBy?.createdAt === 'desc' ? '"createdAt" DESC' : '"createdAt" ASC';
       let sql = `SELECT id, title, description, "contentJson", "contentText", "isTrashed", "trashedAt", "userId", "createdAt", "updatedAt" FROM "Note" WHERE "userId" = $1`;
       const params = [userId];
@@ -206,7 +206,32 @@ const db = {
           params.push(isTrashed ? 1 : 0);
         }
       }
+      // WP-APP-004 — full-text search only.
+      // Case-insensitive substring match on title / contentText / description,
+      // where description is only a fallback used when contentText is empty/null.
+      // Postgres uses ILIKE; SQLite fallback uses LIKE (case-insensitive for ASCII).
+      const needle = typeof q === 'string' ? q.trim() : '';
+      if (needle) {
+        // Escape LIKE wildcards so %, _ and \ in the user's query match literally
+        const esc = needle.replace(/[\\%_]/g, (m) => '\\' + m);
+        const pattern = `%${esc}%`;
+        const like = usePostgres ? 'ILIKE' : 'LIKE';
+        // NOTE: one placeholder per column (SQLite converts each $n to `?` — a
+        // placeholder may not be repeated or the bind count would mismatch).
+        // ESCAPE must follow EACH LIKE expression (SQL grammar binds it per-LIKE).
+        sql += ` AND (
+          title ${like} $${idx} ESCAPE '\\'
+          OR COALESCE("contentText", '') ${like} $${idx + 1} ESCAPE '\\'
+          OR (COALESCE("contentText", '') = '' AND COALESCE(description, '') ${like} $${idx + 2} ESCAPE '\\')
+        )`;
+        params.push(pattern, pattern, pattern);
+        idx += 3;
+      }
       sql += ` ORDER BY ${order}`;
+      // Result cap (spec: e.g. 100) — always applied, with a hard ceiling
+      const lim = Number.isFinite(limit) ? Math.min(Math.max(1, Math.floor(limit)), 500) : 100;
+      sql += ` LIMIT $${idx++}`;
+      params.push(lim);
       const { rows } = await query(sql, params);
       return rows.map(r=>{
         if(r.contentJson && typeof r.contentJson === 'string'){ try{ r.contentJson = JSON.parse(r.contentJson); }catch{} }

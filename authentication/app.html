@@ -68,6 +68,12 @@
         <div class="app-list-title" id="listTitle">All Notes</div>
         <div class="app-list-count" id="noteCount">0 notes</div>
       </div>
+      <!-- WP-APP-004 — search (visible in All Notes and Trash) -->
+      <div class="app-search" id="searchWrap">
+        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><circle cx="9" cy="9" r="5.5" stroke="currentColor" stroke-width="1.6"/><path d="M13.2 13.2L17 17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <input id="searchInput" type="text" placeholder="Search notes" autocomplete="off" spellcheck="false" aria-label="Search notes">
+        <button class="app-search-clear" id="searchClear" type="button" hidden aria-label="Clear search">×</button>
+      </div>
       <div class="app-new" id="newNoteWrap">
         <button class="btn-new" id="newNoteBtn"><span>+</span> New note</button>
       </div>
@@ -80,6 +86,11 @@
       <div class="app-empty" id="emptyTrash" hidden>
         <div style="font-weight:600; color:#111;">Trash is empty</div>
         <div style="font-size:13px; margin-top:4px;">Notes you move to trash will appear here.</div>
+      </div>
+      <div class="app-empty" id="emptySearch" hidden>
+        <div style="font-weight:600; color:#111;">No notes match</div>
+        <div style="font-size:13px; margin-top:4px;">Try different words or clear the search.</div>
+        <button class="app-empty-cta" id="clearSearchEmpty">Clear search</button>
       </div>
     </section>
 

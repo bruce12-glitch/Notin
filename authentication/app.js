@@ -16,6 +16,8 @@ let saveTimer = null;
 let isSaving = false;
 let editor = null;
 let currentFilter = 'active'; // 'active' | 'trash'
+let currentQuery = ''; // WP-APP-004 — active search string ('' = no search)
+let searchDebounce = null; // debounce timer for search input
 
 // DOM
 const emailEl = document.getElementById('appEmail');
@@ -26,6 +28,11 @@ const listTitleEl = document.getElementById('listTitle');
 const listEl = document.getElementById('noteList');
 const emptyEl = document.getElementById('emptyState');
 const emptyTrashEl = document.getElementById('emptyTrash');
+// WP-APP-004 — full-text search UI (title + body plain text)
+const searchInput = document.getElementById('searchInput');
+const searchClear = document.getElementById('searchClear');
+const emptySearchEl = document.getElementById('emptySearch');
+const clearSearchEmptyBtn = document.getElementById('clearSearchEmpty');
 const titleInput = document.getElementById('editorTitle');
 const saveBtn = document.getElementById('saveBtn');
 const saveStatus = document.getElementById('saveStatus');
@@ -260,7 +267,9 @@ function updateToolbar(){
 async function loadNotes(){
   setError('');
   try{
-    const res = await fetchWithAuth(API_BASE + `/api/notes?filter=${currentFilter}`, {method:'GET'});
+    // WP-APP-004 — append q only when searching; empty q = today's list behavior
+    const qs = `/api/notes?filter=${currentFilter}` + (currentQuery ? `&q=${encodeURIComponent(currentQuery)}` : '');
+    const res = await fetchWithAuth(API_BASE + qs, {method:'GET'});
     if(!res.ok){
       const j = await res.json().catch(()=>({}));
       throw new Error(j.message || `Fetch failed ${res.status}`);
@@ -269,7 +278,11 @@ async function loadNotes(){
     notes = Array.isArray(data) ? data : [];
     notes.sort((a,b)=> new Date(b.updatedAt||b.createdAt) - new Date(a.updatedAt||a.createdAt));
     renderList();
-    updateCounts(); // refresh sidebar counts
+    await updateCounts(); // refresh sidebar counts (totals, unfiltered)
+    if(currentQuery && countEl){
+      // While searching, the list-header counter shows matches found
+      countEl.textContent = `${notes.length} ${notes.length===1?'match':'matches'}`;
+    }
     if(notes.length===0){
       selectedId = null;
       titleInput.value = '';
@@ -293,17 +306,25 @@ function renderList(){
   if(countEl) countEl.textContent = `${notes.length} ${notes.length===1?'note':'notes'}`;
   const isTrashView = currentFilter==='trash';
   if(notes.length===0){
-    if(isTrashView){
+    if(currentQuery){
+      // WP-APP-004 — searching with zero results
+      if(emptySearchEl) emptySearchEl.hidden = false;
+      if(emptyEl) emptyEl.hidden = true;
+      if(emptyTrashEl) emptyTrashEl.hidden = true;
+    } else if(isTrashView){
       if(emptyTrashEl) emptyTrashEl.hidden = false;
       if(emptyEl) emptyEl.hidden = true;
+      if(emptySearchEl) emptySearchEl.hidden = true;
     } else {
       if(emptyEl) emptyEl.hidden = false;
       if(emptyTrashEl) emptyTrashEl.hidden = true;
+      if(emptySearchEl) emptySearchEl.hidden = true;
     }
     return;
   }
   if(emptyEl) emptyEl.hidden = true;
   if(emptyTrashEl) emptyTrashEl.hidden = true;
+  if(emptySearchEl) emptySearchEl.hidden = true;
   notes.forEach(n=>{
     const snippet = plainFromNote(n);
     const btn = document.createElement('button');
@@ -372,6 +393,8 @@ function updateEditorDisabled(disabled){
 }
 
 async function createNote(){
+  // WP-APP-004 — a new note must never hide behind an active search filter
+  if(currentQuery) clearSearchNow(false);
   // If in trash, switch to active first
   if(currentFilter==='trash'){
     currentFilter = 'active';
@@ -617,6 +640,30 @@ if(navTrash) navTrash.addEventListener('click', async ()=>{
   updateEditorForSelection(null);
   await loadNotes();
 });
+// ── WP-APP-004 — search wiring (debounced 300ms, no page reload) ──
+function applySearch(value){
+  currentQuery = String(value ?? '');
+  if(searchClear) searchClear.hidden = !(searchInput && searchInput.value);
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(()=>{
+    currentQuery = currentQuery.trim();
+    loadNotes();
+  }, 300);
+}
+function clearSearchNow(reload=true){
+  if(searchInput) searchInput.value = '';
+  currentQuery = '';
+  clearTimeout(searchDebounce);
+  if(searchClear) searchClear.hidden = true;
+  if(reload) loadNotes();
+}
+if(searchInput){
+  searchInput.addEventListener('input', ()=> applySearch(searchInput.value));
+  searchInput.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ clearSearchNow(); } });
+}
+if(searchClear) searchClear.addEventListener('click', ()=>{ clearSearchNow(); if(searchInput) searchInput.focus(); });
+if(clearSearchEmptyBtn) clearSearchEmptyBtn.addEventListener('click', ()=>{ clearSearchNow(); if(searchInput) searchInput.focus(); });
+
 if(logoutBtn) logoutBtn.addEventListener('click', async ()=>{
   try{ await fetch(API_BASE + '/api/auth/logout', {method:'POST', credentials:'include'}); }catch{}
   try{ await fetch(API_BASE + '/auth/logout', {method:'POST', credentials:'include'}); }catch{}
