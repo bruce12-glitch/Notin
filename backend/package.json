@@ -12,11 +12,16 @@
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
+    "express-rate-limit": "^8.6.2",
+    "google-auth-library": "^11.0.0",
     "helmet": "^8.0.0",
+    "jose": "^6.2.8",
     "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^9.0.5",
     "pg": "^8.13.1"
   }
 }

@@ -9,24 +9,62 @@ datasource db {
 
 model User {
   id        String   @id @default(cuid())
-  username  String
   email     String   @unique
-  password  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  username  String?
+  password  String?
+  googleSub String?  @unique @map("google_sub")
+  createdAt DateTime @default(now()) @map("createdAt")
+  updatedAt DateTime @updatedAt @map("updatedAt")
 
-  notes Note[]
+  notes          Note[]
+  otpChallenges  OtpChallenge[]
+  refreshTokens  RefreshToken[]
 }
 
 model Note {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   title       String
-  description String   @db.Text
-  userId      String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  description String    @db.Text
+  contentJson String?   @db.Text @map("contentJson")
+  contentText String?   @db.Text @map("contentText")
+  isTrashed   Boolean   @default(false) @map("isTrashed")
+  trashedAt   DateTime? @map("trashedAt")
+  userId      String    @map("userId")
+  createdAt   DateTime  @default(now()) @map("createdAt")
+  updatedAt   DateTime  @updatedAt @map("updatedAt")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([isTrashed])
+  @@map("Note")
+}
+
+model OtpChallenge {
+  id        String    @id
+  userId    String    @map("user_id")
+  codeHash  String    @map("code_hash")
+  expiresAt DateTime  @map("expires_at")
+  attempts  Int       @default(0)
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("otp_challenges")
+}
+
+model RefreshToken {
+  hash      String    @id
+  userId    String    @map("user_id")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
 }

@@ -1,0 +1,99 @@
+/* WP-APP-001 — App shell (sidebar 220 + list 300 + editor flex) — does NOT touch auth styles.css */
+.app-layout{ min-height:100dvh; display:grid; grid-template-columns:220px 320px 1fr; height:100dvh; background:#fff; font-family:"Inter",system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+.app-sidebar{ background:#fbfcf8; border-right:1px solid #e8e8e3; display:flex; flex-direction:column; padding:18px 14px; gap:14px; }
+.app-sidebar-top{ display:flex; align-items:center; gap:10px; padding:4px 6px; }
+.app-sidebar-mark{ width:28px; height:28px; display:flex; align-items:center; justify-content:center; }
+.app-sidebar-brand{ font-weight:800; letter-spacing:-0.03em; font-size:18px; color:#111; }
+.app-nav{ display:flex; flex-direction:column; gap:4px; margin-top:8px; }
+.app-nav-item{ display:flex; align-items:center; gap:8px; padding:9px 10px; border-radius:8px; font-size:14px; font-weight:600; border:none; background:transparent; color:#6b6b6b; cursor:pointer; text-align:left; width:100%; }
+.app-nav-item:hover{ background:#f0f0ec; color:#111; }
+.app-nav-item.is-active{ background:#111; color:#fff; }
+.app-nav-item svg{ width:16px; height:16px; opacity:0.9; }
+.nav-count{ margin-left:auto; font-size:12px; font-weight:600; background:#fff; color:#6b6b6b; border:1px solid #e8e8e3; padding:2px 6px; border-radius:999px; min-width:22px; text-align:center; }
+.app-nav-item.is-active .nav-count{ background:rgba(255,255,255,0.16); color:#fff; border-color:rgba(255,255,255,0.2); }
+.app-sidebar-bottom{ margin-top:auto; display:flex; flex-direction:column; gap:10px; padding:10px 6px; border-top:1px solid #e8e8e3; }
+.app-email{ font-size:13px; color:#6b6b6b; word-break:break-all; line-height:1.4; }
+.app-btn-logout{ width:100%; height:38px; border-radius:8px; border:1px solid #111; background:#111; color:#fff; font-weight:600; font-size:14px; cursor:pointer; }
+.app-btn-logout:hover{ background:#000; }
+
+.app-list{ background:#f6f7f5; border-right:1px solid #e8e8e3; display:flex; flex-direction:column; min-width:0; }
+.app-list-header{ padding:14px 14px 10px; display:flex; align-items:center; justify-content:space-between; gap:10px; border-bottom:1px solid #e8e8e3; background:#f6f7f5; position:sticky; top:0; z-index:1; }
+.app-list-title{ font-weight:700; font-size:15px; letter-spacing:-0.02em; color:#111; }
+.app-list-count{ font-size:12px; color:#6b6b6b; background:#fff; border:1px solid #e8e8e3; padding:3px 8px; border-radius:999px; }
+.app-new{ width:100%; padding:10px 14px; border-bottom:1px solid #e8e8e3; }
+.btn-new{ width:100%; height:40px; border-radius:8px; border:none; background:#00a82d; color:#fff; font-weight:700; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
+.btn-new:hover{ background:#009326; }
+.btn-new:disabled{ background:#cfcfcf; cursor:not-allowed; }
+.app-list-items{ flex:1; overflow:auto; padding:8px; display:flex; flex-direction:column; gap:8px; }
+.app-note-item{ background:#fff; border:1px solid #e8e8e3; border-radius:10px; padding:12px 12px; cursor:pointer; transition:border-color .12s, box-shadow .12s; text-align:left; }
+.app-note-item:hover{ border-color:#d0d0d0; box-shadow:0 4px 12px rgba(0,0,0,0.06); }
+.app-note-item.is-active{ border-color:#111; box-shadow:0 6px 16px rgba(0,0,0,0.08); }
+.app-note-title{ font-weight:600; font-size:14px; color:#111; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.app-note-snippet{ font-size:13px; color:#6b6b6b; line-height:1.4; margin-top:4px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:18px; }
+.app-note-meta{ font-size:12px; color:#9a9a9a; margin-top:6px; }
+.app-empty{ padding:32px 14px; text-align:center; color:#6b6b6b; }
+.app-empty-cta{ margin-top:12px; display:inline-flex; align-items:center; gap:6px; background:#111; color:#fff; border:none; border-radius:8px; padding:10px 14px; font-weight:600; cursor:pointer; }
+
+.app-editor{ display:flex; flex-direction:column; min-width:0; background:#fff; }
+.app-editor-header{ padding:14px 18px; border-bottom:1px solid #eee; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.app-editor-title{ flex:1; min-width:0; }
+.app-editor-title input{ width:100%; border:none; outline:none; font-size:22px; font-weight:700; letter-spacing:-0.02em; color:#111; background:transparent; }
+.app-editor-title input::placeholder{ color:#a8a8a8; font-weight:600; }
+.app-editor-actions{ display:flex; align-items:center; gap:8px; }
+.app-save{ height:36px; padding:0 14px; border-radius:8px; border:none; background:#111; color:#fff; font-weight:700; font-size:14px; cursor:pointer; }
+.app-save:hover{ background:#000; }
+.app-save:disabled{ background:#cfcfcf; cursor:not-allowed; }
+.app-save-status{ font-size:13px; color:#6b6b6b; min-width:60px; text-align:right; }
+.app-btn-trash,.app-btn-restore,.app-btn-delete{ height:36px; padding:0 14px; border-radius:8px; font-weight:600; font-size:13px; cursor:pointer; border:1px solid #e6e6e6; background:#fff; color:#111; }
+.app-btn-trash{ border-color:#e8e8e3; }
+.app-btn-trash:hover{ background:#fef2f2; border-color:#fecaca; color:#b91c1c; }
+.app-btn-restore{ background:#00a82d; color:#fff; border-color:#00a82d; }
+.app-btn-restore:hover{ background:#009326; }
+.app-btn-delete{ background:#fff; color:#b91c1c; border-color:#fecaca; }
+.app-btn-delete:hover{ background:#fef2f2; }
+.app-modal{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:50; }
+.app-modal[hidden]{ display:none !important; }
+.app-modal-backdrop{ position:absolute; inset:0; background:rgba(0,0,0,0.32); backdrop-filter:blur(2px); }
+.app-modal-card{ position:relative; background:#fff; border-radius:12px; padding:20px; width:min(420px, calc(100% - 32px)); box-shadow:0 20px 40px rgba(0,0,0,0.18); border:1px solid #e8e8e3; }
+.app-save-status.is-saving{ color:#6b6b6b; }
+.app-save-status.is-saved{ color:#00a82d; }
+.app-save-status.is-error{ color:#d93025; }
+.app-editor-body{ flex:1; display:flex; flex-direction:column; padding:18px; overflow:auto; }
+.app-editor-body textarea{ width:100%; flex:1; min-height:260px; border:none; outline:none; resize:none; font-size:15px; line-height:1.65; color:#222; background:transparent; }
+.app-editor-body textarea::placeholder{ color:#a8a8a8; }
+
+/* TipTap toolbar — minimal Evernote-ish light UI */
+.app-toolbar{ display:flex; align-items:center; gap:6px; padding:10px 14px; border-bottom:1px solid #eee; background:#fbfbf9; flex-wrap:wrap; }
+.tb-btn{ min-width:32px; height:32px; padding:0 8px; border:1px solid #e6e6e6; background:#fff; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; color:#222; }
+.tb-btn:hover{ background:#111; color:#fff; border-color:#111; }
+.tb-btn.is-active{ background:#111; color:#fff; border-color:#111; }
+.tb-sep{ width:1px; height:18px; background:#e8e8e3; margin:0 2px; }
+.tiptap-editor{ flex:1; min-height:260px; outline:none; font-size:15px; line-height:1.65; color:#222; }
+.tiptap-editor .ProseMirror{ min-height:260px; outline:none; padding:2px 0; }
+.tiptap-editor .ProseMirror p{ margin:0 0 10px 0; }
+.tiptap-editor .ProseMirror h1{ font-size:26px; font-weight:800; letter-spacing:-0.02em; margin:14px 0 10px; line-height:1.2; }
+.tiptap-editor .ProseMirror h2{ font-size:20px; font-weight:700; letter-spacing:-0.02em; margin:12px 0 8px; line-height:1.3; }
+.tiptap-editor .ProseMirror ul, .tiptap-editor .ProseMirror ol{ margin:8px 0 12px 22px; }
+.tiptap-editor .ProseMirror li{ margin:4px 0; }
+.tiptap-editor .ProseMirror ul[data-type="taskList"]{ list-style:none; margin-left:0; padding-left:0; }
+.tiptap-editor .ProseMirror ul[data-type="taskList"] li{ display:flex; gap:8px; align-items:flex-start; }
+.tiptap-editor .ProseMirror ul[data-type="taskList"] li > label{ flex:0 0 auto; margin-top:2px; }
+.tiptap-editor .ProseMirror ul[data-type="taskList"] li > div{ flex:1; }
+.tiptap-editor .ProseMirror p.is-editor-empty:first-child::before{ content: attr(data-placeholder); float:left; color:#a8a8a8; pointer-events:none; height:0; }
+.app-editor-body{ flex:1; display:flex; flex-direction:column; padding:18px; overflow:auto; }
+#tiptapEditor{ flex:1; display:flex; flex-direction:column; }
+.app-inline-error{ margin:0 18px; padding:10px 12px; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; border-radius:8px; font-size:13px; text-align:center; }
+.app-inline-error:empty{ display:none; }
+.app-mobile-bar{ display:none; padding:10px 14px; border-bottom:1px solid #eee; align-items:center; gap:10px; }
+.app-mobile-back{ height:34px; padding:0 12px; border-radius:8px; border:1px solid #e6e6e6; background:#fff; font-weight:600; cursor:pointer; }
+@media (max-width: 900px){
+  .app-layout{ grid-template-columns:1fr; }
+  .app-sidebar{ display:none; }
+  .app-list{ border-right:none; }
+  .app-editor{ display:none; }
+  .app-layout.is-list .app-list{ display:flex; }
+  .app-layout.is-editor .app-editor{ display:flex; }
+  .app-layout.is-editor .app-list{ display:none; }
+  .app-mobile-bar{ display:flex; }
+  .app-list-header{ position:sticky; }
+}
