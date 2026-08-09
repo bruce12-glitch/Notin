@@ -565,6 +565,13 @@ let submittingDouble = false;
    Does NOT alter layout, form width, 50/50 or flow
    ========================================================= */
 (() => {
+  // UX FIX (2026-08-09): the pointer-follow overlays (notin-cursor-spotlight/glow/dot/ring)
+  // formed a sliding "white sheet" that washed over the credentials form and, with the
+  // column/button/email 3D tilt, made the email field impossible to click/type into.
+  // Disabled entirely — the page keeps its static layout, artwork, and quick intro fade
+  // with a normal native cursor. Re-enable by flipping to true.
+  const POINTER_MOTION = false;
+
   const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const isTouch = window.matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window);
   const isSmall = window.matchMedia('(max-width: 900px)').matches;
@@ -579,7 +586,7 @@ let submittingDouble = false;
   const brandMark = document.querySelector('.brand-mark');
   const artRegion = document.querySelector('.art-region');
 
-  if (!isTouch && !isSmall) {
+  if (POINTER_MOTION && !isTouch && !isSmall) {
     const dot = document.createElement('div');
     dot.className = 'notin-cursor-dot';
     const ring = document.createElement('div');
@@ -689,6 +696,7 @@ let submittingDouble = false;
     rafId = requestAnimationFrame(tick);
     document.addEventListener('visibilitychange', ()=>{ if(document.hidden && rafId){ cancelAnimationFrame(rafId); rafId=null; } else if(!document.hidden && !rafId) rafId = requestAnimationFrame(tick); });
   }
+  if (POINTER_MOTION) {
   const magneticBtns = document.querySelectorAll('.btn-continue, .btn-social');
   magneticBtns.forEach((btn)=>{
     let bounds=null;
@@ -702,8 +710,9 @@ let submittingDouble = false;
     const onLeave=()=>{ btn.style.transform=''; btn.style.transition='transform 0.42s cubic-bezier(.2,.6,.3,1), box-shadow .22s ease, background .12s ease'; bounds=null; };
     btn.addEventListener('mousemove', onMove); btn.addEventListener('mouseleave', onLeave); window.addEventListener('resize', ()=> bounds=null);
   });
+  }
   const emailEl = document.getElementById('email');
-  if (emailEl) {
+  if (POINTER_MOTION && emailEl) {
     emailEl.addEventListener('mousemove', (e)=>{
       if(window.matchMedia('(prefers-reduced-motion: reduce)').matches || window.matchMedia('(pointer: coarse)').matches) return;
       const r = emailEl.getBoundingClientRect(); const dx = (e.clientX - (r.left+r.width/2))/r.width; const dy = (e.clientY - (r.top+r.height/2))/r.height;
