@@ -34,6 +34,34 @@ curl http://127.0.0.1:8787/health    # {"ok":true,"service":"notin-auth","demoMo
 
 ---
 
+## ✅ Current MVP (end of day)
+
+**Status: FROZEN.** Today's work packages are done, verified live, and merged-ready on `arena/019fe6e8-notin` (PR #8): WP-AUTH-001/002/003 (unified JWT, OTP UI, forgot/reset password) + WP-APP-001→007 (app shell, TipTap editor, trash, search, notebooks, tags, pin+sort).
+
+**What works (all exercised over HTTP today):**
+- **Accounts** — email+password signup/signin; OTP sign-in; unified jose JWT (15-min access token, memory-only) + httpOnly refresh rotation (30-day); logout revokes.
+- **Password reset** — `POST /api/auth/forgot-password` (generic anti-enumeration response) + `POST /api/auth/reset-password`; hashed single-use tokens (60-min TTL); email via SMTP when configured, **dev-only token echo/log when not**; reset revokes all sessions; also sets a first password for OTP/Google-only accounts.
+- **Editor app (`app.html`)** — TipTap rich text (bold/italic/underline, H1/H2, lists, checklist), explicit Save, trash/restore/delete-forever.
+- **Organize** — notebooks (create/assign/filter, delete → notes unfiled, never deleted); tags (create, editor chips, replace-set attach, filter, delete keeps notes).
+- **Search** — `?q=` over title/body (description fallback), 300 ms debounce UI, composes with trash/notebook/tag filters.
+- **Pin + sort** — pin/unpin from list row or editor; pinned notes top every scoped view, preserved through trash/restore; sort dropdown Updated/Created/Title (pins always win).
+
+**How to run:**
+```bash
+cd backend
+npm ci
+npm run db:migrate   # Postgres via DATABASE_URL, else SQLite fallback (backend/prisma/notin.sqlite)
+npm start            # unified API + auth UI + editor on http://localhost:5000
+```
+Optional landing: `cd frontend && node dev-server.mjs` → `:3000` (proxies `/api/*` + `/auth/*` → `:5000`).
+
+**Demo auth:** OTP code **`123456`** works **only** when `NODE_ENV !== 'production'` **and** SMTP is not configured — the server enforces this (`GET /api/auth/health` exposes `demoMode`). With SMTP configured, real codes are emailed instead.
+**Forgot password (dev path):** without SMTP & not production, the reset token is echoed in the JSON response + server logs (never in production, never plaintext in the DB — only a peppered SHA-256 is stored).
+
+**Explicitly out of scope (not built, intentionally):** attachments, PWA/offline sync, billing/Stripe, native mobile/desktop apps, Apple SIWA, captcha, nested notebooks, tag colors, note sharing — and the standalone auth server on **`:8787`** (pre-existing reference/demo only; the product uses the unified `:5000` API).
+
+---
+
 ## 🎯 Target: Evernote-class note-taking product
 
 Evernote is not just a landing page. The full product target includes:
