@@ -1,7 +1,7 @@
 # Notin → Evernote Target — Progress Report
 
-**Date:** 2026-08-08  
-**Sandbox ID:** `i9hxmxjgdjhep5271xhh5`
+**Date:** 2026-08-09  
+**Sandbox ID:** `iwajtmd2a4l4mromh6k68`
 
 ---
 
@@ -9,21 +9,28 @@
 
 | # | Service | Port | Status | Preview URL |
 |---|---------|------|--------|-------------|
-| 1 | **Authentication page** (signup UI) | `4173` | ✅ LIVE | https://4173-i9hxmxjgdjhep5271xhh5.e2b.app |
-| 2 | **Landing page** (Green Edition) | `3000` | ✅ LIVE | https://3000-i9hxmxjgdjhep5271xhh5.e2b.app |
-| 3 | **Notes API** (users + notes CRUD) | `5000` | ✅ LIVE | https://5000-i9hxmxjgdjhep5271xhh5.e2b.app |
-| 4 | **Auth API** (Google + OTP service) | `8787` | ✅ LIVE | https://8787-i9hxmxjgdjhep5271xhh5.e2b.app/health |
-| 5 | **PostgreSQL** | `5432` | ✅ LIVE (internal) | `postgresql://postgres:***@127.0.0.1:5432/notin` |
+| 1 | **Landing page** (Green + Neon) | `3000` | ✅ LIVE | https://3000-iwajtmd2a4l4mromh6k68.e2b.app |
+| 2 | **Unified API + Auth UI + Editor app** | `5000` | ✅ LIVE | https://5000-iwajtmd2a4l4mromh6k68.e2b.app |
+| 3 | **Standalone Auth service** (OTP demo) | `8787` | ✅ LIVE | https://8787-iwajtmd2a4l4mromh6k68.e2b.app |
+| 4 | **Database** | — | ✅ SQLite fallback (`backend/prisma/notin.sqlite`) | set `DATABASE_URL=postgresql://…` to switch to Postgres |
 
-### Quick checks
+### Deep links
+- 🌿 Green landing: https://3000-iwajtmd2a4l4mromh6k68.e2b.app
+- ⚡ Neon landing: https://3000-iwajtmd2a4l4mromh6k68.e2b.app/index-neon.html
+- 🔐 Sign-up UI: https://5000-iwajtmd2a4l4mromh6k68.e2b.app/  (login at `/login.html`)
+- 📝 **Note editor app shell:** https://5000-iwajtmd2a4l4mromh6k68.e2b.app/app.html
+- 🩺 API health: https://5000-iwajtmd2a4l4mromh6k68.e2b.app/health
+
+### Quick checks (inside sandbox)
 ```bash
-curl http://127.0.0.1:4173/          # Auth page HTML
 curl http://127.0.0.1:3000/          # Landing HTML
-curl http://127.0.0.1:5000/          # {"message":"Notin Backend API",...}
-curl http://127.0.0.1:8787/health    # {"ok":true,"service":"notin-auth",...}
+curl http://127.0.0.1:5000/health    # {"ok":true,"service":"notin-api",...}
+curl http://127.0.0.1:8787/health    # {"ok":true,"service":"notin-auth","demoMode":true,...}
 ```
 
-> **Auth API note:** Google OAuth + SMTP are **not configured** in this sandbox (no real Google client / mail credentials). The health endpoint reports `googleConfigured:false`, `smtpConfigured:false`. UI + routes are live; full OTP email / Google redirect needs `.env` secrets.
+> **Demo auth:** SMTP/Google OAuth aren't configured, so **demo OTP mode** is on — request a code with any email, then verify with `123456`. Verified end-to-end 2026-08-09: signup → OTP verify → create note → list notes → token refresh all pass through the live preview.
+
+> **2026-08-09 fixes this session:** (1) `frontend/dev-server.mjs` added — static landing server that **proxies `/api/*` + `/auth/*`** to the unified API, so browser code stays same-origin on preview hosts. (2) `frontend/script.js` auth base now defaults to `location.origin` over http(s). (3) Ran `npm run db:migrate` so the SQLite fallback has its tables (the API previously crashed on first request).
 
 ---
 
@@ -57,8 +64,8 @@ Evernote is not just a landing page. The full product target includes:
 | **Brand / design system** | Complete | **100%** | Cream + `#00A82D` / `#8FE333`, type, motion |
 | **Authentication UI** | UI ready | **70%** | Evernote-style signup page live; OTP/Google need secrets |
 | **Auth backend** | Service live | **65%** | Google + OTP + JWT + refresh rotation coded; needs Google/SMTP |
-| **Notes API (CRUD)** | Live | **55%** | Signup/signin + notes CRUD on PostgreSQL |
-| **Core note editor** | Not started | **0%** | No rich text / markdown / checklist app |
+| **Notes API (CRUD)** | Live | **55%** | Unified auth+notes CRUD (SQLite/Postgres) + trash/restore |
+| **Core note editor** | Shell live | **40%** | Tiptap rich-text editor (`app.html`): create/save, task lists, trash/restore |
 | **Notebooks / tags / spaces** | Not started | **0%** | Schema is flat `Note` only |
 | **Search** | Not started | **0%** | No full-text index |
 | **Sync / offline** | Not started | **0%** | No client store / conflict protocol |
@@ -145,8 +152,8 @@ Evernote is not just a landing page. The full product target includes:
 | Milestone | Status |
 |-----------|--------|
 | Look like Evernote (marketing) | ✅ **Done (100/100)** |
-| Sign up / log in like Evernote | 🟡 **UI live; full SSO/OTP needs config** |
-| Take notes like Evernote | 🟡 **API only — no editor UI** |
+| Sign up / log in like Evernote | 🟡 **UI live; demo OTP works; full SSO/SMTP needs config** |
+| Take notes like Evernote | 🟡 **Editor shell live (Tiptap) + CRUD — no notebooks/tags yet** |
 | Organize like Evernote | 🔴 Not started |
 | Search like Evernote | 🔴 Not started |
 | Sync like Evernote | 🔴 Not started |
@@ -158,13 +165,13 @@ Marketing site ████████████████████ 100%
 Auth UI        ██████████████░░░░░░  70%
 Auth backend   █████████████░░░░░░░  65%
 Notes API      ███████████░░░░░░░░░  55%
-Note editor    ░░░░░░░░░░░░░░░░░░░░   0%
+Note editor    ████████░░░░░░░░░░░░  40%
 Org / search   ░░░░░░░░░░░░░░░░░░░░   0%
 Sync / offline ░░░░░░░░░░░░░░░░░░░░   0%
 Clipper / apps ██░░░░░░░░░░░░░░░░░░  10%
 AI product     █░░░░░░░░░░░░░░░░░░░   5%
 ────────────────────────────────────
-PRODUCT TOTAL ████████░░░░░░░░░░░░ ~42%
+PRODUCT TOTAL █████████░░░░░░░░░░░ ~45%
 ```
 
 ---
@@ -172,12 +179,13 @@ PRODUCT TOTAL ████████░░░░░░░░░░░░ ~42%
 ## 🧭 Bottom line
 
 **You already beat Evernote on the marketing-site design match.**  
-**You do not yet have an Evernote-class product** — that starts when the editor + notebooks + search ship behind the live auth.
+**The product core is coming online** — since this report started, the stack gained a unified auth+notes API and a Tiptap editor shell. Evernote parity starts when notebooks/tags + search land behind the editor.
 
 **Right now you can open:**
-1. **Auth page** → https://4173-i9hxmxjgdjhep5271xhh5.e2b.app  
-2. **Landing** → https://3000-i9hxmxjgdjhep5271xhh5.e2b.app  
-3. **Notes API** → https://5000-i9hxmxjgdjhep5271xhh5.e2b.app  
-4. **Auth API health** → https://8787-i9hxmxjgdjhep5271xhh5.e2b.app/health  
+1. **Landing (Green)** → https://3000-iwajtmd2a4l4mromh6k68.e2b.app  
+2. **Landing (Neon)** → https://3000-iwajtmd2a4l4mromh6k68.e2b.app/index-neon.html  
+3. **Sign up / log in** → https://5000-iwajtmd2a4l4mromh6k68.e2b.app (demo code `123456`)  
+4. **Note editor** → https://5000-iwajtmd2a4l4mromh6k68.e2b.app/app.html  
+5. **Auth service** → https://8787-iwajtmd2a4l4mromh6k68.e2b.app  
 
-**Highest-leverage next step:** build the authenticated **note editor app shell** and point the auth page “Continue” flow into it (using the Notes API that is already live).
+**Highest-leverage next step:** finish wiring the landing “Get started” CTA → auth → `app.html` editor journey (auth page “Continue” already redirects there), then add notebooks/tags + full-text search.
