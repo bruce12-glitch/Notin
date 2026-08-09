@@ -77,7 +77,7 @@ export const getNotes = async (req, res) => {
 
 export const updateNote = async (req, res) => {
   const { id } = req.params;
-  const { title, description, contentJson, contentText, isTrashed, trashedAt, notebookId, tagIds } = req.body;
+  const { title, description, contentJson, contentText, isTrashed, trashedAt, notebookId, tagIds, isPinned } = req.body;
   const userId = req.userId;
 
   try {
@@ -123,6 +123,14 @@ export const updateNote = async (req, res) => {
         return res.status(400).json({ message: 'Unknown tag id' });
       }
       data.tagIds = unique;
+    }
+    // WP-APP-007: pin/unpin — strict boolean; composes with any other fields in one PUT.
+    // Pinned notes sort to the top of every list (respecting filter/trash/search scoping).
+    if (isPinned !== undefined) {
+      if (typeof isPinned !== 'boolean') {
+        return res.status(400).json({ message: 'isPinned must be a boolean' });
+      }
+      data.isPinned = isPinned;
     }
 
     // If no fields to update, return existing

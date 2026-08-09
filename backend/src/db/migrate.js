@@ -79,6 +79,10 @@ async function migratePostgres(pool) {
   await pool.query(`ALTER TABLE "Note" ADD COLUMN IF NOT EXISTS "trashedAt" TIMESTAMPTZ;`);
   // Ensure existing nulls become false
   await pool.query(`UPDATE "Note" SET "isTrashed" = FALSE WHERE "isTrashed" IS NULL;`);
+  // WP-APP-007 — pin notes: isPinned boolean (default false; existing notes → false)
+  await pool.query(`ALTER TABLE "Note" ADD COLUMN IF NOT EXISTS "isPinned" BOOLEAN DEFAULT FALSE;`);
+  await pool.query(`UPDATE "Note" SET "isPinned" = FALSE WHERE "isPinned" IS NULL;`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "Note_isPinned_idx" ON "Note" ("isPinned");`);
   await pool.query(`CREATE INDEX IF NOT EXISTS "Note_userId_idx" ON "Note" ("userId");`);
   await pool.query(`CREATE INDEX IF NOT EXISTS "Note_isTrashed_idx" ON "Note" ("isTrashed");`);
 
@@ -193,6 +197,10 @@ function migrateSqlite(dbPath) {
   try{ db.exec(`ALTER TABLE "Note" ADD COLUMN "isTrashed" INTEGER DEFAULT 0`); }catch(e){ if(!String(e.message).includes('duplicate column')) throw e; }
   try{ db.exec(`ALTER TABLE "Note" ADD COLUMN "trashedAt" TEXT`); }catch(e){ if(!String(e.message).includes('duplicate column')) throw e; }
   try{ db.exec(`UPDATE "Note" SET "isTrashed" = 0 WHERE "isTrashed" IS NULL`); }catch{}
+  // WP-APP-007: pin notes — default 0 (existing notes → unpinned)
+  try{ db.exec(`ALTER TABLE "Note" ADD COLUMN "isPinned" INTEGER DEFAULT 0`); }catch(e){ if(!String(e.message).includes('duplicate column')) throw e; }
+  try{ db.exec(`UPDATE "Note" SET "isPinned" = 0 WHERE "isPinned" IS NULL`); }catch{}
+  try{ db.exec(`CREATE INDEX IF NOT EXISTS "Note_isPinned_idx" ON "Note" ("isPinned")`); }catch{}
   db.exec(`CREATE INDEX IF NOT EXISTS "Note_userId_idx" ON "Note" ("userId");`);
   try{ db.exec(`CREATE INDEX IF NOT EXISTS "Note_isTrashed_idx" ON "Note" ("isTrashed")`); }catch{}
 

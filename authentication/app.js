@@ -22,6 +22,7 @@ let notebooks = []; // WP-APP-005 — user's notebooks
 let currentNotebookId = null; // WP-APP-005 — null = All notes (no notebook filter)
 let tags = []; // WP-APP-006 — user's tags
 let currentTagId = null; // WP-APP-006 — null = no tag filter
+let currentSort = 'updated'; // WP-APP-007 — list sort control ('updated' | 'created' | 'title'); pins always win
 
 // DOM
 const emailEl = document.getElementById('appEmail');
@@ -57,6 +58,9 @@ const tagListEl = document.getElementById('tagList');
 const tagRow = document.getElementById('tagRow');
 const tagChips = document.getElementById('tagChips');
 const tagAddSelect = document.getElementById('tagAddSelect');
+// WP-APP-007 — pin notes + sort control
+const pinBtn = document.getElementById('pinBtn');       // editor action (hidden until a note is selected)
+const sortSelect = document.getElementById('sortSelect'); // list-header sort dropdown
 const titleInput = document.getElementById('editorTitle');
 const saveBtn = document.getElementById('saveBtn');
 const saveStatus = document.getElementById('saveStatus');
@@ -143,6 +147,27 @@ function docFromNote(note){
   return { type:'doc', content: paras.map(p=>({type:'paragraph', content:[{type:'text', text:p}]})) };
 }
 function createEmptyDoc(){ return { type:'doc', content:[{type:'paragraph'}] }; }
+// WP-APP-007 — pushpin glyph (list rows + editor action share it)
+const PIN_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H16v-2c-1.66 0-3-1.34-3-3z"/></svg>';
+// WP-APP-007 — pin-aware sort. Pinned notes always precede unpinned ones;
+// within each group the active sort control decides (updated/created/title).
+function compareNotes(a,b){
+  const pa = a.isPinned ? 1 : 0, pb = b.isPinned ? 1 : 0;
+  if(pa !== pb) return pb - pa; // pin always wins
+  if(currentSort==='title'){
+    const t = String(a.title||'Untitled').localeCompare(String(b.title||'Untitled'));
+    if(t!==0) return t;
+  } else if(currentSort==='created'){
+    const c = new Date(b.createdAt||0) - new Date(a.createdAt||0);
+    if(c!==0) return c;
+  }
+  // default 'updated' (also the tiebreak): most recently edited first
+  return new Date(b.updatedAt||b.createdAt||0) - new Date(a.updatedAt||a.createdAt||0);
+}
+function sortNotes(arr){
+  arr.sort(compareNotes);
+  return arr;
+}
 
 async function bootstrapToken(){
   try{
@@ -309,7 +334,7 @@ async function loadNotes(){
     }
     const data = await res.json();
     notes = Array.isArray(data) ? data : [];
-    notes.sort((a,b)=> new Date(b.updatedAt||b.createdAt) - new Date(a.updatedAt||a.createdAt));
+    sortNotes(notes); // WP-APP-007 — pin-aware
     renderList();
     await updateCounts(); // refresh sidebar counts (totals, unfiltered)
     if(countEl && (currentQuery || currentNotebookId || currentTagId)){
@@ -362,15 +387,29 @@ function renderList(){
   if(emptySearchEl) emptySearchEl.hidden = true;
   notes.forEach(n=>{
     const snippet = plainFromNote(n);
-    const btn = document.createElement('button');
-    btn.className = 'app-note-item' + (n.id===selectedId?' is-active':'');
+    const pinned = !!n.isPinned;
+    // WP-APP-007 — row is a focusable div (not <button>) so the pin toggle is valid nested markup
+    const btn = document.createElement('div');
+    btn.className = 'app-note-item' + (pinned?' is-pinned':'') + (n.id===selectedId?' is-active':'');
     btn.dataset.id = n.id;
+    btn.tabIndex = 0;
+    // Pin control: interactive in normal views; static indicator in Trash (pinned state is
+    // preserved while trashed but no writes are allowed on a trashed note).
+    const pinCtl = isTrashView
+      ? (pinned ? `<span class="app-note-pin app-note-pin--static is-on" title="Pinned" aria-hidden="true">${PIN_SVG}</span>` : '')
+      : `<button type="button" class="app-note-pin${pinned?' is-on':''}" title="${pinned?'Unpin note':'Pin note'}" aria-label="${pinned?'Unpin':'Pin'}: ${escapeHtml(n.title || 'Untitled')}" aria-pressed="${pinned?'true':'false'}">${PIN_SVG}</button>`;
     btn.innerHTML = `
+      ${pinCtl}
       <div class="app-note-title">${escapeHtml(n.title || 'Untitled')}</div>
       <div class="app-note-snippet">${escapeHtml(snippetFromText(snippet)) || '<span style="color:#9a9a9a">No additional text</span>'}</div>
       <div class="app-note-meta">${formatDate(n.updatedAt || n.createdAt)}</div>
     `;
     btn.addEventListener('click', ()=> selectNote(n.id));
+    btn.addEventListener('keydown', (e)=>{
+      if((e.key==='Enter' || e.key===' ') && e.target===btn){ e.preventDefault(); selectNote(n.id); }
+    });
+    const pinEl = btn.querySelector('button.app-note-pin');
+    if(pinEl) pinEl.addEventListener('click', (e)=>{ e.stopPropagation(); togglePin(n.id); });
     listEl.appendChild(btn);
   });
 }
@@ -389,6 +428,17 @@ function updateEditorForSelection(note){
   }
   // WP-APP-006 — tag chips reflect selection (hidden for trashed/empty)
   renderTagChips(hasSelection ? note : null);
+  // WP-APP-007 — editor pin control mirrors the selected note (hidden in Trash/no selection)
+  if(pinBtn){
+    pinBtn.hidden = !hasSelection || isTrashed;
+    pinBtn.disabled = !hasSelection || isTrashed;
+    const pinned = !!(note && note.isPinned);
+    pinBtn.classList.toggle('is-pinned', pinned);
+    pinBtn.setAttribute('aria-pressed', pinned ? 'true' : 'false');
+    pinBtn.title = pinned ? 'Unpin note' : 'Pin note';
+    const lbl = pinBtn.querySelector('.app-pin-toggle-label');
+    if(lbl) lbl.textContent = pinned ? 'Pinned' : 'Pin';
+  }
   // Buttons
   if(trashBtn) trashBtn.hidden = !hasSelection || isTrashed;
   if(restoreBtn) restoreBtn.hidden = !isTrashed;
@@ -500,7 +550,7 @@ async function saveNote(){
     const updated = await res.json();
     const idx = notes.findIndex(n=>n.id===selectedId);
     if(idx>=0) notes[idx] = updated;
-    notes.sort((a,b)=> new Date(b.updatedAt||b.createdAt) - new Date(a.updatedAt||a.createdAt));
+    sortNotes(notes); // WP-APP-007 — pin-aware
     renderList();
     setSaveStatus('Saved', 'is-saved');
     updateCounts();
@@ -964,6 +1014,42 @@ if(tagAddSelect) tagAddSelect.addEventListener('change', async ()=>{
   const ids = [...(cur?.tags || []).map(t=>t.id), tagAddSelect.value];
   tagAddSelect.value = '';
   try{ await saveNoteTagIds(ids); }catch(e){ setError(e.message || 'Could not add tag'); }
+});
+
+// ── WP-APP-007 — pin notes + sort control ──
+// Pin/unpin via PUT { isPinned } (works from the list row pin and the editor action).
+// The pinned state belongs to the note: it composes with search/notebook/tag filters and
+// is preserved through trash/restore (a pinned note only surfaces at the top of the view
+// it currently belongs to — pinned+trashed means "top of Trash", not "top of All Notes").
+async function togglePin(id){
+  if(!id) return;
+  const cur = notes.find(n=>n.id===id);
+  if(!cur || cur.isTrashed) return; // pin is read-only for trashed notes
+  setError('');
+  const next = !cur.isPinned;
+  try{
+    const res = await fetchWithAuth(API_BASE + `/api/notes/${id}`, {
+      method:'PUT',
+      body: JSON.stringify({ isPinned: next })
+    });
+    const j = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(j.message || `Pin failed ${res.status}`);
+    const idx = notes.findIndex(n=>n.id===id);
+    if(idx>=0) notes[idx] = j;
+    sortNotes(notes); // repin-aware re-order, then repaint
+    renderList();
+    // pinning the open note re-syncs the editor pin button without touching the editor content
+    if(selectedId===id) updateEditorForSelection(notes.find(n=>n.id===id));
+    setSaveStatus(next ? 'Pinned' : 'Unpinned', 'is-saved');
+  }catch(e){
+    setError(e.message || 'Could not update pin');
+  }
+}
+if(pinBtn) pinBtn.addEventListener('click', ()=> togglePin(selectedId));
+if(sortSelect) sortSelect.addEventListener('change', ()=>{
+  currentSort = sortSelect.value || 'updated';
+  sortNotes(notes);
+  renderList();
 });
 
 // ── WP-APP-004 — search wiring (debounced 300ms, no page reload) ──

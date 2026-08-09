@@ -329,20 +329,24 @@ const db = {
       const { rows } = await query(
         `INSERT INTO "Note" (id, title, description, "contentJson", "contentText", "isTrashed", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt")
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-         RETURNING id, title, description, "contentJson", "contentText", "isTrashed", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt"`,
+         RETURNING id, title, description, "contentJson", "contentText", "isTrashed", "isPinned", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt"`,
         [id, title || 'Untitled', desc, jsonStr, textStr, 0, null, notebookId || null, userId, now, now]
       );
       const row = rows[0];
       if(row){
         if(row.contentJson && typeof row.contentJson === 'string'){ try{ row.contentJson = JSON.parse(row.contentJson); }catch{} }
         row.isTrashed = !!(row.isTrashed === true || row.isTrashed === 1 || row.isTrashed === '1' || row.isTrashed === 't');
+        row.isPinned = !!(row.isPinned === true || row.isPinned === 1 || row.isPinned === '1' || row.isPinned === 't'); // WP-APP-007
         row.tags = row.tags || []; // WP-APP-006 — new notes start untagged
       }
       return row;
     },
     async findMany({ where: { userId, isTrashed, q, notebookId, tagId }, orderBy, limit } = {}) {
-      const order = orderBy?.createdAt === 'desc' ? '"createdAt" DESC' : '"createdAt" ASC';
-      let sql = `SELECT id, title, description, "contentJson", "contentText", "isTrashed", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt" FROM "Note" WHERE "userId" = $1`;
+      // WP-APP-007 — pinned notes always float to the top of whatever filtered list is
+      // returned (active, trash, search, notebook, tag); date keeps the requested direction.
+      const dir = orderBy?.createdAt === 'asc' ? 'ASC' : 'DESC';
+      const order = `"isPinned" DESC, "createdAt" ${dir}`;
+      let sql = `SELECT id, title, description, "contentJson", "contentText", "isTrashed", "isPinned", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt" FROM "Note" WHERE "userId" = $1`;
       const params = [userId];
       let idx = 2;
       if(isTrashed !== undefined){
@@ -398,19 +402,21 @@ const db = {
       const mapped = rows.map(r=>{
         if(r.contentJson && typeof r.contentJson === 'string'){ try{ r.contentJson = JSON.parse(r.contentJson); }catch{} }
         r.isTrashed = !!(r.isTrashed === true || r.isTrashed === 1 || r.isTrashed === '1' || r.isTrashed === 't');
+        r.isPinned = !!(r.isPinned === true || r.isPinned === 1 || r.isPinned === '1' || r.isPinned === 't'); // WP-APP-007
         return r;
       });
       return attachTags(mapped); // WP-APP-006 — every note row carries tags: [{id,name}]
     },
     async findFirst({ where: { id, userId } }) {
       const { rows } = await query(
-        `SELECT id, title, description, "contentJson", "contentText", "isTrashed", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt" FROM "Note" WHERE id = $1 AND "userId" = $2 LIMIT 1`,
+        `SELECT id, title, description, "contentJson", "contentText", "isTrashed", "isPinned", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt" FROM "Note" WHERE id = $1 AND "userId" = $2 LIMIT 1`,
         [id, userId]
       );
       const row = rows[0] || null;
       if(row){
         if(row.contentJson && typeof row.contentJson === 'string'){ try{ row.contentJson = JSON.parse(row.contentJson); }catch{} }
         row.isTrashed = !!(row.isTrashed === true || row.isTrashed === 1 || row.isTrashed === '1' || row.isTrashed === 't');
+        row.isPinned = !!(row.isPinned === true || row.isPinned === 1 || row.isPinned === '1' || row.isPinned === 't'); // WP-APP-007
         await attachTags([row]);
       }
       return row;
@@ -443,11 +449,16 @@ const db = {
       if (data.notebookId !== undefined){
         sets.push(`"notebookId" = $${idx++}`); params.push(data.notebookId || null);
       }
+      // WP-APP-007 — pin/unpin (SQLite stores booleans as 0/1)
+      if (data.isPinned !== undefined){
+        sets.push(`"isPinned" = $${idx++}`);
+        params.push(usePostgres ? !!data.isPinned : (data.isPinned ? 1 : 0));
+      }
       sets.push(`"updatedAt" = $${idx++}`); params.push(now);
       params.push(id);
       const setClause = sets.join(', ');
       const { rows } = await query(
-        `UPDATE "Note" SET ${setClause} WHERE id = $${idx} RETURNING id, title, description, "contentJson", "contentText", "isTrashed", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt"`,
+        `UPDATE "Note" SET ${setClause} WHERE id = $${idx} RETURNING id, title, description, "contentJson", "contentText", "isTrashed", "isPinned", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt"`,
         params
       );
       // WP-APP-006 — replace tag set when tagIds provided (ownership validated in controller)
@@ -458,6 +469,7 @@ const db = {
       if(row){
         if(row.contentJson && typeof row.contentJson === 'string'){ try{ row.contentJson = JSON.parse(row.contentJson); }catch{} }
         row.isTrashed = !!(row.isTrashed === true || row.isTrashed === 1 || row.isTrashed === '1' || row.isTrashed === 't');
+        row.isPinned = !!(row.isPinned === true || row.isPinned === 1 || row.isPinned === '1' || row.isPinned === 't'); // WP-APP-007
         await attachTags([row]);
       }
       return row;

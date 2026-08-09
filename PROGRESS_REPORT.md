@@ -65,9 +65,10 @@ Evernote is not just a landing page. The full product target includes:
 | **Authentication UI** | UI ready | **70%** | Evernote-style signup page live; OTP/Google need secrets |
 | **Auth backend** | Service live | **65%** | Google + OTP + JWT + refresh rotation coded; needs Google/SMTP |
 | **Notes API (CRUD)** | Live | **55%** | Unified auth+notes CRUD (SQLite/Postgres) + trash/restore |
-| **Core note editor** | Shell live | **40%** | Tiptap rich-text editor (`app.html`): create/save, task lists, trash/restore |
-| **Notebooks / tags / spaces** | Not started | **0%** | Schema is flat `Note` only |
-| **Search** | Not started | **0%** | No full-text index |
+| **Core note editor** | Live | **55%** | Tiptap rich-text editor (`app.html`): create/save, task lists, trash/restore, **pin notes + sort (WP-APP-007)** |
+| **Notebooks / tags / spaces** | Minimal live | **35%** | `Notebook`+`Note.notebookId` (WP-APP-005), `Tag`+`NoteTag` replace-set (WP-APP-006); verify live ✅ |
+| **Search** | Basic live | **30%** | Full-text `?q=` on title/body with Trash scoping, 300ms debounce UI (WP-APP-004); no FTS index yet |
+| **Pin notes** | Live | ✅ | `Note.isPinned`, pin-first ordering composable with filters; list row + editor pin, sort dropdown (WP-APP-007) |
 | **Sync / offline** | Not started | **0%** | No client store / conflict protocol |
 | **Web clipper / desktop / mobile** | Marketing only | **10%** | Download section exists; no real apps |
 | **AI features** | Marketing only | **5%** | Landing AI band; no AI service |

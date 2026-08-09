@@ -98,7 +98,15 @@
     <section class="app-list" aria-label="Note list">
       <div class="app-list-header">
         <div class="app-list-title" id="listTitle">All Notes</div>
-        <div class="app-list-count" id="noteCount">0 notes</div>
+        <div class="app-list-tools">
+          <!-- WP-APP-007 — sort control (pinned notes always stay on top regardless) -->
+          <select class="app-sort" id="sortSelect" title="Sort notes" aria-label="Sort notes">
+            <option value="updated">Updated</option>
+            <option value="created">Created</option>
+            <option value="title">Title</option>
+          </select>
+          <div class="app-list-count" id="noteCount">0 notes</div>
+        </div>
       </div>
       <!-- WP-APP-004 — search (visible in All Notes and Trash) -->
       <div class="app-search" id="searchWrap">
@@ -138,6 +146,11 @@
           <input id="editorTitle" type="text" placeholder="Title" autocomplete="off" disabled>
         </div>
         <div class="app-editor-actions">
+          <!-- WP-APP-007 — pin/unpin the open note -->
+          <button class="app-pin-toggle" id="pinBtn" hidden title="Pin note" aria-label="Pin note" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H16v-2c-1.66 0-3-1.34-3-3z"/></svg>
+            <span class="app-pin-toggle-label">Pin</span>
+          </button>
           <select class="app-nb-select" id="noteNotebookSelect" title="Notebook" disabled aria-label="Notebook">
             <option value="">None</option>
           </select>

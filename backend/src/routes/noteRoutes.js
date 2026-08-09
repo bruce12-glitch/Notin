@@ -16,7 +16,7 @@ router.use(auth);
 // GET /api/notes?filter=active|trash  (default active) — also supports ?trash=0|1, ?isTrashed
 router.get('/', getNotes);
 router.post('/', createNote);
-// Update (title, description, contentJson/contentText, or isTrashed)
+// Update (title, description, contentJson/contentText, isTrashed, notebookId, tagIds, isPinned)
 router.put('/:id', updateNote);
 router.patch('/:id', updateNote);
 // Trash / Restore dedicated endpoints
