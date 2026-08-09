@@ -63,7 +63,7 @@ Evernote is not just a landing page. The full product target includes:
 | **Landing / marketing design** | Complete | **100%** | Green + Neon; match score 100/100 vs green-note ref |
 | **Brand / design system** | Complete | **100%** | Cream + `#00A82D` / `#8FE333`, type, motion |
 | **Authentication UI** | UI ready | **70%** | Evernote-style signup page live; OTP/Google need secrets |
-| **Auth backend** | Service live | **65%** | Google + OTP + JWT + refresh rotation coded; needs Google/SMTP |
+| **Auth backend** | Service live | **70%** | Google + OTP + JWT + refresh rotation coded; **forgot/reset password live (hashed single-use tokens, dev fallback)**; needs Google/SMTP secrets |
 | **Notes API (CRUD)** | Live | **55%** | Unified auth+notes CRUD (SQLite/Postgres) + trash/restore |
 | **Core note editor** | Live | **55%** | Tiptap rich-text editor (`app.html`): create/save, task lists, trash/restore, **pin notes + sort (WP-APP-007)** |
 | **Notebooks / tags / spaces** | Minimal live | **35%** | `Notebook`+`Note.notebookId` (WP-APP-005), `Tag`+`NoteTag` replace-set (WP-APP-006); verify live ✅ |

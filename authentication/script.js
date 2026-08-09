@@ -41,6 +41,25 @@ const emailCodeBtn = document.getElementById('emailCodeBtn');
 const cantSignInLink = document.getElementById('cantSignInLink');
 const cantSignInMsg = document.getElementById('cantSignInMsg');
 
+// WP-AUTH-003 — forgot/reset steps (login.html only; null on signup index.html)
+const forgotStep = document.getElementById('forgotStep');
+const forgotForm = document.getElementById('forgotForm');
+const forgotEmail = document.getElementById('forgotEmail');
+const forgotError = document.getElementById('forgotError');
+const forgotSubmitBtn = document.getElementById('forgotSubmitBtn');
+const forgotDone = document.getElementById('forgotDone');
+const forgotDevBtn = document.getElementById('forgotDevBtn');
+const forgotBackBtn = document.getElementById('forgotBackBtn');
+const resetStep = document.getElementById('resetStep');
+const resetForm = document.getElementById('resetForm');
+const resetPassword = document.getElementById('resetPassword');
+const resetConfirm = document.getElementById('resetConfirm');
+const resetError = document.getElementById('resetError');
+const resetSubmitBtn = document.getElementById('resetSubmitBtn');
+const resetBackBtn = document.getElementById('resetBackBtn');
+const resetPwdToggle = document.getElementById('resetPwdToggle');
+const resetDoneMsg = document.getElementById('resetDoneMsg');
+
 // OTP step for login uses suffixed IDs
 const otpStep2 = document.getElementById('otpStep') || document.querySelector('#otpStep');
 const otpInput2 = document.getElementById('otpInput') || document.getElementById('otpInput');
@@ -59,6 +78,7 @@ const loginLink = document.getElementById('loginLink');
 // State
 let currentEmail = '';
 let currentChallenge = '';
+let resetToken = ''; // WP-AUTH-003 — reset token from email link / dev fallback (memory only)
 let resendTimer = null;
 let cooldownSec = 0;
 
@@ -84,11 +104,17 @@ function setOtpError(msg){
   if(el2) el2.textContent = msg||'';
 }
 function setPwdError(msg){ if(pwdError) pwdError.textContent = msg||''; }
+// WP-AUTH-003
+function setForgotError(msg){ if(forgotError) forgotError.textContent = msg||''; }
+function setResetError(msg){ if(resetError) resetError.textContent = msg||''; }
 function showStep(name){
-  // name: 'email' | 'otp' | 'password'
+  // name: 'email' | 'otp' | 'password' | 'forgot' | 'reset'
   const isLogin = !!passwordStep;
   if(emailStep) emailStep.hidden = name!=='email';
   if(otpStep) otpStep.hidden = !(name==='otp' && !isLogin);
+  // WP-AUTH-003 — forgot/reset steps are exclusive with everything else
+  if(forgotStep) forgotStep.hidden = name!=='forgot';
+  if(resetStep) resetStep.hidden = name!=='reset';
   // login has otpStep hidden as well but its OTP is same element? In login we reuse same otpStep if suffix not used
   // For login, passwordStep and otpStep2 are distinct
   if(passwordStep) passwordStep.hidden = name!=='password';
@@ -494,14 +520,114 @@ if(appleBtn){
   });
 }
 
-// Can't sign in
+// ── WP-AUTH-003 — forgot/reset password flow ──
+// “Can’t sign in?” → in-column forgot step (email → reset link). With SMTP the link arrives
+// by email; without SMTP (dev only) the server echoes a token and we offer one-tap continue.
 if(cantSignInLink){
   cantSignInLink.addEventListener('click', (e)=>{
     e.preventDefault();
-    if(cantSignInMsg){
-      cantSignInMsg.textContent = 'Password reset is not yet available — please use “Email me a code” or contact support. For demo, use OTP with 123456.';
-      cantSignInMsg.style.color = '#6b6b6b';
+    const pref = emailInput && isValidEmail(emailInput.value) ? emailInput.value.trim().toLowerCase() : '';
+    if(forgotEmail && pref) forgotEmail.value = pref;
+    setForgotError('');
+    if(forgotDone) forgotDone.textContent = '';
+    if(forgotDevBtn) forgotDevBtn.hidden = true;
+    showStep('forgot');
+    if(forgotEmail) forgotEmail.focus();
+  });
+}
+if(forgotForm){
+  forgotForm.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const email = (forgotEmail ? forgotEmail.value : '').trim().toLowerCase();
+    if(!isValidEmail(email)){
+      setForgotError('Enter a valid email address');
+      return;
     }
+    setForgotError('');
+    if(forgotDone) forgotDone.textContent = '';
+    if(forgotDevBtn) forgotDevBtn.hidden = true;
+    if(forgotSubmitBtn){ forgotSubmitBtn.disabled = true; forgotSubmitBtn.textContent = 'Sending…'; }
+    try{
+      let res = await api('/api/auth/forgot-password', {method:'POST', body:{email}});
+      if(!res.ok && res.status===404) res = await api('/auth/forgot-password', {method:'POST', body:{email}});
+      const j = await res.json().catch(()=>({}));
+      if(!res.ok) throw new Error(j.error || 'Could not process request');
+      // Generic (anti-enumeration) confirmation is all the server commits to
+      if(forgotDone) forgotDone.textContent = j.message || 'If an account exists for that email, a reset link is on its way.';
+      // Dev fallback (no SMTP, non-production): server echoes the token — offer direct continue
+      if(j.devResetToken && forgotDevBtn){
+        resetToken = j.devResetToken;
+        forgotDevBtn.hidden = false;
+      }
+    }catch(err){
+      setForgotError(err.message || 'Could not process request');
+    }finally{
+      if(forgotSubmitBtn){ forgotSubmitBtn.disabled = false; forgotSubmitBtn.textContent = 'Send reset link'; }
+    }
+  });
+}
+if(forgotDevBtn){
+  forgotDevBtn.addEventListener('click', ()=>{
+    if(!resetToken) return;
+    setResetError('');
+    showStep('reset');
+    if(resetPassword){ resetPassword.value=''; resetPassword.focus(); }
+    if(resetConfirm) resetConfirm.value='';
+  });
+}
+if(forgotBackBtn){
+  forgotBackBtn.addEventListener('click', (e)=>{
+    e.preventDefault();
+    setForgotError('');
+    showStep('email');
+  });
+}
+if(resetForm){
+  resetForm.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const p1 = resetPassword ? resetPassword.value : '';
+    const p2 = resetConfirm ? resetConfirm.value : '';
+    if(!resetToken){
+      setResetError('Missing reset token — request a new reset link.');
+      return;
+    }
+    if(p1.length < 8){
+      setResetError('Password must be at least 8 characters');
+      return;
+    }
+    if(p1 !== p2){
+      setResetError('Passwords do not match');
+      return;
+    }
+    setResetError('');
+    if(resetSubmitBtn){ resetSubmitBtn.disabled = true; resetSubmitBtn.textContent = 'Resetting…'; }
+    try{
+      let res = await api('/api/auth/reset-password', {method:'POST', body:{ token: resetToken, password: p1 }});
+      if(!res.ok && res.status===404) res = await api('/auth/reset-password', {method:'POST', body:{ token: resetToken, password: p1 }});
+      const j = await res.json().catch(()=>({}));
+      if(!res.ok) throw new Error(j.error || 'Reset link is invalid or has expired');
+      resetToken = ''; // token is consumed server-side too (single-use)
+      // Success → back to the sign-in form with a confirmation message
+      window.location.href = apiUrl('/login.html?reset=1');
+    }catch(err){
+      setResetError(err.message || 'Could not reset password');
+    }finally{
+      if(resetSubmitBtn){ resetSubmitBtn.disabled = false; resetSubmitBtn.textContent = 'Reset password'; }
+    }
+  });
+}
+if(resetBackBtn){
+  resetBackBtn.addEventListener('click', (e)=>{
+    e.preventDefault();
+    setResetError('');
+    showStep('email');
+  });
+}
+if(resetPwdToggle && resetPassword){
+  resetPwdToggle.addEventListener('click', ()=>{
+    const isPwd = resetPassword.type === 'password';
+    resetPassword.type = isPwd ? 'text' : 'password';
+    resetPwdToggle.textContent = isPwd ? 'Hide' : 'Show';
   });
 }
 
@@ -515,8 +641,25 @@ if(loginLink){
 }
 
 // Handle landing query ?auth=otp&challenge=&email=  (Google callback)
+// WP-AUTH-003 — also handles ?token=<reset token> (email link) and ?reset=1 (post-reset success)
 (function handleOtpQuery(){
   const qs = new URLSearchParams(location.search);
+  // Reset link from the email (or dev log) → straight to the reset step
+  const tok = qs.get('token');
+  if(tok && resetStep){
+    resetToken = tok.trim();
+    setResetError('');
+    if(resetDoneMsg) resetDoneMsg.textContent = '';
+    showStep('reset');
+    try{ history.replaceState({},'', location.pathname); }catch{} // don't keep the token in the URL bar
+    if(resetPassword){ resetPassword.value=''; resetPassword.focus(); }
+    if(resetConfirm) resetConfirm.value='';
+    return;
+  }
+  if(qs.get('reset')==='1' && resetDoneMsg){
+    resetDoneMsg.textContent = 'Password updated — sign in with your new password.';
+    try{ history.replaceState({},'', location.pathname); }catch{}
+  }
   const auth = qs.get('auth');
   const ch = qs.get('challenge');
   const em = qs.get('email');

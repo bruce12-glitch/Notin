@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import nodemailer from 'nodemailer';
+import bcrypt from 'bcryptjs';
 import { OAuth2Client } from 'google-auth-library';
 import db from '../config/db.js';
 import { createAccessToken, hashToken, randomToken } from '../lib/jwt.js';
@@ -304,6 +305,95 @@ export async function logout(req, res) {
   res.clearCookie('notin_refresh', cookieOpts);
   res.clearCookie('notin_refresh', cookieOptsLegacy);
   res.status(204).end();
+}
+
+// ── WP-AUTH-003 — Forgot password (email reset) ──
+// Token is stored HASHED only (peppered sha256) — never plaintext in the DB.
+// Delivery: SMTP email when configured; dev-only token echo/log when !production && !SMTP
+// (same guard family as the demo OTP — never exposed in production).
+const RESET_TTL_MS = 60 * 60 * 1000; // 60 minutes
+const resetPepper = env.RESET_PEPPER || env.OTP_PEPPER || 'dev-reset-pepper';
+const resetHash = (token) => sha(`reset:${token}:${resetPepper}`);
+const GENERIC_RESET_MSG = 'If an account exists for that email, a reset link is on its way.';
+const resetLinkFor = (token) => `${origin}/login.html?token=${encodeURIComponent(token)}`;
+
+export async function forgotPassword(req, res) {
+  try {
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const generic = { ok: true, message: GENERIC_RESET_MSG };
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.json(generic); // anti-enumeration: same response for malformed input
+    }
+    const user = await db.user.findUnique({ where: { email } });
+    if (!user) {
+      return res.json(generic); // anti-enumeration: same response for unknown email
+    }
+    // Choice (documented): reset works for password accounts AND OTP/Google-only accounts —
+    // for passwordless accounts the reset flow SETS their first password (email ownership proven).
+    const token = randomToken(32);
+    const now = nowIso();
+    const expiresAt = new Date(Date.now() + RESET_TTL_MS).toISOString();
+    // One active reset per user at a time: supersede any previous unused tokens
+    await db.query(`UPDATE password_reset_tokens SET used_at = $1 WHERE user_id = $2 AND used_at IS NULL`, [now, user.id]);
+    await db.query(
+      `INSERT INTO password_reset_tokens (id, user_id, token_hash, expires_at, used_at, created_at) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [random(18), user.id, resetHash(token), expiresAt, null, now]
+    );
+    if (mailer) {
+      await mailer.sendMail({
+        from: env.MAIL_FROM || 'Notin <noreply@notin.app>',
+        to: user.email,
+        subject: 'Reset your Notin password',
+        text: `We received a request to reset the password for your Notin account.\n\nReset it here (link expires in 60 minutes and works once):\n${resetLinkFor(token)}\n\nIf you did not request this, you can ignore this email — your password will not change.`,
+      });
+      return res.json(generic);
+    }
+    if (!isProduction) {
+      // DEV fallback (no SMTP, not production) — mirrors the demo-OTP guard: token is echoed
+      // in the response + server log so the flow stays end-to-end usable in dev/preview.
+      console.log(`[DEV RESET] ${user.email} => token ${token}`);
+      console.log(`[DEV RESET] link ${resetLinkFor(token)}`);
+      return res.json({ ...generic, devResetToken: token, devResetLink: resetLinkFor(token) });
+    }
+    // Production without SMTP: never expose the token — must be fixed by configuring SMTP.
+    console.error(`[RESET] SMTP is not configured; reset email to ${user.email} could not be delivered`);
+    return res.json(generic);
+  } catch (e) {
+    console.error('forgotPassword', e);
+    res.status(500).json({ error: 'Could not process reset request' });
+  }
+}
+
+export async function resetPassword(req, res) {
+  try {
+    const { token, password } = req.body || {};
+    if (typeof token !== 'string' || !token.trim()) {
+      return res.status(400).json({ error: 'Reset token required' });
+    }
+    if (typeof password !== 'string' || password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+    const now = nowIso();
+    const { rows } = await db.query(
+      `SELECT * FROM password_reset_tokens WHERE token_hash = $1 LIMIT 1`,
+      [resetHash(token.trim())]
+    );
+    const r = rows[0];
+    const invalid = () => res.status(401).json({ error: 'Reset link is invalid or has expired' });
+    if (!r || r.used_at || r.expires_at < now) return invalid();
+    const user = await db.user.findById(r.user_id);
+    if (!user) return invalid();
+    const hashed = await bcrypt.hash(password, 10);
+    await db.user.updatePassword(user.id, hashed);
+    // Single-use: consume the token…
+    await db.query(`UPDATE password_reset_tokens SET used_at = $1 WHERE id = $2`, [now, r.id]);
+    // …and revoke every existing refresh session for the user (new sign-in required)
+    await db.query(`UPDATE refresh_tokens SET revoked_at = $1 WHERE user_id = $2 AND revoked_at IS NULL`, [now, user.id]);
+    res.json({ ok: true, message: 'Password updated. Sign in with your new password.' });
+  } catch (e) {
+    console.error('resetPassword', e);
+    res.status(500).json({ error: 'Could not reset password' });
+  }
 }
 
 export async function health(req, res) {
