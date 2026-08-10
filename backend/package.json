@@ -8,7 +8,9 @@
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "db:migrate": "node src/db/migrate.js",
-    "db:generate": "echo 'Schema is applied via npm run db:migrate (pg driver). prisma/schema.prisma is the source of truth for the data model.'"
+    "db:generate": "echo 'Schema is applied via npm run db:migrate (pg driver). prisma/schema.prisma is the source of truth for the data model.'",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -23,5 +25,8 @@
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^9.0.5",
     "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1"
   }
 }
