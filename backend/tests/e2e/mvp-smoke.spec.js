@@ -61,6 +61,10 @@ test('MVP journey: OTP, note persistence, organize, search, share, pin, trash, r
   await page.locator('.capture-soon').click();
   await expect(page.locator('.capture-soon')).toContainText('Coming soon');
   await expect(page).toHaveURL(/#\/home$/);
+  await page.locator('#navShortcuts').click();
+  await expect(page.locator('.shortcuts-empty')).toContainText('Pin notes to see them here');
+  await page.locator('.shortcuts-empty [data-action="home"]').click();
+  await expect(page).toHaveURL(/#\/home$/);
 
   // Scratch content is stored only under this authenticated user's id.
   await page.locator('#scratchPad').fill(`Scratch ${runId}`);
@@ -194,7 +198,16 @@ test('MVP journey: OTP, note persistence, organize, search, share, pin, trash, r
   await page.locator('#navHome').click();
   const pinnedHomeCard = page.locator('.home-note-card', { hasText: noteTitle });
   await expect(pinnedHomeCard.locator('.home-card-pin')).toHaveAttribute('title', 'Pinned');
-  await pinnedHomeCard.click();
+
+  // Shortcuts is a real pinned-only route; its card opens the selected note.
+  await page.locator('#navShortcuts').click();
+  await expect(page).toHaveURL(/#\/shortcuts$/);
+  await expect(page.locator('#navShortcuts')).toHaveClass(/is-active/);
+  const shortcutCard = page.locator('.shortcut-card', { hasText: noteTitle });
+  await expect(shortcutCard).toBeVisible();
+  await expect(page.locator('.shortcut-card')).toHaveCount(1);
+  await shortcutCard.click();
+  await expect(page).toHaveURL(/#\/notes$/);
   await expect(page.locator('#editorTitle')).toHaveValue(noteTitle);
 
   // A hard reload proves refresh-cookie bootstrap and database persistence.

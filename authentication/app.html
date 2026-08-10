@@ -60,7 +60,7 @@
       <nav class="app-nav" aria-label="Workspace navigation">
         <button class="app-nav-item" id="navHome" data-route="home"><span class="nav-icon">⌂</span> Home</button>
         <button class="app-nav-item" data-filter="active" id="navAllNotes" data-route="notes"><span class="nav-icon">▤</span> Notes <span class="nav-count" id="countAll">0</span></button>
-        <button class="app-nav-item app-nav-stub" data-soon="Shortcuts"><span class="nav-icon">☆</span> Shortcuts <span class="soon-badge">Soon</span></button>
+        <button class="app-nav-item" id="navShortcuts" data-route="shortcuts"><span class="nav-icon">☆</span> Shortcuts</button>
         <button class="app-nav-item app-nav-stub" data-soon="Tasks"><span class="nav-icon">✓</span> Tasks <span class="soon-badge">Soon</span></button>
         <button class="app-nav-item app-nav-stub" data-soon="Files"><span class="nav-icon">▧</span> Files <span class="soon-badge">Soon</span></button>
         <button class="app-nav-item app-nav-stub" data-soon="Calendar"><span class="nav-icon">□</span> Calendar <span class="soon-badge">Soon</span></button>
@@ -102,6 +102,14 @@
           <section class="scratch-card"><div class="home-panel-title"><span>Scratch pad</span><small>Saved on this device</small></div><textarea id="scratchPad" placeholder="Write something down…" aria-label="Scratch pad"></textarea><div class="scratch-status" id="scratchStatus">Local only</div></section>
           <section class="capture-card"><div class="capture-icon" aria-hidden="true">↗</div><h2>Recently captured</h2><p>Web capture is not connected yet. Your saved notes will appear above.</p><button type="button" class="capture-soon" data-soon="Web clipper">Clip web content <span>Soon</span></button></section>
         </div>
+      </section>
+      <section class="shortcuts-view" id="shortcutsView" aria-labelledby="shortcutsTitle" hidden>
+        <header class="shortcuts-header">
+          <div><p class="home-eyebrow">Quick access</p><h1 id="shortcutsTitle">Shortcuts</h1><p>Your pinned notes, all in one place.</p></div>
+          <button class="home-new-top" id="shortcutsViewNotes" type="button">View all notes</button>
+        </header>
+        <div class="shortcuts-summary"><h2>Pinned notes</h2><span id="shortcutsCount">0 shortcuts</span></div>
+        <div class="shortcuts-grid" id="shortcutsGrid" aria-live="polite"></div>
       </section>
       <section class="organize-view" id="organizeView" aria-labelledby="organizeTitle" hidden>
         <header class="organize-header">

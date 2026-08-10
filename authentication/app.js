@@ -24,7 +24,7 @@ let tags = []; // WP-APP-006 — user's tags
 let currentTagId = null; // WP-APP-006 — null = no tag filter
 let currentSort = 'updated'; // WP-APP-007 — list sort control ('updated' | 'created' | 'title'); pins always win
 // WP-UI-HOME-001 — tiny hash router for authenticated app views.
-let currentView = 'home'; // home | notes | notebooks | tags | trash | account
+let currentView = 'home'; // home | notes | shortcuts | notebooks | tags | trash | account
 let routeReady = false;
 let soonToastTimer = null;
 // WP-APP-010 — offline read state. Tokens remain memory-only; only the non-secret user id
@@ -128,6 +128,7 @@ const globalSearchForm = document.getElementById('globalSearchForm');
 const globalSearchInput = document.getElementById('globalSearchInput');
 const globalSearchClear = document.getElementById('globalSearchClear');
 const navHome = document.getElementById('navHome');
+const navShortcuts = document.getElementById('navShortcuts');
 const navNotebooks = document.getElementById('navNotebooks');
 const navTags = document.getElementById('navTags');
 const notebookSection = document.getElementById('notebookSection');
@@ -141,6 +142,10 @@ const soonToast = document.getElementById('soonToast');
 const sidebarOpen = document.getElementById('sidebarOpen');
 const sidebarClose = document.getElementById('sidebarClose');
 const sidebarScrim = document.getElementById('sidebarScrim');
+const shortcutsView = document.getElementById('shortcutsView');
+const shortcutsGrid = document.getElementById('shortcutsGrid');
+const shortcutsCount = document.getElementById('shortcutsCount');
+const shortcutsViewNotes = document.getElementById('shortcutsViewNotes');
 const organizeView = document.getElementById('organizeView');
 const organizeTitle = document.getElementById('organizeTitle');
 const organizeDescription = document.getElementById('organizeDescription');
@@ -395,7 +400,7 @@ function setSaveStatus(text, cls){
 }
 
 // ── WP-UI-HOME-001 — authenticated view router + Home dashboard ──
-const APP_ROUTES = new Set(['home','notes','notebooks','tags','trash','account']);
+const APP_ROUTES = new Set(['home','notes','shortcuts','notebooks','tags','trash','account']);
 function routeFromHash(){
   const value = location.hash.replace(/^#\/?/, '').split('/')[0].toLowerCase();
   return APP_ROUTES.has(value) ? value : 'home';
@@ -414,20 +419,24 @@ function closeMobileSidebar(){
 function setViewChrome(view){
   currentView = APP_ROUTES.has(view) ? view : 'home';
   const showHome = currentView==='home' || currentView==='account';
+  const showShortcuts = currentView==='shortcuts';
   const showOrganize = currentView==='notebooks' || currentView==='tags';
   if(homeView) homeView.hidden = !showHome;
+  if(shortcutsView) shortcutsView.hidden = !showShortcuts;
   if(organizeView) organizeView.hidden = !showOrganize;
-  if(editorWorkspace) editorWorkspace.hidden = showHome || showOrganize;
+  if(editorWorkspace) editorWorkspace.hidden = showHome || showShortcuts || showOrganize;
   if(layout){
     layout.classList.toggle('is-home', showHome);
+    layout.classList.toggle('is-shortcuts', showShortcuts);
     layout.classList.toggle('is-organize', showOrganize);
-    if(showHome || showOrganize){ layout.classList.remove('is-list','is-editor'); }
+    if(showHome || showShortcuts || showOrganize){ layout.classList.remove('is-list','is-editor'); }
     else if(!layout.classList.contains('is-editor')) layout.classList.add('is-list');
   }
-  [navHome,navAll,navNotebooks,navTags,navTrash].forEach(el=>{
+  [navHome,navAll,navShortcuts,navNotebooks,navTags,navTrash].forEach(el=>{
     if(!el) return;
     const active = (el===navHome && currentView==='home')
       || (el===navAll && currentView==='notes')
+      || (el===navShortcuts && currentView==='shortcuts')
       || (el===navNotebooks && currentView==='notebooks')
       || (el===navTags && currentView==='tags')
       || (el===navTrash && currentView==='trash');
@@ -467,6 +476,31 @@ function renderHome(){
     card.innerHTML = `<span class="home-card-book">${escapeHtml(notebook?.name || 'Unfiled note')}</span><h3>${escapeHtml(note.title || 'Untitled')}</h3><p class="home-card-snippet">${escapeHtml(snippetFromText(plainFromNote(note))) || 'No additional text'}</p><span class="home-card-date">Edited ${formatDate(note.updatedAt || note.createdAt)}</span>${note.isPinned?'<span class="home-card-pin" title="Pinned">●</span>':''}`;
     card.addEventListener('click', ()=> openNoteFromHome(note.id));
     homeNoteGrid.appendChild(card);
+  });
+}
+function renderShortcuts(){
+  if(!shortcutsGrid) return;
+  const pinned = notes.filter(note=>note.isPinned && !note.isTrashed);
+  shortcutsGrid.innerHTML='';
+  if(shortcutsCount) shortcutsCount.textContent=`${pinned.length} ${pinned.length===1?'shortcut':'shortcuts'}`;
+  if(!pinned.length){
+    const empty=document.createElement('div');
+    empty.className='shortcuts-empty';
+    empty.innerHTML='<span class="shortcuts-empty-icon" aria-hidden="true">☆</span><strong>Pin notes to see them here</strong><p>Pinned notes become shortcuts for quick access.</p><div class="shortcuts-empty-actions"><button type="button" data-action="notes">Go to Notes</button><button type="button" data-action="home">Back Home</button></div>';
+    empty.querySelector('[data-action="notes"]').addEventListener('click',()=>goToView('notes'));
+    empty.querySelector('[data-action="home"]').addEventListener('click',()=>goToView('home'));
+    shortcutsGrid.appendChild(empty);
+    return;
+  }
+  pinned.forEach(note=>{
+    const notebook=note.notebookId ? notebooks.find(item=>item.id===note.notebookId) : null;
+    const card=document.createElement('button');
+    card.type='button';
+    card.className='shortcut-card';
+    card.dataset.noteId=note.id;
+    card.innerHTML=`<span class="shortcut-card-book">${escapeHtml(notebook?.name || 'Unfiled note')}</span><h3>${escapeHtml(note.title || 'Untitled')}</h3><p>${escapeHtml(snippetFromText(plainFromNote(note))) || 'No additional text'}</p><span class="shortcut-card-date">Edited ${formatDate(note.updatedAt || note.createdAt)}</span><span class="shortcut-pin" title="Pinned">●</span>`;
+    card.addEventListener('click',()=>openNoteFromHome(note.id));
+    shortcutsGrid.appendChild(card);
   });
 }
 function renderOrganizeView(){
@@ -551,9 +585,9 @@ async function applyRoute(view=routeFromHash(), {focusSearch=false}={}){
     return;
   }
   if(accountModal && !accountModal.hidden) closeAccountModal();
-  if(view==='home' || view==='notes'){
+  if(view==='home' || view==='notes' || view==='shortcuts'){
     currentFilter='active'; currentNotebookId=null; currentTagId=null;
-    if(view==='home') clearSearchNow(false);
+    if(view==='home' || view==='shortcuts') clearSearchNow(false);
   }else if(view==='trash'){
     currentFilter='trash'; currentNotebookId=null; currentTagId=null; clearSearchNow(false);
   }else{
@@ -564,6 +598,7 @@ async function applyRoute(view=routeFromHash(), {focusSearch=false}={}){
   updateNav();
   await loadNotes();
   if(view==='home') renderHome();
+  if(view==='shortcuts') renderShortcuts();
   if(view==='notebooks' || view==='tags') renderOrganizeView();
   if(focusSearch) setTimeout(()=>searchInput?.focus(), 0);
 }
@@ -601,11 +636,13 @@ function updateNav(){
   // Route is the primary navigation state; notebook/tag filters remain secondary.
   if(navHome) navHome.classList.toggle('is-active', currentView==='home');
   if(navAll) navAll.classList.toggle('is-active', currentView==='notes');
+  if(navShortcuts) navShortcuts.classList.toggle('is-active', currentView==='shortcuts');
   if(navNotebooks) navNotebooks.classList.toggle('is-active', currentView==='notebooks');
   if(navTags) navTags.classList.toggle('is-active', currentView==='tags');
   if(navTrash) navTrash.classList.toggle('is-active', currentView==='trash');
   if(navHome) navHome.setAttribute('aria-current', currentView==='home'?'page':'false');
   if(navAll) navAll.setAttribute('aria-current', currentView==='notes'?'page':'false');
+  if(navShortcuts) navShortcuts.setAttribute('aria-current', currentView==='shortcuts'?'page':'false');
   if(navNotebooks) navNotebooks.setAttribute('aria-current', currentView==='notebooks'?'page':'false');
   if(navTags) navTags.setAttribute('aria-current', currentView==='tags'?'page':'false');
   if(navTrash) navTrash.setAttribute('aria-current', currentView==='trash'?'page':'false');
@@ -1277,6 +1314,7 @@ document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && deleteModal &
 
 if(navHome) navHome.addEventListener('click', ()=> goToView('home'));
 if(navAll) navAll.addEventListener('click', ()=> goToView('notes'));
+if(navShortcuts) navShortcuts.addEventListener('click', ()=> goToView('shortcuts'));
 if(navNotebooks) navNotebooks.addEventListener('click', ()=> goToView('notebooks'));
 if(navTags) navTags.addEventListener('click', ()=> goToView('tags'));
 if(navTrash) navTrash.addEventListener('click', ()=> goToView('trash'));
@@ -1294,6 +1332,7 @@ if(globalSearchClear) globalSearchClear.addEventListener('click', ()=>{ clearSea
 if(sidebarNewNote) sidebarNewNote.addEventListener('click', createNote);
 if(homeNewNoteTop) homeNewNoteTop.addEventListener('click', createNote);
 if(homeViewAll) homeViewAll.addEventListener('click', ()=> goToView('notes'));
+if(shortcutsViewNotes) shortcutsViewNotes.addEventListener('click', ()=> goToView('notes'));
 if(organizeCreateBtn) organizeCreateBtn.addEventListener('click', showOrganizeCreate);
 if(organizeCreateForm) organizeCreateForm.addEventListener('submit', submitOrganizeCreate);
 if(organizeCreateCancel) organizeCreateCancel.addEventListener('click', hideOrganizeCreate);
@@ -1826,7 +1865,9 @@ registerServiceWorker();
       setViewChrome(currentView);
       updateNav();
       loadCachedNotes();
-      renderHome();
+      if(currentView==='home') renderHome();
+      if(currentView==='shortcuts') renderShortcuts();
+      if(currentView==='notebooks' || currentView==='tags') renderOrganizeView();
       if(!currentUserId || !offlineSnapshot) setError('No saved notes are available for this offline session. Reconnect to sign in.');
       routeReady = true;
       return;
