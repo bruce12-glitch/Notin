@@ -41,68 +41,90 @@
   <div class="app-offline-banner" id="offlineBanner" role="status" aria-live="polite" hidden>
     You’re offline — saved notes are available read-only. Changes are disabled.
   </div>
-  <div class="app-layout is-list" id="appLayout">
-    <!-- Sidebar ~220px -->
-    <aside class="app-sidebar" aria-label="Sidebar">
+  <div class="app-layout is-home" id="appLayout">
+    <aside class="app-sidebar" id="appSidebar" aria-label="Main navigation">
       <div class="app-sidebar-top">
         <div class="app-sidebar-mark" aria-hidden="true">
-          <svg width="28" height="28" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M22 3.5C22 3.5 36.5 10.2 38.2 12.4C39.9 14.6 39.2 29.5 37.5 33.2C35.8 36.9 24.8 41.2 22 41.2C19.2 41.2 8.2 36.9 6.5 33.2C4.8 29.5 4.1 14.6 5.8 12.4C7.5 10.2 22 3.5 22 3.5Z" fill="#00A82D"/>
-            <path d="M22 12C22 12 29.5 15.5 30.2 17.1C30.9 18.7 30.4 27.2 29.2 29.1C28 31 23.5 33.2 22 33.2C20.5 33.2 16 31 14.8 29.1C13.6 27.2 13.1 18.7 13.8 17.1C14.5 15.5 22 12 22 12Z" fill="#8FE333"/>
-            <path d="M18.2 20.5C19.4 19.1 20.8 18.4 22 18.4C23.2 18.4 24.6 19.1 25.8 20.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>
-          </svg>
+          <svg width="28" height="28" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 3.5C22 3.5 36.5 10.2 38.2 12.4C39.9 14.6 39.2 29.5 37.5 33.2C35.8 36.9 24.8 41.2 22 41.2C19.2 41.2 8.2 36.9 6.5 33.2C4.8 29.5 4.1 14.6 5.8 12.4C7.5 10.2 22 3.5 22 3.5Z" fill="#00A82D"/><path d="M22 12C22 12 29.5 15.5 30.2 17.1C30.9 18.7 30.4 27.2 29.2 29.1C28 31 23.5 33.2 22 33.2C20.5 33.2 16 31 14.8 29.1C13.6 27.2 13.1 18.7 13.8 17.1C14.5 15.5 22 12 22 12Z" fill="#8FE333"/></svg>
         </div>
         <div class="app-sidebar-brand">Notin</div>
+        <button class="app-sidebar-close" id="sidebarClose" type="button" aria-label="Close navigation">×</button>
       </div>
-      <nav class="app-nav" aria-label="Notes navigation">
-        <button class="app-nav-item is-active" data-filter="active" id="navAllNotes" aria-current="page">
-          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 5.5A1.5 1.5 0 014.5 4h5.2l2 2H15.5A1.5 1.5 0 0117 7.5v7A1.5 1.5 0 0115.5 16h-11A1.5 1.5 0 013 14.5v-9z" fill="currentColor"/><path d="M6.5 9.5h7M6.5 12.5h5" stroke="#fff" stroke-width="1.3" stroke-linecap="round"/></svg>
-          All Notes <span class="nav-count" id="countAll">0</span>
-        </button>
-        <button class="app-nav-item" data-filter="trash" id="navTrash">
-          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M6 6.5V5a1.5 1.5 0 011.5-1.5h5A1.5 1.5 0 0114 5v1.5"/><path d="M3.5 6.5h13v8A1.5 1.5 0 0115 16H5a1.5 1.5 0 01-1.5-1.5v-8z" fill="currentColor"/><path d="M8.5 9.5v5M11.5 9.5v5" stroke="#fff" stroke-width="1.3" stroke-linecap="round"/></svg>
-          Trash <span class="nav-count" id="countTrash">0</span>
-        </button>
-        <!-- WP-APP-005 — Notebooks (minimal organize) -->
-        <div class="app-nb" id="notebookSection">
-          <div class="app-nb-head">
-            <span class="app-nb-title">Notebooks</span>
-            <button type="button" class="app-nb-add" id="newNotebookBtn" title="New notebook" aria-label="New notebook">+</button>
-          </div>
-          <div class="app-nb-form" id="newNotebookForm" hidden>
-            <input id="newNotebookInput" type="text" placeholder="Notebook name" maxlength="100" autocomplete="off" aria-label="Notebook name">
-            <div class="app-nb-form-row">
-              <button type="button" class="app-nb-ok" id="newNotebookAdd">Add</button>
-              <button type="button" class="app-nb-cancel" id="newNotebookCancel">Cancel</button>
-            </div>
-            <div class="app-nb-err" id="newNotebookErr" role="alert"></div>
-          </div>
-          <div class="app-nb-list" id="notebookList"></div>
-        </div>
-        <!-- WP-APP-006 — Tags (minimal) -->
-        <div class="app-nb" id="tagSection">
-          <div class="app-nb-head">
-            <span class="app-nb-title">Tags</span>
-            <button type="button" class="app-nb-add" id="newTagBtn" title="New tag" aria-label="New tag">+</button>
-          </div>
-          <div class="app-nb-form" id="newTagForm" hidden>
-            <input id="newTagInput" type="text" placeholder="Tag name" maxlength="50" autocomplete="off" aria-label="Tag name">
-            <div class="app-nb-form-row">
-              <button type="button" class="app-nb-ok" id="newTagAdd">Add</button>
-              <button type="button" class="app-nb-cancel" id="newTagCancel">Cancel</button>
-            </div>
-            <div class="app-nb-err" id="newTagErr" role="alert"></div>
-          </div>
-          <div class="app-nb-list" id="tagList"></div>
-        </div>
+      <form class="app-sidebar-search" id="globalSearchForm" role="search">
+        <span aria-hidden="true">⌕</span>
+        <input id="globalSearchInput" type="search" placeholder="Search" autocomplete="off" aria-label="Search all notes">
+        <button id="globalSearchClear" type="button" aria-label="Clear global search" hidden>×</button>
+        <kbd>⌘ K</kbd>
+      </form>
+      <button class="app-create-note" id="sidebarNewNote" type="button"><span aria-hidden="true">+</span> Note</button>
+      <nav class="app-nav" aria-label="Workspace navigation">
+        <button class="app-nav-item" id="navHome" data-route="home"><span class="nav-icon">⌂</span> Home</button>
+        <button class="app-nav-item" data-filter="active" id="navAllNotes" data-route="notes"><span class="nav-icon">▤</span> Notes <span class="nav-count" id="countAll">0</span></button>
+        <button class="app-nav-item" id="navShortcuts" data-route="shortcuts"><span class="nav-icon">☆</span> Shortcuts</button>
+        <button class="app-nav-item app-nav-stub" data-soon="Tasks"><span class="nav-icon">✓</span> Tasks <span class="soon-badge">Soon</span></button>
+        <button class="app-nav-item app-nav-stub" data-soon="Files"><span class="nav-icon">▧</span> Files <span class="soon-badge">Soon</span></button>
+        <button class="app-nav-item app-nav-stub" data-soon="Calendar"><span class="nav-icon">□</span> Calendar <span class="soon-badge">Soon</span></button>
+        <button class="app-nav-item" id="navNotebooks" data-route="notebooks"><span class="nav-icon">▥</span> Notebooks</button>
+        <button class="app-nav-item" id="navTags" data-route="tags"><span class="nav-icon">#</span> Tags</button>
+        <button class="app-nav-item app-nav-stub" data-soon="Templates"><span class="nav-icon">◇</span> Templates <span class="soon-badge">Soon</span></button>
+        <button class="app-nav-item app-nav-stub" data-soon="Shared with me"><span class="nav-icon">♧</span> Shared with me <span class="soon-badge">Soon</span></button>
+        <button class="app-nav-item app-nav-stub" data-soon="Spaces"><span class="nav-icon">◫</span> Spaces <span class="soon-badge">Soon</span></button>
+        <button class="app-nav-item" data-filter="trash" id="navTrash" data-route="trash"><span class="nav-icon">♲</span> Trash <span class="nav-count" id="countTrash">0</span></button>
+        <button class="app-nav-item app-nav-stub" data-soon="More"><span class="nav-icon">•••</span> More</button>
       </nav>
+      <div class="app-organize-panel" id="notebookSection" hidden>
+        <div class="app-nb-head"><span class="app-nb-title">Your notebooks</span><button type="button" class="app-nb-add" id="newNotebookBtn" title="New notebook" aria-label="New notebook">+</button></div>
+        <div class="app-nb-form" id="newNotebookForm" hidden><input id="newNotebookInput" type="text" placeholder="Notebook name" maxlength="100" autocomplete="off" aria-label="Notebook name"><div class="app-nb-form-row"><button type="button" class="app-nb-ok" id="newNotebookAdd">Add</button><button type="button" class="app-nb-cancel" id="newNotebookCancel">Cancel</button></div><div class="app-nb-err" id="newNotebookErr" role="alert"></div></div>
+        <div class="app-nb-list" id="notebookList"></div>
+      </div>
+      <div class="app-organize-panel" id="tagSection" hidden>
+        <div class="app-nb-head"><span class="app-nb-title">Your tags</span><button type="button" class="app-nb-add" id="newTagBtn" title="New tag" aria-label="New tag">+</button></div>
+        <div class="app-nb-form" id="newTagForm" hidden><input id="newTagInput" type="text" placeholder="Tag name" maxlength="50" autocomplete="off" aria-label="Tag name"><div class="app-nb-form-row"><button type="button" class="app-nb-ok" id="newTagAdd">Add</button><button type="button" class="app-nb-cancel" id="newTagCancel">Cancel</button></div><div class="app-nb-err" id="newTagErr" role="alert"></div></div>
+        <div class="app-nb-list" id="tagList"></div>
+      </div>
       <div class="app-sidebar-bottom">
-        <div class="app-email" id="appEmail" title="">—</div>
-        <button class="app-btn-account" id="accountBtn">Account</button>
+        <a class="app-upgrade" href="#" data-soon="Upgrade">Upgrade</a>
+        <button class="app-user" id="accountBtn" type="button">
+          <span class="app-avatar" id="appAvatar">N</span><span class="app-user-copy"><strong id="appUserName">Account</strong><span class="app-email" id="appEmail" title="">—</span></span><span aria-hidden="true">⋯</span>
+        </button>
         <button class="app-btn-logout" id="logoutBtn">Log out</button>
       </div>
+      <div class="app-toast" id="soonToast" role="status" aria-live="polite" hidden></div>
     </aside>
-
+    <button class="app-mobile-menu" id="sidebarOpen" type="button" aria-label="Open navigation">☰</button>
+    <div class="app-sidebar-scrim" id="sidebarScrim" hidden></div>
+    <div class="app-stage">
+      <section class="home-view" id="homeView" aria-labelledby="homeTitle">
+        <header class="home-header"><div><p class="home-eyebrow">Your workspace</p><h1 id="homeTitle">Home</h1><p class="home-greeting" id="homeGreeting">Welcome back.</p></div><button class="home-new-top" id="homeNewNoteTop" type="button">+ New note</button></header>
+        <div class="home-section-head"><div><h2>Notes</h2><p>Your latest ideas, ready when you are.</p></div><button id="homeViewAll" type="button">View all notes →</button></div>
+        <div class="home-note-grid" id="homeNoteGrid" aria-live="polite"></div>
+        <div class="home-lower-grid">
+          <section class="scratch-card"><div class="home-panel-title"><span>Scratch pad</span><small>Saved on this device</small></div><textarea id="scratchPad" placeholder="Write something down…" aria-label="Scratch pad"></textarea><div class="scratch-status" id="scratchStatus">Local only</div></section>
+          <section class="capture-card"><div class="capture-icon" aria-hidden="true">↗</div><h2>Recently captured</h2><p>Web capture is not connected yet. Your saved notes will appear above.</p><button type="button" class="capture-soon" data-soon="Web clipper">Clip web content <span>Soon</span></button></section>
+        </div>
+      </section>
+      <section class="shortcuts-view" id="shortcutsView" aria-labelledby="shortcutsTitle" hidden>
+        <header class="shortcuts-header">
+          <div><p class="home-eyebrow">Quick access</p><h1 id="shortcutsTitle">Shortcuts</h1><p>Your pinned notes, all in one place.</p></div>
+          <button class="home-new-top" id="shortcutsViewNotes" type="button">View all notes</button>
+        </header>
+        <div class="shortcuts-summary"><h2>Pinned notes</h2><span id="shortcutsCount">0 shortcuts</span></div>
+        <div class="shortcuts-grid" id="shortcutsGrid" aria-live="polite"></div>
+      </section>
+      <section class="organize-view" id="organizeView" aria-labelledby="organizeTitle" hidden>
+        <header class="organize-header">
+          <div><p class="home-eyebrow">Organize your work</p><h1 id="organizeTitle">Notebooks</h1><p id="organizeDescription">Group related notes into focused collections.</p></div>
+          <button class="home-new-top" id="organizeCreateBtn" type="button">+ New notebook</button>
+        </header>
+        <form class="organize-create-form" id="organizeCreateForm" hidden>
+          <label id="organizeInputLabel" for="organizeCreateInput">Notebook name</label>
+          <div><input id="organizeCreateInput" maxlength="100" autocomplete="off"><button type="submit">Create</button><button type="button" id="organizeCreateCancel">Cancel</button></div>
+          <p id="organizeCreateError" role="alert"></p>
+        </form>
+        <div class="organize-summary"><h2 id="organizeListTitle">Your notebooks</h2><span id="organizeCount">0 notebooks</span></div>
+        <div class="organize-grid" id="organizeGrid" aria-live="polite"></div>
+      </section>
+      <div class="editor-workspace" id="editorWorkspace" hidden>
     <!-- Note list ~320px -->
     <section class="app-list" aria-label="Note list">
       <div class="app-list-header">
@@ -213,6 +235,8 @@
         <div id="tiptapEditor" class="tiptap-editor" aria-label="Note body"></div>
       </div>
     </main>
+      </div>
+    </div>
   </div>
   <!-- WP-AUTH-004 — account export and permanent deletion -->
   <div class="app-modal" id="accountModal" hidden>

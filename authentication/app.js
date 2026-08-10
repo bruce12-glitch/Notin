@@ -23,6 +23,10 @@ let currentNotebookId = null; // WP-APP-005 — null = All notes (no notebook fi
 let tags = []; // WP-APP-006 — user's tags
 let currentTagId = null; // WP-APP-006 — null = no tag filter
 let currentSort = 'updated'; // WP-APP-007 — list sort control ('updated' | 'created' | 'title'); pins always win
+// WP-UI-HOME-001 — tiny hash router for authenticated app views.
+let currentView = 'home'; // home | notes | shortcuts | notebooks | tags | trash | account
+let routeReady = false;
+let soonToastTimer = null;
 // WP-APP-010 — offline read state. Tokens remain memory-only; only the non-secret user id
 // is kept in sessionStorage so an IndexedDB snapshot can be scoped to this browser session.
 let currentUserId = null;
@@ -112,6 +116,48 @@ const deleteModal = document.getElementById('deleteModal');
 const modalBackdrop = document.getElementById('modalBackdrop');
 const modalCancel = document.getElementById('modalCancel');
 const modalConfirm = document.getElementById('modalConfirm');
+// WP-UI-HOME-001 — Home shell and global navigation.
+const homeView = document.getElementById('homeView');
+const editorWorkspace = document.getElementById('editorWorkspace');
+const homeNoteGrid = document.getElementById('homeNoteGrid');
+const homeGreeting = document.getElementById('homeGreeting');
+const homeNewNoteTop = document.getElementById('homeNewNoteTop');
+const homeViewAll = document.getElementById('homeViewAll');
+const sidebarNewNote = document.getElementById('sidebarNewNote');
+const globalSearchForm = document.getElementById('globalSearchForm');
+const globalSearchInput = document.getElementById('globalSearchInput');
+const globalSearchClear = document.getElementById('globalSearchClear');
+const navHome = document.getElementById('navHome');
+const navShortcuts = document.getElementById('navShortcuts');
+const navNotebooks = document.getElementById('navNotebooks');
+const navTags = document.getElementById('navTags');
+const notebookSection = document.getElementById('notebookSection');
+const tagSection = document.getElementById('tagSection');
+const accountUserBtn = document.getElementById('accountBtn');
+const appAvatar = document.getElementById('appAvatar');
+const appUserName = document.getElementById('appUserName');
+const scratchPad = document.getElementById('scratchPad');
+const scratchStatus = document.getElementById('scratchStatus');
+const soonToast = document.getElementById('soonToast');
+const sidebarOpen = document.getElementById('sidebarOpen');
+const sidebarClose = document.getElementById('sidebarClose');
+const sidebarScrim = document.getElementById('sidebarScrim');
+const shortcutsView = document.getElementById('shortcutsView');
+const shortcutsGrid = document.getElementById('shortcutsGrid');
+const shortcutsCount = document.getElementById('shortcutsCount');
+const shortcutsViewNotes = document.getElementById('shortcutsViewNotes');
+const organizeView = document.getElementById('organizeView');
+const organizeTitle = document.getElementById('organizeTitle');
+const organizeDescription = document.getElementById('organizeDescription');
+const organizeCreateBtn = document.getElementById('organizeCreateBtn');
+const organizeCreateForm = document.getElementById('organizeCreateForm');
+const organizeCreateInput = document.getElementById('organizeCreateInput');
+const organizeInputLabel = document.getElementById('organizeInputLabel');
+const organizeCreateCancel = document.getElementById('organizeCreateCancel');
+const organizeCreateError = document.getElementById('organizeCreateError');
+const organizeListTitle = document.getElementById('organizeListTitle');
+const organizeCount = document.getElementById('organizeCount');
+const organizeGrid = document.getElementById('organizeGrid');
 
 function getEmail(){
   const qs = new URLSearchParams(location.search);
@@ -352,11 +398,254 @@ function setSaveStatus(text, cls){
   saveStatus.textContent = text || '';
   saveStatus.className = 'app-save-status' + (cls ? ' ' + cls : '');
 }
+
+// ── WP-UI-HOME-001 — authenticated view router + Home dashboard ──
+const APP_ROUTES = new Set(['home','notes','shortcuts','notebooks','tags','trash','account']);
+function routeFromHash(){
+  const value = location.hash.replace(/^#\/?/, '').split('/')[0].toLowerCase();
+  return APP_ROUTES.has(value) ? value : 'home';
+}
+function setRouteHash(view, replace=false){
+  const hash = `#/${view}`;
+  if(location.hash===hash) return false;
+  if(replace) history.replaceState({}, '', `${location.pathname}${location.search}${hash}`);
+  else location.hash = `/${view}`;
+  return true;
+}
+function closeMobileSidebar(){
+  document.body.classList.remove('sidebar-open');
+  if(sidebarScrim) sidebarScrim.hidden = true;
+}
+function setViewChrome(view){
+  currentView = APP_ROUTES.has(view) ? view : 'home';
+  const showHome = currentView==='home' || currentView==='account';
+  const showShortcuts = currentView==='shortcuts';
+  const showOrganize = currentView==='notebooks' || currentView==='tags';
+  if(homeView) homeView.hidden = !showHome;
+  if(shortcutsView) shortcutsView.hidden = !showShortcuts;
+  if(organizeView) organizeView.hidden = !showOrganize;
+  if(editorWorkspace) editorWorkspace.hidden = showHome || showShortcuts || showOrganize;
+  if(layout){
+    layout.classList.toggle('is-home', showHome);
+    layout.classList.toggle('is-shortcuts', showShortcuts);
+    layout.classList.toggle('is-organize', showOrganize);
+    if(showHome || showShortcuts || showOrganize){ layout.classList.remove('is-list','is-editor'); }
+    else if(!layout.classList.contains('is-editor')) layout.classList.add('is-list');
+  }
+  [navHome,navAll,navShortcuts,navNotebooks,navTags,navTrash].forEach(el=>{
+    if(!el) return;
+    const active = (el===navHome && currentView==='home')
+      || (el===navAll && currentView==='notes')
+      || (el===navShortcuts && currentView==='shortcuts')
+      || (el===navNotebooks && currentView==='notebooks')
+      || (el===navTags && currentView==='tags')
+      || (el===navTrash && currentView==='trash');
+    el.classList.toggle('is-active', active);
+    el.setAttribute('aria-current', active ? 'page' : 'false');
+  });
+  if(notebookSection) notebookSection.hidden = currentView!=='notebooks';
+  if(tagSection) tagSection.hidden = currentView!=='tags';
+  closeMobileSidebar();
+}
+function renderHome(){
+  if(!homeNoteGrid) return;
+  homeNoteGrid.innerHTML = '';
+  const create = document.createElement('button');
+  create.type = 'button';
+  create.className = 'home-note-card home-create-card';
+  create.id = 'homeCreateNote';
+  create.disabled = offlineReadOnly;
+  create.innerHTML = '<span class="home-create-icon" aria-hidden="true">+</span><strong>Create new note</strong><small>Start with a blank note</small>';
+  create.addEventListener('click', createNote);
+  homeNoteGrid.appendChild(create);
+  const recent = notes.filter(note=>!note.isTrashed).slice(0,7);
+  if(!recent.length){
+    const empty = document.createElement('div');
+    empty.className = 'home-empty-copy';
+    empty.innerHTML = '<strong>Your Home is ready for its first idea.</strong><span>Create a note and it will appear here automatically.</span><button type="button" class="home-empty-cta">Create a note</button>';
+    empty.querySelector('button').addEventListener('click', createNote);
+    homeNoteGrid.appendChild(empty);
+    return;
+  }
+  recent.forEach(note=>{
+    const notebook = note.notebookId ? notebooks.find(item=>item.id===note.notebookId) : null;
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'home-note-card';
+    card.dataset.noteId = note.id;
+    card.innerHTML = `<span class="home-card-book">${escapeHtml(notebook?.name || 'Unfiled note')}</span><h3>${escapeHtml(note.title || 'Untitled')}</h3><p class="home-card-snippet">${escapeHtml(snippetFromText(plainFromNote(note))) || 'No additional text'}</p><span class="home-card-date">Edited ${formatDate(note.updatedAt || note.createdAt)}</span>${note.isPinned?'<span class="home-card-pin" title="Pinned">●</span>':''}`;
+    card.addEventListener('click', ()=> openNoteFromHome(note.id));
+    homeNoteGrid.appendChild(card);
+  });
+}
+function renderShortcuts(){
+  if(!shortcutsGrid) return;
+  const pinned = notes.filter(note=>note.isPinned && !note.isTrashed);
+  shortcutsGrid.innerHTML='';
+  if(shortcutsCount) shortcutsCount.textContent=`${pinned.length} ${pinned.length===1?'shortcut':'shortcuts'}`;
+  if(!pinned.length){
+    const empty=document.createElement('div');
+    empty.className='shortcuts-empty';
+    empty.innerHTML='<span class="shortcuts-empty-icon" aria-hidden="true">☆</span><strong>Pin notes to see them here</strong><p>Pinned notes become shortcuts for quick access.</p><div class="shortcuts-empty-actions"><button type="button" data-action="notes">Go to Notes</button><button type="button" data-action="home">Back Home</button></div>';
+    empty.querySelector('[data-action="notes"]').addEventListener('click',()=>goToView('notes'));
+    empty.querySelector('[data-action="home"]').addEventListener('click',()=>goToView('home'));
+    shortcutsGrid.appendChild(empty);
+    return;
+  }
+  pinned.forEach(note=>{
+    const notebook=note.notebookId ? notebooks.find(item=>item.id===note.notebookId) : null;
+    const card=document.createElement('button');
+    card.type='button';
+    card.className='shortcut-card';
+    card.dataset.noteId=note.id;
+    card.innerHTML=`<span class="shortcut-card-book">${escapeHtml(notebook?.name || 'Unfiled note')}</span><h3>${escapeHtml(note.title || 'Untitled')}</h3><p>${escapeHtml(snippetFromText(plainFromNote(note))) || 'No additional text'}</p><span class="shortcut-card-date">Edited ${formatDate(note.updatedAt || note.createdAt)}</span><span class="shortcut-pin" title="Pinned">●</span>`;
+    card.addEventListener('click',()=>openNoteFromHome(note.id));
+    shortcutsGrid.appendChild(card);
+  });
+}
+function renderOrganizeView(){
+  if(!organizeGrid || !organizeView) return;
+  const isTags = currentView==='tags';
+  const items = isTags ? tags : notebooks;
+  const singular = isTags ? 'tag' : 'notebook';
+  const plural = isTags ? 'tags' : 'notebooks';
+  if(organizeTitle) organizeTitle.textContent = isTags ? 'Tags' : 'Notebooks';
+  if(organizeDescription) organizeDescription.textContent = isTags
+    ? 'Label notes so related ideas are always easy to find.'
+    : 'Group related notes into focused collections.';
+  if(organizeCreateBtn) organizeCreateBtn.textContent = `+ New ${singular}`;
+  if(organizeInputLabel) organizeInputLabel.textContent = `${singular[0].toUpperCase()+singular.slice(1)} name`;
+  if(organizeCreateInput){
+    organizeCreateInput.placeholder = `Name your ${singular}`;
+    organizeCreateInput.maxLength = isTags ? 50 : 100;
+  }
+  if(organizeListTitle) organizeListTitle.textContent = `Your ${plural}`;
+  if(organizeCount) organizeCount.textContent = `${items.length} ${items.length===1?singular:plural}`;
+  organizeGrid.innerHTML = '';
+  if(!items.length){
+    const empty = document.createElement('div');
+    empty.className = 'organize-empty';
+    empty.innerHTML = `<strong>No ${plural} yet</strong><span>Create one to start organizing your notes.</span>`;
+    organizeGrid.appendChild(empty);
+    return;
+  }
+  items.forEach(item=>{
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'organize-card';
+    card.dataset.id = item.id;
+    card.innerHTML = `<span class="organize-card-icon" aria-hidden="true">${isTags?'#':'▥'}</span><span class="organize-card-copy"><strong>${escapeHtml(item.name)}</strong><span>${Number(item.noteCount)||0} ${(Number(item.noteCount)||0)===1?'note':'notes'}</span></span><span class="organize-card-arrow" aria-hidden="true">→</span>`;
+    card.addEventListener('click', ()=> openOrganizeFilter(isTags ? 'tag' : 'notebook', item.id));
+    organizeGrid.appendChild(card);
+  });
+}
+async function openOrganizeFilter(type,id){
+  currentFilter='active';
+  if(type==='tag') currentTagId=id;
+  else currentNotebookId=id;
+  setViewChrome('notes');
+  setRouteHash('notes', true);
+  updateNav();
+  selectedId=null;
+  await loadNotes();
+}
+function showOrganizeCreate(){
+  if(!organizeCreateForm) return;
+  organizeCreateForm.hidden=false;
+  if(organizeCreateError) organizeCreateError.textContent='';
+  if(organizeCreateInput){ organizeCreateInput.value=''; organizeCreateInput.focus(); }
+}
+function hideOrganizeCreate(){
+  if(organizeCreateForm) organizeCreateForm.hidden=true;
+  if(organizeCreateError) organizeCreateError.textContent='';
+}
+async function submitOrganizeCreate(event){
+  event?.preventDefault();
+  if(offlineReadOnly) return;
+  const isTags = currentView==='tags';
+  const name=(organizeCreateInput?.value||'').trim();
+  if(!name){ if(organizeCreateError) organizeCreateError.textContent=`Name your ${isTags?'tag':'notebook'}.`; return; }
+  const submit=organizeCreateForm?.querySelector('button[type="submit"]');
+  if(submit) submit.disabled=true;
+  try{
+    const res=await fetchWithAuth(API_BASE + (isTags?'/api/tags':'/api/notebooks'), {method:'POST',body:JSON.stringify({name})});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.message || 'Could not create item');
+    hideOrganizeCreate();
+    if(isTags) await loadTags(); else await loadNotebooks();
+    renderOrganizeView();
+  }catch(error){ if(organizeCreateError) organizeCreateError.textContent=error.message || 'Could not create item'; }
+  finally{ if(submit) submit.disabled=false; }
+}
+async function applyRoute(view=routeFromHash(), {focusSearch=false}={}){
+  view = APP_ROUTES.has(view) ? view : 'home';
+  setViewChrome(view);
+  if(view==='account'){
+    openAccountModal();
+    return;
+  }
+  if(accountModal && !accountModal.hidden) closeAccountModal();
+  if(view==='home' || view==='notes' || view==='shortcuts'){
+    currentFilter='active'; currentNotebookId=null; currentTagId=null;
+    if(view==='home' || view==='shortcuts') clearSearchNow(false);
+  }else if(view==='trash'){
+    currentFilter='trash'; currentNotebookId=null; currentTagId=null; clearSearchNow(false);
+  }else{
+    currentFilter='active'; clearSearchNow(false);
+    if(view==='notebooks'){ currentNotebookId=null; currentTagId=null; }
+    if(view==='tags'){ currentTagId=null; currentNotebookId=null; }
+  }
+  updateNav();
+  await loadNotes();
+  if(view==='home') renderHome();
+  if(view==='shortcuts') renderShortcuts();
+  if(view==='notebooks' || view==='tags') renderOrganizeView();
+  if(focusSearch) setTimeout(()=>searchInput?.focus(), 0);
+}
+function goToView(view, options={}){
+  if(!setRouteHash(view)) applyRoute(view, options);
+  else if(options.focusSearch) setTimeout(()=>searchInput?.focus(), 80);
+}
+function openNoteFromHome(id){
+  setViewChrome('notes');
+  setRouteHash('notes', true);
+  selectNote(id);
+}
+function showSoon(name){
+  if(name==='Web clipper'){
+    const capture=document.querySelector('.capture-soon');
+    if(capture){ capture.classList.add('is-coming'); capture.innerHTML='Coming soon <span>No clipper backend</span>'; }
+  }
+  if(!soonToast) return;
+  soonToast.textContent = `${name} is coming soon.`;
+  soonToast.hidden = false;
+  clearTimeout(soonToastTimer);
+  soonToastTimer = setTimeout(()=>{ soonToast.hidden=true; }, 2200);
+}
+function initScratchPad(){
+  if(!scratchPad || !currentUserId) return;
+  const key = `notin_scratch_${currentUserId}`;
+  try{ scratchPad.value = localStorage.getItem(key) || ''; }catch{}
+  scratchPad.disabled = offlineReadOnly;
+  scratchPad.addEventListener('input', ()=>{
+    try{ localStorage.setItem(key, scratchPad.value); }catch{}
+    if(scratchStatus){ scratchStatus.textContent='Saved locally'; setTimeout(()=>{ scratchStatus.textContent='Local only'; },900); }
+  });
+}
 function updateNav(){
-  if(navAll) navAll.classList.toggle('is-active', currentFilter==='active' && !currentNotebookId);
-  if(navTrash) navTrash.classList.toggle('is-active', currentFilter==='trash');
-  if(navAll) navAll.setAttribute('aria-current', currentFilter==='active' && !currentNotebookId ? 'page' : 'false');
-  if(navTrash) navTrash.setAttribute('aria-current', currentFilter==='trash'?'page':'false');
+  // Route is the primary navigation state; notebook/tag filters remain secondary.
+  if(navHome) navHome.classList.toggle('is-active', currentView==='home');
+  if(navAll) navAll.classList.toggle('is-active', currentView==='notes');
+  if(navShortcuts) navShortcuts.classList.toggle('is-active', currentView==='shortcuts');
+  if(navNotebooks) navNotebooks.classList.toggle('is-active', currentView==='notebooks');
+  if(navTags) navTags.classList.toggle('is-active', currentView==='tags');
+  if(navTrash) navTrash.classList.toggle('is-active', currentView==='trash');
+  if(navHome) navHome.setAttribute('aria-current', currentView==='home'?'page':'false');
+  if(navAll) navAll.setAttribute('aria-current', currentView==='notes'?'page':'false');
+  if(navShortcuts) navShortcuts.setAttribute('aria-current', currentView==='shortcuts'?'page':'false');
+  if(navNotebooks) navNotebooks.setAttribute('aria-current', currentView==='notebooks'?'page':'false');
+  if(navTags) navTags.setAttribute('aria-current', currentView==='tags'?'page':'false');
+  if(navTrash) navTrash.setAttribute('aria-current', currentView==='trash'?'page':'false');
   // WP-APP-005/006 — list title reflects the selected notebook/tag (Trash keeps its title)
   const nb = currentNotebookId ? notebooks.find(x=>x.id===currentNotebookId) : null;
   const tg = currentTagId ? tags.find(x=>x.id===currentTagId) : null;
@@ -507,6 +796,7 @@ function renderList(){
   if(!listEl) return;
   listEl.innerHTML = '';
   if(countEl) countEl.textContent = `${notes.length} ${notes.length===1?'note':'notes'}`;
+  if(currentView==='home') renderHome();
   const isTrashView = currentFilter==='trash';
   if(notes.length===0){
     if(currentQuery){
@@ -787,6 +1077,9 @@ if(attachImageInput) attachImageInput.addEventListener('change', async ()=>{
 
 async function createNote(){
   if(offlineReadOnly){ setSaveStatus('Offline · read only','is-error'); return; }
+  // Creating from Home/global sidebar always opens the existing editor workspace.
+  setViewChrome('notes');
+  setRouteHash('notes', true);
   // WP-APP-004 — a new note must never hide behind an active search filter
   if(currentQuery) clearSearchNow(false);
   // If in trash, switch to active first
@@ -928,8 +1221,11 @@ async function restoreNote(){
     renderList();
     setSaveStatus('Restored','is-saved');
     updateCounts();
-    // Switch to All Notes to show restored
+    // Switch to Notes to show the restored item.
     currentFilter = 'active';
+    currentView = 'notes';
+    setViewChrome('notes');
+    setRouteHash('notes', true);
     updateNav();
     await loadNotes();
     if(restored && restored.id) selectNote(restored.id);
@@ -1016,27 +1312,38 @@ if(modalBackdrop) modalBackdrop.addEventListener('click', hideDeleteModal);
 if(modalConfirm) modalConfirm.addEventListener('click', deleteForever);
 document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && deleteModal && !deleteModal.hidden) hideDeleteModal(); });
 
-if(navAll) navAll.addEventListener('click', async ()=>{
-  if(currentFilter==='active' && !currentNotebookId && !currentTagId) return;
-  currentFilter='active';
-  currentNotebookId=null; // WP-APP-005: All Notes = every notebook
-  currentTagId=null;      // WP-APP-006: All Notes clears tag filter too
-  updateNav();
-  selectedId=null;
-  titleInput.value='';
-  if(editor) editor.commands.setContent(createEmptyDoc(), false);
-  updateEditorForSelection(null);
-  await loadNotes();
+if(navHome) navHome.addEventListener('click', ()=> goToView('home'));
+if(navAll) navAll.addEventListener('click', ()=> goToView('notes'));
+if(navShortcuts) navShortcuts.addEventListener('click', ()=> goToView('shortcuts'));
+if(navNotebooks) navNotebooks.addEventListener('click', ()=> goToView('notebooks'));
+if(navTags) navTags.addEventListener('click', ()=> goToView('tags'));
+if(navTrash) navTrash.addEventListener('click', ()=> goToView('trash'));
+if(globalSearchForm) globalSearchForm.addEventListener('submit', (event)=>{
+  event.preventDefault();
+  const query=(globalSearchInput?.value||'').trim();
+  currentQuery=query;
+  if(searchInput) searchInput.value=query;
+  if(searchClear) searchClear.hidden=!query;
+  if(globalSearchClear) globalSearchClear.hidden=!query;
+  goToView('notes');
 });
-if(navTrash) navTrash.addEventListener('click', async ()=>{
-  if(currentFilter==='trash') return;
-  currentFilter='trash';
-  updateNav();
-  selectedId=null;
-  titleInput.value='';
-  if(editor) editor.commands.setContent(createEmptyDoc(), false);
-  updateEditorForSelection(null);
-  await loadNotes();
+if(globalSearchInput) globalSearchInput.addEventListener('input', ()=>{ if(globalSearchClear) globalSearchClear.hidden=!globalSearchInput.value; });
+if(globalSearchClear) globalSearchClear.addEventListener('click', ()=>{ clearSearchNow(); globalSearchInput?.focus(); });
+if(sidebarNewNote) sidebarNewNote.addEventListener('click', createNote);
+if(homeNewNoteTop) homeNewNoteTop.addEventListener('click', createNote);
+if(homeViewAll) homeViewAll.addEventListener('click', ()=> goToView('notes'));
+if(shortcutsViewNotes) shortcutsViewNotes.addEventListener('click', ()=> goToView('notes'));
+if(organizeCreateBtn) organizeCreateBtn.addEventListener('click', showOrganizeCreate);
+if(organizeCreateForm) organizeCreateForm.addEventListener('submit', submitOrganizeCreate);
+if(organizeCreateCancel) organizeCreateCancel.addEventListener('click', hideOrganizeCreate);
+document.querySelectorAll('[data-soon]').forEach(button=> button.addEventListener('click', (event)=>{ event.preventDefault(); showSoon(button.dataset.soon); }));
+if(sidebarOpen) sidebarOpen.addEventListener('click', ()=>{ document.body.classList.add('sidebar-open'); if(sidebarScrim) sidebarScrim.hidden=false; });
+if(sidebarClose) sidebarClose.addEventListener('click', closeMobileSidebar);
+if(sidebarScrim) sidebarScrim.addEventListener('click', closeMobileSidebar);
+document.addEventListener('keydown', (event)=>{
+  if((event.ctrlKey || event.metaKey) && event.key.toLowerCase()==='k'){
+    event.preventDefault(); globalSearchInput?.focus();
+  }
 });
 // ── WP-APP-005 — notebooks (minimal organize: sidebar list + filter + editor picker) ──
 async function loadNotebooks(){
@@ -1086,6 +1393,8 @@ async function selectNotebook(id){
   if(currentNotebookId===id && currentFilter==='active') return;
   currentNotebookId = id;
   if(currentFilter!=='active') currentFilter='active'; // notebooks organize non-trashed notes
+  setViewChrome('notes');
+  setRouteHash('notes', true);
   updateNav();
   selectedId=null; titleInput.value='';
   if(editor) editor.commands.setContent(createEmptyDoc(), false);
@@ -1222,6 +1531,8 @@ function renderTags(){
 async function selectTag(id){
   // Clicking the active tag again clears the filter (toggle)
   currentTagId = (currentTagId===id) ? null : id;
+  setViewChrome('notes');
+  setRouteHash('notes', true);
   updateNav();
   selectedId=null; titleInput.value='';
   if(editor) editor.commands.setContent(createEmptyDoc(), false);
@@ -1375,6 +1686,8 @@ if(sortSelect) sortSelect.addEventListener('change', ()=>{
 // ── WP-APP-004 — search wiring (debounced 300ms, no page reload) ──
 function applySearch(value){
   currentQuery = String(value ?? '');
+  if(globalSearchInput) globalSearchInput.value=currentQuery;
+  if(globalSearchClear) globalSearchClear.hidden=!currentQuery;
   if(searchClear) searchClear.hidden = !(searchInput && searchInput.value);
   clearTimeout(searchDebounce);
   searchDebounce = setTimeout(()=>{
@@ -1384,9 +1697,11 @@ function applySearch(value){
 }
 function clearSearchNow(reload=true){
   if(searchInput) searchInput.value = '';
+  if(globalSearchInput) globalSearchInput.value = '';
   currentQuery = '';
   clearTimeout(searchDebounce);
   if(searchClear) searchClear.hidden = true;
+  if(globalSearchClear) globalSearchClear.hidden = true;
   if(reload) loadNotes();
 }
 if(searchInput){
@@ -1402,6 +1717,11 @@ function updateConnectivityUi(){
   document.body.classList.toggle('is-offline', offlineReadOnly);
   if(newBtn) newBtn.disabled = offlineReadOnly;
   if(newBtnEmpty) newBtnEmpty.disabled = offlineReadOnly;
+  if(sidebarNewNote) sidebarNewNote.disabled = offlineReadOnly;
+  if(homeNewNoteTop) homeNewNoteTop.disabled = offlineReadOnly;
+  const homeCreate = document.getElementById('homeCreateNote');
+  if(homeCreate) homeCreate.disabled = offlineReadOnly;
+  if(scratchPad) scratchPad.disabled = offlineReadOnly;
   if(newNotebookBtn) newNotebookBtn.disabled = offlineReadOnly;
   if(newTagBtn) newTagBtn.disabled = offlineReadOnly;
   if(accountBtn) accountBtn.disabled = offlineReadOnly;
@@ -1449,9 +1769,9 @@ function closeAccountModal(){
   if(deleteAccountConfirm) deleteAccountConfirm.value = '';
   if(deleteAccountBtn) deleteAccountBtn.disabled = true;
 }
-if(accountBtn) accountBtn.addEventListener('click', openAccountModal);
-if(accountModalClose) accountModalClose.addEventListener('click', closeAccountModal);
-if(accountModalBackdrop) accountModalBackdrop.addEventListener('click', closeAccountModal);
+if(accountBtn) accountBtn.addEventListener('click', ()=> goToView('account'));
+if(accountModalClose) accountModalClose.addEventListener('click', ()=> goToView('home'));
+if(accountModalBackdrop) accountModalBackdrop.addEventListener('click', ()=> goToView('home'));
 if(deleteAccountConfirm) deleteAccountConfirm.addEventListener('input', ()=>{
   if(deleteAccountBtn) deleteAccountBtn.disabled = deleteAccountConfirm.value !== 'DELETE';
   if(accountStatus) accountStatus.textContent = '';
@@ -1501,7 +1821,7 @@ if(deleteAccountBtn) deleteAccountBtn.addEventListener('click', async ()=>{
   }
 });
 document.addEventListener('keydown', (e)=>{
-  if(e.key==='Escape' && accountModal && !accountModal.hidden) closeAccountModal();
+  if(e.key==='Escape' && accountModal && !accountModal.hidden) goToView('home');
 });
 
 if(logoutBtn) logoutBtn.addEventListener('click', async ()=>{
@@ -1527,6 +1847,10 @@ registerServiceWorker();
     emailEl.textContent = email || '—';
     emailEl.title = email || '';
   }
+  const identity = (email || 'Notin user').split('@')[0];
+  if(appAvatar) appAvatar.textContent = (email || 'N').trim().charAt(0).toUpperCase();
+  if(appUserName) appUserName.textContent = identity || 'Account';
+  if(homeGreeting) homeGreeting.textContent = email ? `Welcome back, ${identity}.` : 'Welcome back.';
   const tok = await bootstrapToken();
   if(!tok){
     if(!navigator.onLine){
@@ -1536,10 +1860,16 @@ registerServiceWorker();
       notebooks = Array.isArray(offlineSnapshot?.notebooks) ? offlineSnapshot.notebooks : [];
       tags = Array.isArray(offlineSnapshot?.tags) ? offlineSnapshot.tags : [];
       updateConnectivityUi();
+      currentView = routeFromHash();
+      if(!location.hash) setRouteHash('home', true);
+      setViewChrome(currentView);
       updateNav();
       loadCachedNotes();
+      if(currentView==='home') renderHome();
+      if(currentView==='shortcuts') renderShortcuts();
+      if(currentView==='notebooks' || currentView==='tags') renderOrganizeView();
       if(!currentUserId || !offlineSnapshot) setError('No saved notes are available for this offline session. Reconnect to sign in.');
-      if(layout) layout.classList.add('is-list');
+      routeReady = true;
       return;
     }
     redirectToLogin();
@@ -1555,11 +1885,15 @@ registerServiceWorker();
   updateEditorDisabled(true);
   await loadNotebooks(); // WP-APP-005 — sidebar notebooks
   await loadTags();      // WP-APP-006 — sidebar tags
-  updateNav();
-  await loadNotes();
+  if(!location.hash) setRouteHash('home', true);
+  currentView = routeFromHash();
+  await applyRoute(currentView);
   await updateCounts();
-  if(layout) layout.classList.add('is-list');
+  initScratchPad();
+  renderHome();
+  routeReady = true;
 })();
+window.addEventListener('hashchange', ()=>{ if(routeReady) applyRoute(routeFromHash()); });
 
 try{
   const has = Object.keys(localStorage).some(k=> /token/i.test(k) && localStorage.getItem(k)?.startsWith('eyJ'));

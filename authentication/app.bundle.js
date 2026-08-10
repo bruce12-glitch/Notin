@@ -18633,6 +18633,9 @@ var currentNotebookId = null;
 var tags = [];
 var currentTagId = null;
 var currentSort = "updated";
+var currentView = "home";
+var routeReady = false;
+var soonToastTimer = null;
 var currentUserId = null;
 var offlineReadOnly = !navigator.onLine;
 var offlineSnapshot = null;
@@ -18711,6 +18714,47 @@ var deleteModal = document.getElementById("deleteModal");
 var modalBackdrop = document.getElementById("modalBackdrop");
 var modalCancel = document.getElementById("modalCancel");
 var modalConfirm = document.getElementById("modalConfirm");
+var homeView = document.getElementById("homeView");
+var editorWorkspace = document.getElementById("editorWorkspace");
+var homeNoteGrid = document.getElementById("homeNoteGrid");
+var homeGreeting = document.getElementById("homeGreeting");
+var homeNewNoteTop = document.getElementById("homeNewNoteTop");
+var homeViewAll = document.getElementById("homeViewAll");
+var sidebarNewNote = document.getElementById("sidebarNewNote");
+var globalSearchForm = document.getElementById("globalSearchForm");
+var globalSearchInput = document.getElementById("globalSearchInput");
+var globalSearchClear = document.getElementById("globalSearchClear");
+var navHome = document.getElementById("navHome");
+var navShortcuts = document.getElementById("navShortcuts");
+var navNotebooks = document.getElementById("navNotebooks");
+var navTags = document.getElementById("navTags");
+var notebookSection = document.getElementById("notebookSection");
+var tagSection = document.getElementById("tagSection");
+var accountUserBtn = document.getElementById("accountBtn");
+var appAvatar = document.getElementById("appAvatar");
+var appUserName = document.getElementById("appUserName");
+var scratchPad = document.getElementById("scratchPad");
+var scratchStatus = document.getElementById("scratchStatus");
+var soonToast = document.getElementById("soonToast");
+var sidebarOpen = document.getElementById("sidebarOpen");
+var sidebarClose = document.getElementById("sidebarClose");
+var sidebarScrim = document.getElementById("sidebarScrim");
+var shortcutsView = document.getElementById("shortcutsView");
+var shortcutsGrid = document.getElementById("shortcutsGrid");
+var shortcutsCount = document.getElementById("shortcutsCount");
+var shortcutsViewNotes = document.getElementById("shortcutsViewNotes");
+var organizeView = document.getElementById("organizeView");
+var organizeTitle = document.getElementById("organizeTitle");
+var organizeDescription = document.getElementById("organizeDescription");
+var organizeCreateBtn = document.getElementById("organizeCreateBtn");
+var organizeCreateForm = document.getElementById("organizeCreateForm");
+var organizeCreateInput = document.getElementById("organizeCreateInput");
+var organizeInputLabel = document.getElementById("organizeInputLabel");
+var organizeCreateCancel = document.getElementById("organizeCreateCancel");
+var organizeCreateError = document.getElementById("organizeCreateError");
+var organizeListTitle = document.getElementById("organizeListTitle");
+var organizeCount = document.getElementById("organizeCount");
+var organizeGrid = document.getElementById("organizeGrid");
 function getEmail() {
   const qs = new URLSearchParams(location.search);
   const q = qs.get("email");
@@ -18962,11 +19006,283 @@ function setSaveStatus(text, cls) {
   saveStatus.textContent = text || "";
   saveStatus.className = "app-save-status" + (cls ? " " + cls : "");
 }
+var APP_ROUTES = /* @__PURE__ */ new Set(["home", "notes", "shortcuts", "notebooks", "tags", "trash", "account"]);
+function routeFromHash() {
+  const value = location.hash.replace(/^#\/?/, "").split("/")[0].toLowerCase();
+  return APP_ROUTES.has(value) ? value : "home";
+}
+function setRouteHash(view, replace2 = false) {
+  const hash = `#/${view}`;
+  if (location.hash === hash) return false;
+  if (replace2) history.replaceState({}, "", `${location.pathname}${location.search}${hash}`);
+  else location.hash = `/${view}`;
+  return true;
+}
+function closeMobileSidebar() {
+  document.body.classList.remove("sidebar-open");
+  if (sidebarScrim) sidebarScrim.hidden = true;
+}
+function setViewChrome(view) {
+  currentView = APP_ROUTES.has(view) ? view : "home";
+  const showHome = currentView === "home" || currentView === "account";
+  const showShortcuts = currentView === "shortcuts";
+  const showOrganize = currentView === "notebooks" || currentView === "tags";
+  if (homeView) homeView.hidden = !showHome;
+  if (shortcutsView) shortcutsView.hidden = !showShortcuts;
+  if (organizeView) organizeView.hidden = !showOrganize;
+  if (editorWorkspace) editorWorkspace.hidden = showHome || showShortcuts || showOrganize;
+  if (layout) {
+    layout.classList.toggle("is-home", showHome);
+    layout.classList.toggle("is-shortcuts", showShortcuts);
+    layout.classList.toggle("is-organize", showOrganize);
+    if (showHome || showShortcuts || showOrganize) {
+      layout.classList.remove("is-list", "is-editor");
+    } else if (!layout.classList.contains("is-editor")) layout.classList.add("is-list");
+  }
+  [navHome, navAll, navShortcuts, navNotebooks, navTags, navTrash].forEach((el) => {
+    if (!el) return;
+    const active = el === navHome && currentView === "home" || el === navAll && currentView === "notes" || el === navShortcuts && currentView === "shortcuts" || el === navNotebooks && currentView === "notebooks" || el === navTags && currentView === "tags" || el === navTrash && currentView === "trash";
+    el.classList.toggle("is-active", active);
+    el.setAttribute("aria-current", active ? "page" : "false");
+  });
+  if (notebookSection) notebookSection.hidden = currentView !== "notebooks";
+  if (tagSection) tagSection.hidden = currentView !== "tags";
+  closeMobileSidebar();
+}
+function renderHome() {
+  if (!homeNoteGrid) return;
+  homeNoteGrid.innerHTML = "";
+  const create = document.createElement("button");
+  create.type = "button";
+  create.className = "home-note-card home-create-card";
+  create.id = "homeCreateNote";
+  create.disabled = offlineReadOnly;
+  create.innerHTML = '<span class="home-create-icon" aria-hidden="true">+</span><strong>Create new note</strong><small>Start with a blank note</small>';
+  create.addEventListener("click", createNote);
+  homeNoteGrid.appendChild(create);
+  const recent = notes.filter((note) => !note.isTrashed).slice(0, 7);
+  if (!recent.length) {
+    const empty2 = document.createElement("div");
+    empty2.className = "home-empty-copy";
+    empty2.innerHTML = '<strong>Your Home is ready for its first idea.</strong><span>Create a note and it will appear here automatically.</span><button type="button" class="home-empty-cta">Create a note</button>';
+    empty2.querySelector("button").addEventListener("click", createNote);
+    homeNoteGrid.appendChild(empty2);
+    return;
+  }
+  recent.forEach((note) => {
+    const notebook = note.notebookId ? notebooks.find((item) => item.id === note.notebookId) : null;
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "home-note-card";
+    card.dataset.noteId = note.id;
+    card.innerHTML = `<span class="home-card-book">${escapeHtml(notebook?.name || "Unfiled note")}</span><h3>${escapeHtml(note.title || "Untitled")}</h3><p class="home-card-snippet">${escapeHtml(snippetFromText(plainFromNote(note))) || "No additional text"}</p><span class="home-card-date">Edited ${formatDate(note.updatedAt || note.createdAt)}</span>${note.isPinned ? '<span class="home-card-pin" title="Pinned">\u25CF</span>' : ""}`;
+    card.addEventListener("click", () => openNoteFromHome(note.id));
+    homeNoteGrid.appendChild(card);
+  });
+}
+function renderShortcuts() {
+  if (!shortcutsGrid) return;
+  const pinned = notes.filter((note) => note.isPinned && !note.isTrashed);
+  shortcutsGrid.innerHTML = "";
+  if (shortcutsCount) shortcutsCount.textContent = `${pinned.length} ${pinned.length === 1 ? "shortcut" : "shortcuts"}`;
+  if (!pinned.length) {
+    const empty2 = document.createElement("div");
+    empty2.className = "shortcuts-empty";
+    empty2.innerHTML = '<span class="shortcuts-empty-icon" aria-hidden="true">\u2606</span><strong>Pin notes to see them here</strong><p>Pinned notes become shortcuts for quick access.</p><div class="shortcuts-empty-actions"><button type="button" data-action="notes">Go to Notes</button><button type="button" data-action="home">Back Home</button></div>';
+    empty2.querySelector('[data-action="notes"]').addEventListener("click", () => goToView("notes"));
+    empty2.querySelector('[data-action="home"]').addEventListener("click", () => goToView("home"));
+    shortcutsGrid.appendChild(empty2);
+    return;
+  }
+  pinned.forEach((note) => {
+    const notebook = note.notebookId ? notebooks.find((item) => item.id === note.notebookId) : null;
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "shortcut-card";
+    card.dataset.noteId = note.id;
+    card.innerHTML = `<span class="shortcut-card-book">${escapeHtml(notebook?.name || "Unfiled note")}</span><h3>${escapeHtml(note.title || "Untitled")}</h3><p>${escapeHtml(snippetFromText(plainFromNote(note))) || "No additional text"}</p><span class="shortcut-card-date">Edited ${formatDate(note.updatedAt || note.createdAt)}</span><span class="shortcut-pin" title="Pinned">\u25CF</span>`;
+    card.addEventListener("click", () => openNoteFromHome(note.id));
+    shortcutsGrid.appendChild(card);
+  });
+}
+function renderOrganizeView() {
+  if (!organizeGrid || !organizeView) return;
+  const isTags = currentView === "tags";
+  const items = isTags ? tags : notebooks;
+  const singular = isTags ? "tag" : "notebook";
+  const plural = isTags ? "tags" : "notebooks";
+  if (organizeTitle) organizeTitle.textContent = isTags ? "Tags" : "Notebooks";
+  if (organizeDescription) organizeDescription.textContent = isTags ? "Label notes so related ideas are always easy to find." : "Group related notes into focused collections.";
+  if (organizeCreateBtn) organizeCreateBtn.textContent = `+ New ${singular}`;
+  if (organizeInputLabel) organizeInputLabel.textContent = `${singular[0].toUpperCase() + singular.slice(1)} name`;
+  if (organizeCreateInput) {
+    organizeCreateInput.placeholder = `Name your ${singular}`;
+    organizeCreateInput.maxLength = isTags ? 50 : 100;
+  }
+  if (organizeListTitle) organizeListTitle.textContent = `Your ${plural}`;
+  if (organizeCount) organizeCount.textContent = `${items.length} ${items.length === 1 ? singular : plural}`;
+  organizeGrid.innerHTML = "";
+  if (!items.length) {
+    const empty2 = document.createElement("div");
+    empty2.className = "organize-empty";
+    empty2.innerHTML = `<strong>No ${plural} yet</strong><span>Create one to start organizing your notes.</span>`;
+    organizeGrid.appendChild(empty2);
+    return;
+  }
+  items.forEach((item) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "organize-card";
+    card.dataset.id = item.id;
+    card.innerHTML = `<span class="organize-card-icon" aria-hidden="true">${isTags ? "#" : "\u25A5"}</span><span class="organize-card-copy"><strong>${escapeHtml(item.name)}</strong><span>${Number(item.noteCount) || 0} ${(Number(item.noteCount) || 0) === 1 ? "note" : "notes"}</span></span><span class="organize-card-arrow" aria-hidden="true">\u2192</span>`;
+    card.addEventListener("click", () => openOrganizeFilter(isTags ? "tag" : "notebook", item.id));
+    organizeGrid.appendChild(card);
+  });
+}
+async function openOrganizeFilter(type, id) {
+  currentFilter = "active";
+  if (type === "tag") currentTagId = id;
+  else currentNotebookId = id;
+  setViewChrome("notes");
+  setRouteHash("notes", true);
+  updateNav();
+  selectedId = null;
+  await loadNotes();
+}
+function showOrganizeCreate() {
+  if (!organizeCreateForm) return;
+  organizeCreateForm.hidden = false;
+  if (organizeCreateError) organizeCreateError.textContent = "";
+  if (organizeCreateInput) {
+    organizeCreateInput.value = "";
+    organizeCreateInput.focus();
+  }
+}
+function hideOrganizeCreate() {
+  if (organizeCreateForm) organizeCreateForm.hidden = true;
+  if (organizeCreateError) organizeCreateError.textContent = "";
+}
+async function submitOrganizeCreate(event) {
+  event?.preventDefault();
+  if (offlineReadOnly) return;
+  const isTags = currentView === "tags";
+  const name = (organizeCreateInput?.value || "").trim();
+  if (!name) {
+    if (organizeCreateError) organizeCreateError.textContent = `Name your ${isTags ? "tag" : "notebook"}.`;
+    return;
+  }
+  const submit = organizeCreateForm?.querySelector('button[type="submit"]');
+  if (submit) submit.disabled = true;
+  try {
+    const res = await fetchWithAuth(API_BASE2 + (isTags ? "/api/tags" : "/api/notebooks"), { method: "POST", body: JSON.stringify({ name }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || "Could not create item");
+    hideOrganizeCreate();
+    if (isTags) await loadTags();
+    else await loadNotebooks();
+    renderOrganizeView();
+  } catch (error) {
+    if (organizeCreateError) organizeCreateError.textContent = error.message || "Could not create item";
+  } finally {
+    if (submit) submit.disabled = false;
+  }
+}
+async function applyRoute(view = routeFromHash(), { focusSearch = false } = {}) {
+  view = APP_ROUTES.has(view) ? view : "home";
+  setViewChrome(view);
+  if (view === "account") {
+    openAccountModal();
+    return;
+  }
+  if (accountModal && !accountModal.hidden) closeAccountModal();
+  if (view === "home" || view === "notes" || view === "shortcuts") {
+    currentFilter = "active";
+    currentNotebookId = null;
+    currentTagId = null;
+    if (view === "home" || view === "shortcuts") clearSearchNow(false);
+  } else if (view === "trash") {
+    currentFilter = "trash";
+    currentNotebookId = null;
+    currentTagId = null;
+    clearSearchNow(false);
+  } else {
+    currentFilter = "active";
+    clearSearchNow(false);
+    if (view === "notebooks") {
+      currentNotebookId = null;
+      currentTagId = null;
+    }
+    if (view === "tags") {
+      currentTagId = null;
+      currentNotebookId = null;
+    }
+  }
+  updateNav();
+  await loadNotes();
+  if (view === "home") renderHome();
+  if (view === "shortcuts") renderShortcuts();
+  if (view === "notebooks" || view === "tags") renderOrganizeView();
+  if (focusSearch) setTimeout(() => searchInput?.focus(), 0);
+}
+function goToView(view, options = {}) {
+  if (!setRouteHash(view)) applyRoute(view, options);
+  else if (options.focusSearch) setTimeout(() => searchInput?.focus(), 80);
+}
+function openNoteFromHome(id) {
+  setViewChrome("notes");
+  setRouteHash("notes", true);
+  selectNote(id);
+}
+function showSoon(name) {
+  if (name === "Web clipper") {
+    const capture = document.querySelector(".capture-soon");
+    if (capture) {
+      capture.classList.add("is-coming");
+      capture.innerHTML = "Coming soon <span>No clipper backend</span>";
+    }
+  }
+  if (!soonToast) return;
+  soonToast.textContent = `${name} is coming soon.`;
+  soonToast.hidden = false;
+  clearTimeout(soonToastTimer);
+  soonToastTimer = setTimeout(() => {
+    soonToast.hidden = true;
+  }, 2200);
+}
+function initScratchPad() {
+  if (!scratchPad || !currentUserId) return;
+  const key = `notin_scratch_${currentUserId}`;
+  try {
+    scratchPad.value = localStorage.getItem(key) || "";
+  } catch {
+  }
+  scratchPad.disabled = offlineReadOnly;
+  scratchPad.addEventListener("input", () => {
+    try {
+      localStorage.setItem(key, scratchPad.value);
+    } catch {
+    }
+    if (scratchStatus) {
+      scratchStatus.textContent = "Saved locally";
+      setTimeout(() => {
+        scratchStatus.textContent = "Local only";
+      }, 900);
+    }
+  });
+}
 function updateNav() {
-  if (navAll) navAll.classList.toggle("is-active", currentFilter === "active" && !currentNotebookId);
-  if (navTrash) navTrash.classList.toggle("is-active", currentFilter === "trash");
-  if (navAll) navAll.setAttribute("aria-current", currentFilter === "active" && !currentNotebookId ? "page" : "false");
-  if (navTrash) navTrash.setAttribute("aria-current", currentFilter === "trash" ? "page" : "false");
+  if (navHome) navHome.classList.toggle("is-active", currentView === "home");
+  if (navAll) navAll.classList.toggle("is-active", currentView === "notes");
+  if (navShortcuts) navShortcuts.classList.toggle("is-active", currentView === "shortcuts");
+  if (navNotebooks) navNotebooks.classList.toggle("is-active", currentView === "notebooks");
+  if (navTags) navTags.classList.toggle("is-active", currentView === "tags");
+  if (navTrash) navTrash.classList.toggle("is-active", currentView === "trash");
+  if (navHome) navHome.setAttribute("aria-current", currentView === "home" ? "page" : "false");
+  if (navAll) navAll.setAttribute("aria-current", currentView === "notes" ? "page" : "false");
+  if (navShortcuts) navShortcuts.setAttribute("aria-current", currentView === "shortcuts" ? "page" : "false");
+  if (navNotebooks) navNotebooks.setAttribute("aria-current", currentView === "notebooks" ? "page" : "false");
+  if (navTags) navTags.setAttribute("aria-current", currentView === "tags" ? "page" : "false");
+  if (navTrash) navTrash.setAttribute("aria-current", currentView === "trash" ? "page" : "false");
   const nb = currentNotebookId ? notebooks.find((x) => x.id === currentNotebookId) : null;
   const tg = currentTagId ? tags.find((x) => x.id === currentTagId) : null;
   if (listTitleEl) listTitleEl.textContent = currentFilter === "trash" ? "Trash" : tg ? `#${tg.name}` : nb ? nb.name : "All Notes";
@@ -19144,6 +19460,7 @@ function renderList() {
   if (!listEl) return;
   listEl.innerHTML = "";
   if (countEl) countEl.textContent = `${notes.length} ${notes.length === 1 ? "note" : "notes"}`;
+  if (currentView === "home") renderHome();
   const isTrashView = currentFilter === "trash";
   if (notes.length === 0) {
     if (currentQuery) {
@@ -19436,6 +19753,8 @@ async function createNote() {
     setSaveStatus("Offline \xB7 read only", "is-error");
     return;
   }
+  setViewChrome("notes");
+  setRouteHash("notes", true);
   if (currentQuery) clearSearchNow(false);
   if (currentFilter === "trash") {
     currentFilter = "active";
@@ -19574,6 +19893,9 @@ async function restoreNote() {
     setSaveStatus("Restored", "is-saved");
     updateCounts();
     currentFilter = "active";
+    currentView = "notes";
+    setViewChrome("notes");
+    setRouteHash("notes", true);
     updateNav();
     await loadNotes();
     if (restored && restored.id) selectNote(restored.id);
@@ -19657,27 +19979,50 @@ if (modalConfirm) modalConfirm.addEventListener("click", deleteForever);
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && deleteModal && !deleteModal.hidden) hideDeleteModal();
 });
-if (navAll) navAll.addEventListener("click", async () => {
-  if (currentFilter === "active" && !currentNotebookId && !currentTagId) return;
-  currentFilter = "active";
-  currentNotebookId = null;
-  currentTagId = null;
-  updateNav();
-  selectedId = null;
-  titleInput.value = "";
-  if (editor) editor.commands.setContent(createEmptyDoc(), false);
-  updateEditorForSelection(null);
-  await loadNotes();
+if (navHome) navHome.addEventListener("click", () => goToView("home"));
+if (navAll) navAll.addEventListener("click", () => goToView("notes"));
+if (navShortcuts) navShortcuts.addEventListener("click", () => goToView("shortcuts"));
+if (navNotebooks) navNotebooks.addEventListener("click", () => goToView("notebooks"));
+if (navTags) navTags.addEventListener("click", () => goToView("tags"));
+if (navTrash) navTrash.addEventListener("click", () => goToView("trash"));
+if (globalSearchForm) globalSearchForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const query = (globalSearchInput?.value || "").trim();
+  currentQuery = query;
+  if (searchInput) searchInput.value = query;
+  if (searchClear) searchClear.hidden = !query;
+  if (globalSearchClear) globalSearchClear.hidden = !query;
+  goToView("notes");
 });
-if (navTrash) navTrash.addEventListener("click", async () => {
-  if (currentFilter === "trash") return;
-  currentFilter = "trash";
-  updateNav();
-  selectedId = null;
-  titleInput.value = "";
-  if (editor) editor.commands.setContent(createEmptyDoc(), false);
-  updateEditorForSelection(null);
-  await loadNotes();
+if (globalSearchInput) globalSearchInput.addEventListener("input", () => {
+  if (globalSearchClear) globalSearchClear.hidden = !globalSearchInput.value;
+});
+if (globalSearchClear) globalSearchClear.addEventListener("click", () => {
+  clearSearchNow();
+  globalSearchInput?.focus();
+});
+if (sidebarNewNote) sidebarNewNote.addEventListener("click", createNote);
+if (homeNewNoteTop) homeNewNoteTop.addEventListener("click", createNote);
+if (homeViewAll) homeViewAll.addEventListener("click", () => goToView("notes"));
+if (shortcutsViewNotes) shortcutsViewNotes.addEventListener("click", () => goToView("notes"));
+if (organizeCreateBtn) organizeCreateBtn.addEventListener("click", showOrganizeCreate);
+if (organizeCreateForm) organizeCreateForm.addEventListener("submit", submitOrganizeCreate);
+if (organizeCreateCancel) organizeCreateCancel.addEventListener("click", hideOrganizeCreate);
+document.querySelectorAll("[data-soon]").forEach((button) => button.addEventListener("click", (event) => {
+  event.preventDefault();
+  showSoon(button.dataset.soon);
+}));
+if (sidebarOpen) sidebarOpen.addEventListener("click", () => {
+  document.body.classList.add("sidebar-open");
+  if (sidebarScrim) sidebarScrim.hidden = false;
+});
+if (sidebarClose) sidebarClose.addEventListener("click", closeMobileSidebar);
+if (sidebarScrim) sidebarScrim.addEventListener("click", closeMobileSidebar);
+document.addEventListener("keydown", (event) => {
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+    event.preventDefault();
+    globalSearchInput?.focus();
+  }
 });
 async function loadNotebooks() {
   if (offlineReadOnly) {
@@ -19730,6 +20075,8 @@ async function selectNotebook(id) {
   if (currentNotebookId === id && currentFilter === "active") return;
   currentNotebookId = id;
   if (currentFilter !== "active") currentFilter = "active";
+  setViewChrome("notes");
+  setRouteHash("notes", true);
   updateNav();
   selectedId = null;
   titleInput.value = "";
@@ -19884,6 +20231,8 @@ function renderTags() {
 }
 async function selectTag(id) {
   currentTagId = currentTagId === id ? null : id;
+  setViewChrome("notes");
+  setRouteHash("notes", true);
   updateNav();
   selectedId = null;
   titleInput.value = "";
@@ -20054,6 +20403,8 @@ if (sortSelect) sortSelect.addEventListener("change", () => {
 });
 function applySearch(value) {
   currentQuery = String(value ?? "");
+  if (globalSearchInput) globalSearchInput.value = currentQuery;
+  if (globalSearchClear) globalSearchClear.hidden = !currentQuery;
   if (searchClear) searchClear.hidden = !(searchInput && searchInput.value);
   clearTimeout(searchDebounce);
   searchDebounce = setTimeout(() => {
@@ -20063,9 +20414,11 @@ function applySearch(value) {
 }
 function clearSearchNow(reload = true) {
   if (searchInput) searchInput.value = "";
+  if (globalSearchInput) globalSearchInput.value = "";
   currentQuery = "";
   clearTimeout(searchDebounce);
   if (searchClear) searchClear.hidden = true;
+  if (globalSearchClear) globalSearchClear.hidden = true;
   if (reload) loadNotes();
 }
 if (searchInput) {
@@ -20089,6 +20442,11 @@ function updateConnectivityUi() {
   document.body.classList.toggle("is-offline", offlineReadOnly);
   if (newBtn) newBtn.disabled = offlineReadOnly;
   if (newBtnEmpty) newBtnEmpty.disabled = offlineReadOnly;
+  if (sidebarNewNote) sidebarNewNote.disabled = offlineReadOnly;
+  if (homeNewNoteTop) homeNewNoteTop.disabled = offlineReadOnly;
+  const homeCreate = document.getElementById("homeCreateNote");
+  if (homeCreate) homeCreate.disabled = offlineReadOnly;
+  if (scratchPad) scratchPad.disabled = offlineReadOnly;
   if (newNotebookBtn) newNotebookBtn.disabled = offlineReadOnly;
   if (newTagBtn) newTagBtn.disabled = offlineReadOnly;
   if (accountBtn) accountBtn.disabled = offlineReadOnly;
@@ -20139,9 +20497,9 @@ function closeAccountModal() {
   if (deleteAccountConfirm) deleteAccountConfirm.value = "";
   if (deleteAccountBtn) deleteAccountBtn.disabled = true;
 }
-if (accountBtn) accountBtn.addEventListener("click", openAccountModal);
-if (accountModalClose) accountModalClose.addEventListener("click", closeAccountModal);
-if (accountModalBackdrop) accountModalBackdrop.addEventListener("click", closeAccountModal);
+if (accountBtn) accountBtn.addEventListener("click", () => goToView("account"));
+if (accountModalClose) accountModalClose.addEventListener("click", () => goToView("home"));
+if (accountModalBackdrop) accountModalBackdrop.addEventListener("click", () => goToView("home"));
 if (deleteAccountConfirm) deleteAccountConfirm.addEventListener("input", () => {
   if (deleteAccountBtn) deleteAccountBtn.disabled = deleteAccountConfirm.value !== "DELETE";
   if (accountStatus) accountStatus.textContent = "";
@@ -20203,7 +20561,7 @@ if (deleteAccountBtn) deleteAccountBtn.addEventListener("click", async () => {
   }
 });
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && accountModal && !accountModal.hidden) closeAccountModal();
+  if (e.key === "Escape" && accountModal && !accountModal.hidden) goToView("home");
 });
 if (logoutBtn) logoutBtn.addEventListener("click", async () => {
   try {
@@ -20239,6 +20597,10 @@ registerServiceWorker();
     emailEl.textContent = email || "\u2014";
     emailEl.title = email || "";
   }
+  const identity = (email || "Notin user").split("@")[0];
+  if (appAvatar) appAvatar.textContent = (email || "N").trim().charAt(0).toUpperCase();
+  if (appUserName) appUserName.textContent = identity || "Account";
+  if (homeGreeting) homeGreeting.textContent = email ? `Welcome back, ${identity}.` : "Welcome back.";
   const tok = await bootstrapToken();
   if (!tok) {
     if (!navigator.onLine) {
@@ -20251,10 +20613,16 @@ registerServiceWorker();
       notebooks = Array.isArray(offlineSnapshot?.notebooks) ? offlineSnapshot.notebooks : [];
       tags = Array.isArray(offlineSnapshot?.tags) ? offlineSnapshot.tags : [];
       updateConnectivityUi();
+      currentView = routeFromHash();
+      if (!location.hash) setRouteHash("home", true);
+      setViewChrome(currentView);
       updateNav();
       loadCachedNotes();
+      if (currentView === "home") renderHome();
+      if (currentView === "shortcuts") renderShortcuts();
+      if (currentView === "notebooks" || currentView === "tags") renderOrganizeView();
       if (!currentUserId || !offlineSnapshot) setError("No saved notes are available for this offline session. Reconnect to sign in.");
-      if (layout) layout.classList.add("is-list");
+      routeReady = true;
       return;
     }
     redirectToLogin();
@@ -20273,11 +20641,17 @@ registerServiceWorker();
   updateEditorDisabled(true);
   await loadNotebooks();
   await loadTags();
-  updateNav();
-  await loadNotes();
+  if (!location.hash) setRouteHash("home", true);
+  currentView = routeFromHash();
+  await applyRoute(currentView);
   await updateCounts();
-  if (layout) layout.classList.add("is-list");
+  initScratchPad();
+  renderHome();
+  routeReady = true;
 })();
+window.addEventListener("hashchange", () => {
+  if (routeReady) applyRoute(routeFromHash());
+});
 try {
   const has = Object.keys(localStorage).some((k) => /token/i.test(k) && localStorage.getItem(k)?.startsWith("eyJ"));
   if (has) console.warn("localStorage contains token \u2014 should be memory only");

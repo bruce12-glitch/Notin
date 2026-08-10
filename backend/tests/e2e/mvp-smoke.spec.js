@@ -52,27 +52,48 @@ test('MVP journey: OTP, note persistence, organize, search, share, pin, trash, r
   await expect(page.locator('#otpStep')).toBeVisible();
   await page.locator('#otpInput').fill('123456');
   await page.locator('#otpVerifyBtn').click();
-  await expect(page).toHaveURL(/\/app\.html(?:\?|$)/);
+  await expect(page).toHaveURL(/\/app\.html#\/home$/);
   await expect(page.locator('#appEmail')).toHaveText(email);
-  await expect(page.locator('#newNoteBtn')).toBeEnabled();
+  await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
+  await expect(page.locator('#navHome')).toHaveClass(/is-active/);
+  await expect(page.locator('#homeCreateNote')).toBeEnabled();
+  await expect(page.locator('.home-empty-copy')).toContainText('first idea');
+  await page.locator('.capture-soon').click();
+  await expect(page.locator('.capture-soon')).toContainText('Coming soon');
+  await expect(page).toHaveURL(/#\/home$/);
+  await page.locator('#navShortcuts').click();
+  await expect(page.locator('.shortcuts-empty')).toContainText('Pin notes to see them here');
+  await page.locator('.shortcuts-empty [data-action="home"]').click();
+  await expect(page).toHaveURL(/#\/home$/);
 
-  // Create notebook and tag through the UI before creating the note. New notes
-  // inherit the active notebook; the tag is attached later via the editor UI.
-  await page.locator('#newNotebookBtn').click();
-  await page.locator('#newNotebookInput').fill(notebookName);
-  await page.locator('#newNotebookAdd').click();
-  await expect(page.locator('#listTitle')).toHaveText(notebookName);
+  // Scratch content is stored only under this authenticated user's id.
+  await page.locator('#scratchPad').fill(`Scratch ${runId}`);
+  await expect.poll(()=>page.evaluate(()=>Object.entries(localStorage).filter(([key])=>key.startsWith('notin_scratch_')))).toEqual([
+    expect.arrayContaining([expect.stringMatching(/^notin_scratch_/), `Scratch ${runId}`]),
+  ]);
 
-  await page.locator('#newTagBtn').click();
-  await page.locator('#newTagInput').fill(tagName);
-  await page.locator('#newTagAdd').click();
-  await expect(page.locator('#listTitle')).toHaveText(`#${tagName}`);
-  // Toggle the new (empty) tag filter off while retaining the notebook filter.
-  await page.locator('#tagList .app-nb-item', { hasText: tagName }).locator('.app-nb-open').click();
-  await expect(page.locator('#listTitle')).toHaveText(notebookName);
+  // Dedicated Notebooks and Tags views create and display real API entities.
+  await page.locator('#navNotebooks').click();
+  await expect(page).toHaveURL(/#\/notebooks$/);
+  await expect(page.locator('#organizeTitle')).toHaveText('Notebooks');
+  await page.locator('#organizeCreateBtn').click();
+  await page.locator('#organizeCreateInput').fill(notebookName);
+  await page.locator('#organizeCreateForm button[type="submit"]').click();
+  await expect(page.locator('#organizeGrid .organize-card', { hasText: notebookName })).toBeVisible();
 
-  // Create and explicitly save a rich-text note through TipTap.
-  await page.locator('#newNoteBtn').click();
+  await page.locator('#navTags').click();
+  await expect(page).toHaveURL(/#\/tags$/);
+  await expect(page.locator('#organizeTitle')).toHaveText('Tags');
+  await page.locator('#organizeCreateBtn').click();
+  await page.locator('#organizeCreateInput').fill(tagName);
+  await page.locator('#organizeCreateForm button[type="submit"]').click();
+  await expect(page.locator('#organizeGrid .organize-card', { hasText: tagName })).toBeVisible();
+
+  // Return Home and create from the reference-style Create new note tile.
+  await page.locator('#navHome').click();
+  await expect(page).toHaveURL(/#\/home$/);
+  await page.locator('#homeCreateNote').click();
+  await expect(page).toHaveURL(/#\/notes$/);
   await expect(page.locator('#editorTitle')).toBeEnabled();
   await page.locator('#editorTitle').fill(noteTitle);
   const editor = page.locator('#tiptapEditor .ProseMirror');
@@ -81,6 +102,18 @@ test('MVP journey: OTP, note persistence, organize, search, share, pin, trash, r
   await page.locator('#saveBtn').click();
   await expect(page.locator('#saveStatus')).toHaveText('Saved');
   await expect(noteRow(page)).toBeVisible();
+  await page.locator('#noteNotebookSelect').selectOption({ label: notebookName });
+  await expect(page.locator('#noteNotebookSelect')).toHaveValue(/.+/);
+
+  // Home now renders the API note with notebook/title/date; opening it returns
+  // to #/notes with that exact note selected.
+  await page.locator('#navHome').click();
+  const homeCard = page.locator('.home-note-card', { hasText: noteTitle });
+  await expect(homeCard).toContainText(notebookName);
+  await expect(homeCard.locator('.home-card-date')).toContainText('Edited');
+  await homeCard.click();
+  await expect(page).toHaveURL(/#\/notes$/);
+  await expect(page.locator('#editorTitle')).toHaveValue(noteTitle);
 
   // Attach a generated 1x1 PNG through the UI (no binary fixture is committed).
   const imageBytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');
@@ -141,14 +174,20 @@ test('MVP journey: OTP, note persistence, organize, search, share, pin, trash, r
   // Assign and filter by tag using the shipped editor/sidebar controls.
   await page.locator('#tagAddSelect').selectOption({ label: tagName });
   await expect(page.locator('#tagChips')).toContainText(tagName);
-  await page.locator('#tagList .app-nb-item', { hasText: tagName }).locator('.app-nb-open').click();
+  await page.locator('#navTags').click();
+  const tagCard = page.locator('#organizeGrid .organize-card', { hasText: tagName });
+  await expect(tagCard).toContainText('1 note');
+  await tagCard.click();
+  await expect(page).toHaveURL(/#\/notes$/);
   await expect(page.locator('#listTitle')).toHaveText(`#${tagName}`);
   await expect(noteRow(page)).toBeVisible();
 
-  // Notebook filter also contains the note.
-  const notebookRow = page.locator('#notebookList .app-nb-item', { hasText: notebookName });
-  await notebookRow.locator('.app-nb-open').click();
-  await expect(notebookRow).toHaveClass(/is-active/);
+  // Dedicated notebook card opens the matching filtered notes view.
+  await page.locator('#navNotebooks').click();
+  const notebookCard = page.locator('#organizeGrid .organize-card', { hasText: notebookName });
+  await expect(notebookCard).toContainText('1 note');
+  await notebookCard.click();
+  await expect(page.locator('#listTitle')).toHaveText(notebookName);
   await expect(noteRow(page)).toBeVisible();
 
   // Pin from the editor and assert both state and pin-first list placement.
@@ -156,10 +195,24 @@ test('MVP journey: OTP, note persistence, organize, search, share, pin, trash, r
   await expect(page.locator('#pinBtn')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.app-note-item').first()).toContainText(noteTitle);
   await expect(noteRow(page)).toHaveClass(/is-pinned/);
+  await page.locator('#navHome').click();
+  const pinnedHomeCard = page.locator('.home-note-card', { hasText: noteTitle });
+  await expect(pinnedHomeCard.locator('.home-card-pin')).toHaveAttribute('title', 'Pinned');
+
+  // Shortcuts is a real pinned-only route; its card opens the selected note.
+  await page.locator('#navShortcuts').click();
+  await expect(page).toHaveURL(/#\/shortcuts$/);
+  await expect(page.locator('#navShortcuts')).toHaveClass(/is-active/);
+  const shortcutCard = page.locator('.shortcut-card', { hasText: noteTitle });
+  await expect(shortcutCard).toBeVisible();
+  await expect(page.locator('.shortcut-card')).toHaveCount(1);
+  await shortcutCard.click();
+  await expect(page).toHaveURL(/#\/notes$/);
+  await expect(page.locator('#editorTitle')).toHaveValue(noteTitle);
 
   // A hard reload proves refresh-cookie bootstrap and database persistence.
   await page.reload();
-  await expect(page).toHaveURL(/\/app\.html$/);
+  await expect(page).toHaveURL(/\/app\.html#\/notes$/);
   await expect(noteRow(page)).toBeVisible();
   await noteRow(page).click();
   await expect(page.locator('#editorTitle')).toHaveValue(noteTitle);
@@ -180,14 +233,18 @@ test('MVP journey: OTP, note persistence, organize, search, share, pin, trash, r
   expect((await request.get(`/api/public/share/${firstShareToken}`)).status()).toBe(404);
   expect((await request.get(`/api/public/share/${share.token}`)).ok()).toBeTruthy();
 
-  // Search is UI-driven and waits for the product's 300 ms debounce.
+  // Shell search submits directly into #/notes with the query applied.
+  await page.locator('#navHome').click();
+  await page.locator('#globalSearchInput').fill(searchToken);
   await Promise.all([
     page.waitForResponse((response) => response.url().includes('/api/notes?') && response.url().includes(`q=${searchToken}`) && response.ok()),
-    page.locator('#searchInput').fill(searchToken),
+    page.locator('#globalSearchInput').press('Enter'),
   ]);
+  await expect(page).toHaveURL(/#\/notes$/);
+  await expect(page.locator('#searchInput')).toHaveValue(searchToken);
   await expect(noteRow(page)).toBeVisible();
   await expect(page.locator('.app-note-item')).toHaveCount(1);
-  await page.locator('#searchClear').click();
+  await page.locator('#globalSearchClear').click();
   await expect(page.locator('#searchInput')).toHaveValue('');
 
   // Trash, verify absence from All Notes, then restore from Trash.
