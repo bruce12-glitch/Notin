@@ -3,3 +3,10 @@ node_modules
 prisma/migrations
 *.log
 .DS_Store
+
+# Playwright artifacts
+playwright-report/
+test-results/
+
+# Local image attachment storage
+uploads/

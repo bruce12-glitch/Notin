@@ -55,6 +55,9 @@ npx @tailwindcss/cli -i input-neon.css  -o styles-neon.css --minify   # Neon
 
 > The root `notin/index.html` redirects to the frontend — deploy the whole folder to any static host (Netlify / Vercel / GitHub Pages).
 
+### Operations
+For the unified app/API setup, environment behavior, deployment checklist, backups, optional Sentry monitoring, and E2E commands, see **[RUNBOOK.md](RUNBOOK.md)**. Port `5000` is the source of truth; do not deploy the legacy standalone auth server on `8787`.
+
 ---
 
 ## 🗂️ Project Structure

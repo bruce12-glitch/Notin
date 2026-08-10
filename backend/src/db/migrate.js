@@ -128,6 +128,38 @@ async function migratePostgres(pool) {
   await pool.query(`CREATE INDEX IF NOT EXISTS "NoteTag_noteId_idx" ON "NoteTag" ("noteId");`);
   await pool.query(`CREATE INDEX IF NOT EXISTS "NoteTag_tagId_idx" ON "NoteTag" ("tagId");`);
 
+  // WP-APP-008 — image attachment metadata. Files live under UPLOAD_DIR on local disk.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "Attachment" (
+      id TEXT PRIMARY KEY,
+      "noteId" TEXT NOT NULL REFERENCES "Note"(id) ON DELETE CASCADE,
+      "userId" TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+      filename TEXT NOT NULL,
+      mime TEXT NOT NULL,
+      size INTEGER NOT NULL,
+      path TEXT NOT NULL,
+      "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "Attachment_noteId_idx" ON "Attachment" ("noteId");`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "Attachment_userId_idx" ON "Attachment" ("userId");`);
+
+  // WP-APP-009 — one hashed secret share per note; public reads join back to the note owner.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "NoteShare" (
+      id TEXT PRIMARY KEY,
+      "noteId" TEXT NOT NULL UNIQUE REFERENCES "Note"(id) ON DELETE CASCADE,
+      "userId" TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+      "tokenHash" TEXT NOT NULL UNIQUE,
+      "shareEnabled" BOOLEAN NOT NULL DEFAULT TRUE,
+      "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      "expiresAt" TIMESTAMPTZ
+    );
+  `);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS "NoteShare_noteId_key" ON "NoteShare" ("noteId");`);
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS "NoteShare_tokenHash_key" ON "NoteShare" ("tokenHash");`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "NoteShare_userId_idx" ON "NoteShare" ("userId");`);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS otp_challenges (
       id TEXT PRIMARY KEY,
@@ -252,6 +284,38 @@ function migrateSqlite(dbPath) {
   `);
   db.exec(`CREATE INDEX IF NOT EXISTS "NoteTag_noteId_idx" ON "NoteTag" ("noteId");`);
   db.exec(`CREATE INDEX IF NOT EXISTS "NoteTag_tagId_idx" ON "NoteTag" ("tagId");`);
+
+  // WP-APP-008 — image attachment metadata. Files live under UPLOAD_DIR on local disk.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS "Attachment" (
+      id TEXT PRIMARY KEY,
+      "noteId" TEXT NOT NULL REFERENCES "Note"(id) ON DELETE CASCADE,
+      "userId" TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+      filename TEXT NOT NULL,
+      mime TEXT NOT NULL,
+      size INTEGER NOT NULL,
+      path TEXT NOT NULL,
+      "createdAt" TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS "Attachment_noteId_idx" ON "Attachment" ("noteId");`);
+  db.exec(`CREATE INDEX IF NOT EXISTS "Attachment_userId_idx" ON "Attachment" ("userId");`);
+
+  // WP-APP-009 — one hashed secret share per note.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS "NoteShare" (
+      id TEXT PRIMARY KEY,
+      "noteId" TEXT NOT NULL UNIQUE REFERENCES "Note"(id) ON DELETE CASCADE,
+      "userId" TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+      "tokenHash" TEXT NOT NULL UNIQUE,
+      "shareEnabled" INTEGER NOT NULL DEFAULT 1,
+      "createdAt" TEXT NOT NULL DEFAULT (datetime('now')),
+      "expiresAt" TEXT
+    );
+  `);
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS "NoteShare_noteId_key" ON "NoteShare" ("noteId");`);
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS "NoteShare_tokenHash_key" ON "NoteShare" ("tokenHash");`);
+  db.exec(`CREATE INDEX IF NOT EXISTS "NoteShare_userId_idx" ON "NoteShare" ("userId");`);
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS otp_challenges (

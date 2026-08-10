@@ -1,0 +1,25 @@
+{
+  "id": "/app.html",
+  "name": "Notin — Your Second Brain",
+  "short_name": "Notin",
+  "description": "A focused notes app with offline read access to your recent notes.",
+  "start_url": "/app.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f6f2",
+  "theme_color": "#00a82d",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

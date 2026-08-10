@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Notin — Your notes</title>
+  <meta name="theme-color" content="#00a82d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -33,6 +38,9 @@
   </script>
 </head>
 <body>
+  <div class="app-offline-banner" id="offlineBanner" role="status" aria-live="polite" hidden>
+    You’re offline — saved notes are available read-only. Changes are disabled.
+  </div>
   <div class="app-layout is-list" id="appLayout">
     <!-- Sidebar ~220px -->
     <aside class="app-sidebar" aria-label="Sidebar">
@@ -90,6 +98,7 @@
       </nav>
       <div class="app-sidebar-bottom">
         <div class="app-email" id="appEmail" title="">—</div>
+        <button class="app-btn-account" id="accountBtn">Account</button>
         <button class="app-btn-logout" id="logoutBtn">Log out</button>
       </div>
     </aside>
@@ -154,6 +163,7 @@
           <select class="app-nb-select" id="noteNotebookSelect" title="Notebook" disabled aria-label="Notebook">
             <option value="">None</option>
           </select>
+          <button type="button" class="app-share-btn" id="shareBtn" hidden>Share</button>
           <span class="app-save-status" id="saveStatus"></span>
           <button class="app-save" id="saveBtn" disabled>Save</button>
           <button class="app-btn-trash" id="trashBtn" hidden title="Move to Trash">Trash</button>
@@ -161,12 +171,28 @@
           <button class="app-btn-delete" id="deleteBtn" hidden>Delete forever</button>
         </div>
       </div>
+      <!-- WP-APP-009 — owner-only read-only share controls -->
+      <div class="app-share-panel" id="sharePanel" hidden>
+        <input id="shareLinkInput" type="text" readonly aria-label="Read-only share link">
+        <button type="button" id="copyShareBtn">Copy</button>
+        <button type="button" id="revokeShareBtn">Revoke</button>
+        <span id="shareStatus" aria-live="polite"></span>
+      </div>
       <!-- WP-APP-006 — note tags row (chips + add-tag picker) -->
       <div class="app-tag-row" id="tagRow" hidden>
         <div class="app-tag-chips" id="tagChips"></div>
         <select class="app-tag-add" id="tagAddSelect" title="Add tag" aria-label="Add tag">
           <option value="">+ Tag</option>
         </select>
+      </div>
+      <!-- WP-APP-008 — image attachments (local-disk backed, protected API) -->
+      <div class="app-attachments" id="attachmentRow" hidden>
+        <div class="app-attachment-actions">
+          <button type="button" class="app-attach-btn" id="attachImageBtn">+ Image</button>
+          <input id="attachImageInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
+          <span class="app-attachment-status" id="attachmentStatus" aria-live="polite"></span>
+        </div>
+        <div class="app-attachment-gallery" id="attachmentGallery"></div>
       </div>
       <!-- TipTap toolbar -->
       <div class="app-toolbar" id="toolbar" aria-label="Formatting toolbar">
@@ -188,6 +214,28 @@
       </div>
     </main>
   </div>
+  <!-- WP-AUTH-004 — account export and permanent deletion -->
+  <div class="app-modal" id="accountModal" hidden>
+    <div class="app-modal-backdrop" id="accountModalBackdrop"></div>
+    <div class="app-modal-card app-account-card" role="dialog" aria-modal="true" aria-labelledby="accountModalTitle">
+      <div class="app-account-head">
+        <h3 id="accountModalTitle">Account</h3>
+        <button type="button" class="app-account-close" id="accountModalClose" aria-label="Close account panel">×</button>
+      </div>
+      <section class="app-account-section">
+        <h4>Export your data</h4>
+        <p>Download notes, notebooks, tags, and image metadata as JSON. Image files are not included.</p>
+        <button type="button" class="app-account-export" id="exportDataBtn">Export data</button>
+      </section>
+      <section class="app-account-section app-account-danger">
+        <h4>Delete account</h4>
+        <p>This permanently removes your account, notes, shares, sessions, and uploaded images. Type <strong>DELETE</strong> to continue.</p>
+        <input id="deleteAccountConfirm" type="text" autocomplete="off" placeholder="Type DELETE" aria-label="Type DELETE to confirm">
+        <button type="button" id="deleteAccountBtn" disabled>Delete account permanently</button>
+      </section>
+      <div class="app-account-status" id="accountStatus" aria-live="polite"></div>
+    </div>
+  </div>
   <!-- Delete forever confirm (no alert) -->
   <div class="app-modal" id="deleteModal" hidden>
     <div class="app-modal-backdrop" id="modalBackdrop"></div>
@@ -200,6 +248,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="app.js"></script>
+  <script type="module" src="app.bundle.js"></script>
 </body>
 </html>
