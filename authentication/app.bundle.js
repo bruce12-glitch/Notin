@@ -18721,7 +18721,9 @@ var homeGreeting = document.getElementById("homeGreeting");
 var homeNewNoteTop = document.getElementById("homeNewNoteTop");
 var homeViewAll = document.getElementById("homeViewAll");
 var sidebarNewNote = document.getElementById("sidebarNewNote");
-var globalSearchBtn = document.getElementById("globalSearchBtn");
+var globalSearchForm = document.getElementById("globalSearchForm");
+var globalSearchInput = document.getElementById("globalSearchInput");
+var globalSearchClear = document.getElementById("globalSearchClear");
 var navHome = document.getElementById("navHome");
 var navNotebooks = document.getElementById("navNotebooks");
 var navTags = document.getElementById("navTags");
@@ -18736,6 +18738,18 @@ var soonToast = document.getElementById("soonToast");
 var sidebarOpen = document.getElementById("sidebarOpen");
 var sidebarClose = document.getElementById("sidebarClose");
 var sidebarScrim = document.getElementById("sidebarScrim");
+var organizeView = document.getElementById("organizeView");
+var organizeTitle = document.getElementById("organizeTitle");
+var organizeDescription = document.getElementById("organizeDescription");
+var organizeCreateBtn = document.getElementById("organizeCreateBtn");
+var organizeCreateForm = document.getElementById("organizeCreateForm");
+var organizeCreateInput = document.getElementById("organizeCreateInput");
+var organizeInputLabel = document.getElementById("organizeInputLabel");
+var organizeCreateCancel = document.getElementById("organizeCreateCancel");
+var organizeCreateError = document.getElementById("organizeCreateError");
+var organizeListTitle = document.getElementById("organizeListTitle");
+var organizeCount = document.getElementById("organizeCount");
+var organizeGrid = document.getElementById("organizeGrid");
 function getEmail() {
   const qs = new URLSearchParams(location.search);
   const q = qs.get("email");
@@ -19006,11 +19020,14 @@ function closeMobileSidebar() {
 function setViewChrome(view) {
   currentView = APP_ROUTES.has(view) ? view : "home";
   const showHome = currentView === "home" || currentView === "account";
+  const showOrganize = currentView === "notebooks" || currentView === "tags";
   if (homeView) homeView.hidden = !showHome;
-  if (editorWorkspace) editorWorkspace.hidden = showHome;
+  if (organizeView) organizeView.hidden = !showOrganize;
+  if (editorWorkspace) editorWorkspace.hidden = showHome || showOrganize;
   if (layout) {
     layout.classList.toggle("is-home", showHome);
-    if (showHome) {
+    layout.classList.toggle("is-organize", showOrganize);
+    if (showHome || showOrganize) {
       layout.classList.remove("is-list", "is-editor");
     } else if (!layout.classList.contains("is-editor")) layout.classList.add("is-list");
   }
@@ -19039,7 +19056,8 @@ function renderHome() {
   if (!recent.length) {
     const empty2 = document.createElement("div");
     empty2.className = "home-empty-copy";
-    empty2.innerHTML = "<span>No notes yet.<br>Create your first note to fill your Home.</span>";
+    empty2.innerHTML = '<strong>Your Home is ready for its first idea.</strong><span>Create a note and it will appear here automatically.</span><button type="button" class="home-empty-cta">Create a note</button>';
+    empty2.querySelector("button").addEventListener("click", createNote);
     homeNoteGrid.appendChild(empty2);
     return;
   }
@@ -19054,6 +19072,88 @@ function renderHome() {
     homeNoteGrid.appendChild(card);
   });
 }
+function renderOrganizeView() {
+  if (!organizeGrid || !organizeView) return;
+  const isTags = currentView === "tags";
+  const items = isTags ? tags : notebooks;
+  const singular = isTags ? "tag" : "notebook";
+  const plural = isTags ? "tags" : "notebooks";
+  if (organizeTitle) organizeTitle.textContent = isTags ? "Tags" : "Notebooks";
+  if (organizeDescription) organizeDescription.textContent = isTags ? "Label notes so related ideas are always easy to find." : "Group related notes into focused collections.";
+  if (organizeCreateBtn) organizeCreateBtn.textContent = `+ New ${singular}`;
+  if (organizeInputLabel) organizeInputLabel.textContent = `${singular[0].toUpperCase() + singular.slice(1)} name`;
+  if (organizeCreateInput) {
+    organizeCreateInput.placeholder = `Name your ${singular}`;
+    organizeCreateInput.maxLength = isTags ? 50 : 100;
+  }
+  if (organizeListTitle) organizeListTitle.textContent = `Your ${plural}`;
+  if (organizeCount) organizeCount.textContent = `${items.length} ${items.length === 1 ? singular : plural}`;
+  organizeGrid.innerHTML = "";
+  if (!items.length) {
+    const empty2 = document.createElement("div");
+    empty2.className = "organize-empty";
+    empty2.innerHTML = `<strong>No ${plural} yet</strong><span>Create one to start organizing your notes.</span>`;
+    organizeGrid.appendChild(empty2);
+    return;
+  }
+  items.forEach((item) => {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "organize-card";
+    card.dataset.id = item.id;
+    card.innerHTML = `<span class="organize-card-icon" aria-hidden="true">${isTags ? "#" : "\u25A5"}</span><span class="organize-card-copy"><strong>${escapeHtml(item.name)}</strong><span>${Number(item.noteCount) || 0} ${(Number(item.noteCount) || 0) === 1 ? "note" : "notes"}</span></span><span class="organize-card-arrow" aria-hidden="true">\u2192</span>`;
+    card.addEventListener("click", () => openOrganizeFilter(isTags ? "tag" : "notebook", item.id));
+    organizeGrid.appendChild(card);
+  });
+}
+async function openOrganizeFilter(type, id) {
+  currentFilter = "active";
+  if (type === "tag") currentTagId = id;
+  else currentNotebookId = id;
+  setViewChrome("notes");
+  setRouteHash("notes", true);
+  updateNav();
+  selectedId = null;
+  await loadNotes();
+}
+function showOrganizeCreate() {
+  if (!organizeCreateForm) return;
+  organizeCreateForm.hidden = false;
+  if (organizeCreateError) organizeCreateError.textContent = "";
+  if (organizeCreateInput) {
+    organizeCreateInput.value = "";
+    organizeCreateInput.focus();
+  }
+}
+function hideOrganizeCreate() {
+  if (organizeCreateForm) organizeCreateForm.hidden = true;
+  if (organizeCreateError) organizeCreateError.textContent = "";
+}
+async function submitOrganizeCreate(event) {
+  event?.preventDefault();
+  if (offlineReadOnly) return;
+  const isTags = currentView === "tags";
+  const name = (organizeCreateInput?.value || "").trim();
+  if (!name) {
+    if (organizeCreateError) organizeCreateError.textContent = `Name your ${isTags ? "tag" : "notebook"}.`;
+    return;
+  }
+  const submit = organizeCreateForm?.querySelector('button[type="submit"]');
+  if (submit) submit.disabled = true;
+  try {
+    const res = await fetchWithAuth(API_BASE2 + (isTags ? "/api/tags" : "/api/notebooks"), { method: "POST", body: JSON.stringify({ name }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || "Could not create item");
+    hideOrganizeCreate();
+    if (isTags) await loadTags();
+    else await loadNotebooks();
+    renderOrganizeView();
+  } catch (error) {
+    if (organizeCreateError) organizeCreateError.textContent = error.message || "Could not create item";
+  } finally {
+    if (submit) submit.disabled = false;
+  }
+}
 async function applyRoute(view = routeFromHash(), { focusSearch = false } = {}) {
   view = APP_ROUTES.has(view) ? view : "home";
   setViewChrome(view);
@@ -19066,16 +19166,28 @@ async function applyRoute(view = routeFromHash(), { focusSearch = false } = {}) 
     currentFilter = "active";
     currentNotebookId = null;
     currentTagId = null;
+    if (view === "home") clearSearchNow(false);
   } else if (view === "trash") {
     currentFilter = "trash";
     currentNotebookId = null;
     currentTagId = null;
+    clearSearchNow(false);
   } else {
     currentFilter = "active";
+    clearSearchNow(false);
+    if (view === "notebooks") {
+      currentNotebookId = null;
+      currentTagId = null;
+    }
+    if (view === "tags") {
+      currentTagId = null;
+      currentNotebookId = null;
+    }
   }
   updateNav();
   await loadNotes();
   if (view === "home") renderHome();
+  if (view === "notebooks" || view === "tags") renderOrganizeView();
   if (focusSearch) setTimeout(() => searchInput?.focus(), 0);
 }
 function goToView(view, options = {}) {
@@ -19088,6 +19200,13 @@ function openNoteFromHome(id) {
   selectNote(id);
 }
 function showSoon(name) {
+  if (name === "Web clipper") {
+    const capture = document.querySelector(".capture-soon");
+    if (capture) {
+      capture.classList.add("is-coming");
+      capture.innerHTML = "Coming soon <span>No clipper backend</span>";
+    }
+  }
   if (!soonToast) return;
   soonToast.textContent = `${name} is coming soon.`;
   soonToast.hidden = false;
@@ -19829,10 +19948,28 @@ if (navAll) navAll.addEventListener("click", () => goToView("notes"));
 if (navNotebooks) navNotebooks.addEventListener("click", () => goToView("notebooks"));
 if (navTags) navTags.addEventListener("click", () => goToView("tags"));
 if (navTrash) navTrash.addEventListener("click", () => goToView("trash"));
-if (globalSearchBtn) globalSearchBtn.addEventListener("click", () => goToView("notes", { focusSearch: true }));
+if (globalSearchForm) globalSearchForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const query = (globalSearchInput?.value || "").trim();
+  currentQuery = query;
+  if (searchInput) searchInput.value = query;
+  if (searchClear) searchClear.hidden = !query;
+  if (globalSearchClear) globalSearchClear.hidden = !query;
+  goToView("notes");
+});
+if (globalSearchInput) globalSearchInput.addEventListener("input", () => {
+  if (globalSearchClear) globalSearchClear.hidden = !globalSearchInput.value;
+});
+if (globalSearchClear) globalSearchClear.addEventListener("click", () => {
+  clearSearchNow();
+  globalSearchInput?.focus();
+});
 if (sidebarNewNote) sidebarNewNote.addEventListener("click", createNote);
 if (homeNewNoteTop) homeNewNoteTop.addEventListener("click", createNote);
 if (homeViewAll) homeViewAll.addEventListener("click", () => goToView("notes"));
+if (organizeCreateBtn) organizeCreateBtn.addEventListener("click", showOrganizeCreate);
+if (organizeCreateForm) organizeCreateForm.addEventListener("submit", submitOrganizeCreate);
+if (organizeCreateCancel) organizeCreateCancel.addEventListener("click", hideOrganizeCreate);
 document.querySelectorAll("[data-soon]").forEach((button) => button.addEventListener("click", (event) => {
   event.preventDefault();
   showSoon(button.dataset.soon);
@@ -19846,7 +19983,7 @@ if (sidebarScrim) sidebarScrim.addEventListener("click", closeMobileSidebar);
 document.addEventListener("keydown", (event) => {
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
-    goToView("notes", { focusSearch: true });
+    globalSearchInput?.focus();
   }
 });
 async function loadNotebooks() {
@@ -19900,6 +20037,8 @@ async function selectNotebook(id) {
   if (currentNotebookId === id && currentFilter === "active") return;
   currentNotebookId = id;
   if (currentFilter !== "active") currentFilter = "active";
+  setViewChrome("notes");
+  setRouteHash("notes", true);
   updateNav();
   selectedId = null;
   titleInput.value = "";
@@ -20054,6 +20193,8 @@ function renderTags() {
 }
 async function selectTag(id) {
   currentTagId = currentTagId === id ? null : id;
+  setViewChrome("notes");
+  setRouteHash("notes", true);
   updateNav();
   selectedId = null;
   titleInput.value = "";
@@ -20224,6 +20365,8 @@ if (sortSelect) sortSelect.addEventListener("change", () => {
 });
 function applySearch(value) {
   currentQuery = String(value ?? "");
+  if (globalSearchInput) globalSearchInput.value = currentQuery;
+  if (globalSearchClear) globalSearchClear.hidden = !currentQuery;
   if (searchClear) searchClear.hidden = !(searchInput && searchInput.value);
   clearTimeout(searchDebounce);
   searchDebounce = setTimeout(() => {
@@ -20233,9 +20376,11 @@ function applySearch(value) {
 }
 function clearSearchNow(reload = true) {
   if (searchInput) searchInput.value = "";
+  if (globalSearchInput) globalSearchInput.value = "";
   currentQuery = "";
   clearTimeout(searchDebounce);
   if (searchClear) searchClear.hidden = true;
+  if (globalSearchClear) globalSearchClear.hidden = true;
   if (reload) loadNotes();
 }
 if (searchInput) {
