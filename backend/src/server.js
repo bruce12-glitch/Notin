@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { captureExpressError } from './config/sentry.js';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -110,6 +111,8 @@ app.get('/', (req, res) => {
 app.get('/login.html', (req, res) => res.sendFile(path.join(authStaticPath, 'login.html')));
 
 app.use((err, req, res, next) => {
+  // Capture only the Error object. Sentry's beforeSend strips request/user/extras.
+  captureExpressError(err);
   console.error(err.stack || err);
   res.status(500).json({ message: 'Internal Server Error' });
 });

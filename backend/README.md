@@ -2,6 +2,8 @@
 
 Clean, modern, and stable backend for Notin.
 
+> Operations and deployment: see the repository **[RUNBOOK](../RUNBOOK.md)** for the unified port-5000 architecture, environment controls, backups, optional Sentry setup, and production checklist.
+
 ## Tech Stack
 - PostgreSQL
 - Express.js

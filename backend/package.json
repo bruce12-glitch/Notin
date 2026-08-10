@@ -13,6 +13,7 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
+    "@sentry/node": "^10.69.0",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
