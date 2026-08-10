@@ -32,9 +32,13 @@ npm run dev
 
 ## API Endpoints
 
-### Auth
-- `POST /api/users/signup`
-- `POST /api/users/signin`
+### Auth and account
+- `POST   /api/users/signup`
+- `POST   /api/users/signin`
+- `GET    /api/users/me/export` — authenticated JSON download
+- `DELETE /api/users/me` — authenticated; body must be `{ "confirm": "DELETE" }`
+
+Exports include the public user profile, note content/metadata, notebooks, tags, note-tag relationships, and attachment metadata. Image bytes, password hashes, auth sessions, reset/OTP records, and share secrets are intentionally excluded. Account deletion permanently removes all owned database records and uploaded image files, then clears refresh cookies.
 
 ### Notes (Protected)
 - `GET    /api/notes`
@@ -103,4 +107,4 @@ By default Playwright targets `http://127.0.0.1:5000`. It reuses an existing ser
 PLAYWRIGHT_BASE_URL=https://example.test npm run test:e2e
 ```
 
-The suite uses a unique throwaway email and unique note, notebook, tag, and search values on every run. All product steps are UI-driven (no API-assisted setup): demo OTP signup, note creation and explicit save, reload persistence, search, notebook assignment/filtering, tag assignment/filtering, pin ordering, trash/restore, and logout/session revocation. Failure-only screenshots and retained traces are written to ignored Playwright artifact directories.
+The suite uses unique throwaway data on every run. The main MVP journey is UI-driven; a focused API-level account test verifies export contents, confirmation enforcement, complete account/file deletion, session invalidation, failed re-login, and isolation from another user. Failure-only screenshots and retained traces are written to ignored Playwright artifact directories.

@@ -53,6 +53,12 @@ PORT=3000 API_TARGET=http://127.0.0.1:5000 node dev-server.mjs
 - Share secrets are 32 random bytes; only SHA-256 hashes are stored. Public routes are `/api/public/share/:token` and `/api/public/share/:token/files/:attachmentId`.
 - Public share reads expose only title/body and safely scoped note images. Revoked/invalid shares return 404. Trashed notes also return 404 publicly; restoring an enabled share makes it readable again.
 
+## Account export & delete
+
+Authenticated users can download JSON from `GET /api/users/me/export`. It includes their profile (never the password hash), notes and editor content, notebooks, tags, and attachment metadata; uploaded image bytes and auth/share secrets are not included. In the app, open **Account → Export data**.
+
+`DELETE /api/users/me` requires the exact JSON body `{ "confirm": "DELETE" }`. The app requires typing `DELETE`. A successful deletion removes notes, notebooks, tags, shares, OTP/reset/refresh records, attachment rows and local files, then clears refresh cookies. Remaining access tokens fail immediately because protected requests verify that the user still exists. This operation is irreversible; export and verify backups first.
+
 ## Optional Sentry monitoring
 
 Set `SENTRY_DSN` in the backend environment to enable `@sentry/node`. Leave it empty in development if you do not want monitoring noise. `SENTRY_ENVIRONMENT` is optional and otherwise follows `NODE_ENV`.

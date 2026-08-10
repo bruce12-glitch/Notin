@@ -1,4 +1,6 @@
-import { test, expect } from '@playwright/test';
+import fs from 'node:fs';
+import path from 'node:path';
+import { test, expect, request as requestFactory } from '@playwright/test';
 
 const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const email = `notin-e2e-${runId}@example.test`;
@@ -224,4 +226,100 @@ test('MVP journey: OTP, note persistence, organize, search, share, pin, trash, r
   await expect(page).toHaveURL(/\/login\.html$/);
   await page.goto('/app.html');
   await expect(page).toHaveURL(/\/login\.html$/);
+});
+
+test('account export and confirmed deletion wipe owned data without affecting another user', async ({ baseURL }) => {
+  const ownerApi = await requestFactory.newContext({ baseURL });
+  const otherApi = await requestFactory.newContext({ baseURL });
+  const ownerEmail = `account-owner-${runId}@example.test`;
+  const otherEmail = `account-other-${runId}@example.test`;
+  const password = 'SmokePassword-123!';
+  const checksLocalDisk = ['127.0.0.1', 'localhost'].includes(new URL(baseURL).hostname);
+  const uploadDirectory = path.resolve('uploads');
+  const filesBefore = checksLocalDisk && fs.existsSync(uploadDirectory) ? new Set(fs.readdirSync(uploadDirectory)) : new Set();
+  let uploadedDiskFile = null;
+
+  try {
+    const ownerSignup = await ownerApi.post('/api/users/signup', { data: { email: ownerEmail, password, username: 'Export Owner' } });
+    expect(ownerSignup.status()).toBe(201);
+    const ownerAuth = await ownerSignup.json();
+    const ownerAuthorization = `Bearer ${ownerAuth.accessToken}`;
+    const ownerHeaders = { Authorization: ownerAuthorization };
+
+    const notebookResponse = await ownerApi.post('/api/notebooks', { headers: ownerHeaders, data: { name: `Export Notebook ${runId}` } });
+    expect(notebookResponse.status()).toBe(201);
+    const notebook = await notebookResponse.json();
+    const tagResponse = await ownerApi.post('/api/tags', { headers: ownerHeaders, data: { name: `export-tag-${runId}` } });
+    expect(tagResponse.status()).toBe(201);
+    const tag = await tagResponse.json();
+
+    const noteResponse = await ownerApi.post('/api/notes', {
+      headers: ownerHeaders,
+      data: { title: `Export Note ${runId}`, contentText: 'Exported account body', description: 'Exported account body', notebookId: notebook.id },
+    });
+    expect(noteResponse.status()).toBe(201);
+    let note = await noteResponse.json();
+    const taggedNoteResponse = await ownerApi.put(`/api/notes/${note.id}`, { headers: ownerHeaders, data: { tagIds: [tag.id], isPinned: true } });
+    expect(taggedNoteResponse.ok()).toBeTruthy();
+    note = await taggedNoteResponse.json();
+
+    const imageBytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');
+    const attachmentResponse = await ownerApi.post(`/api/notes/${note.id}/attachments`, {
+      headers: ownerHeaders,
+      multipart: { images: { name: `account-${runId}.png`, mimeType: 'image/png', buffer: imageBytes } },
+    });
+    expect(attachmentResponse.status()).toBe(201);
+    const [attachment] = await attachmentResponse.json();
+    if (checksLocalDisk) {
+      const newFiles = fs.readdirSync(uploadDirectory).filter((file) => !filesBefore.has(file));
+      expect(newFiles).toHaveLength(1);
+      [uploadedDiskFile] = newFiles;
+    }
+
+    const shareResponse = await ownerApi.post(`/api/notes/${note.id}/share`, { headers: ownerHeaders });
+    expect(shareResponse.status()).toBe(201);
+    const share = await shareResponse.json();
+
+    const exportResponse = await ownerApi.get('/api/users/me/export', { headers: ownerHeaders });
+    expect(exportResponse.status()).toBe(200);
+    expect(exportResponse.headers()['content-disposition']).toContain('attachment; filename="notin-export-');
+    const exported = await exportResponse.json();
+    expect(exported.user).toMatchObject({ email: ownerEmail, username: 'Export Owner' });
+    expect(exported.user).not.toHaveProperty('password');
+    expect(exported.notes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: note.id, title: `Export Note ${runId}`, contentText: 'Exported account body', isPinned: true, tags: [expect.objectContaining({ id: tag.id })] }),
+    ]));
+    expect(exported.notebooks).toEqual(expect.arrayContaining([expect.objectContaining({ id: notebook.id })]));
+    expect(exported.tags).toEqual(expect.arrayContaining([expect.objectContaining({ id: tag.id })]));
+    expect(exported.attachments).toEqual(expect.arrayContaining([expect.objectContaining({ id: attachment.id, noteId: note.id, mime: 'image/png' })]));
+
+    const wrongConfirm = await ownerApi.delete('/api/users/me', { headers: ownerHeaders, data: { confirm: 'delete' } });
+    expect(wrongConfirm.status()).toBe(400);
+    expect((await ownerApi.get('/api/notes', { headers: ownerHeaders })).ok()).toBeTruthy();
+
+    const otherSignup = await otherApi.post('/api/users/signup', { data: { email: otherEmail, password } });
+    expect(otherSignup.status()).toBe(201);
+    const otherAuth = await otherSignup.json();
+    const otherHeaders = { Authorization: `Bearer ${otherAuth.accessToken}` };
+    const otherNote = await otherApi.post('/api/notes', { headers: otherHeaders, data: { title: `Other user ${runId}` } });
+    expect(otherNote.status()).toBe(201);
+
+    const deleteResponse = await ownerApi.delete('/api/users/me', { headers: ownerHeaders, data: { confirm: 'DELETE' } });
+    expect(deleteResponse.status()).toBe(204);
+    if (checksLocalDisk) expect(fs.existsSync(path.join(uploadDirectory, uploadedDiskFile))).toBeFalsy();
+
+    expect((await ownerApi.get('/api/notes', { headers: ownerHeaders })).status()).toBe(401);
+    expect((await ownerApi.post('/api/auth/refresh')).status()).toBe(401);
+    expect((await ownerApi.post('/api/users/signin', { data: { email: ownerEmail, password } })).status()).toBe(404);
+    expect((await ownerApi.get(`/api/public/share/${share.token}`)).status()).toBe(404);
+    expect((await ownerApi.get(attachment.url, { headers: ownerHeaders })).status()).toBe(401);
+
+    const otherNotesResponse = await otherApi.get('/api/notes', { headers: otherHeaders });
+    expect(otherNotesResponse.ok()).toBeTruthy();
+    const otherNotes = await otherNotesResponse.json();
+    expect(otherNotes).toEqual(expect.arrayContaining([expect.objectContaining({ title: `Other user ${runId}` })]));
+  } finally {
+    await ownerApi.dispose();
+    await otherApi.dispose();
+  }
 });

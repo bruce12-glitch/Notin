@@ -90,6 +90,7 @@
       </nav>
       <div class="app-sidebar-bottom">
         <div class="app-email" id="appEmail" title="">—</div>
+        <button class="app-btn-account" id="accountBtn">Account</button>
         <button class="app-btn-logout" id="logoutBtn">Log out</button>
       </div>
     </aside>
@@ -204,6 +205,28 @@
         <div id="tiptapEditor" class="tiptap-editor" aria-label="Note body"></div>
       </div>
     </main>
+  </div>
+  <!-- WP-AUTH-004 — account export and permanent deletion -->
+  <div class="app-modal" id="accountModal" hidden>
+    <div class="app-modal-backdrop" id="accountModalBackdrop"></div>
+    <div class="app-modal-card app-account-card" role="dialog" aria-modal="true" aria-labelledby="accountModalTitle">
+      <div class="app-account-head">
+        <h3 id="accountModalTitle">Account</h3>
+        <button type="button" class="app-account-close" id="accountModalClose" aria-label="Close account panel">×</button>
+      </div>
+      <section class="app-account-section">
+        <h4>Export your data</h4>
+        <p>Download notes, notebooks, tags, and image metadata as JSON. Image files are not included.</p>
+        <button type="button" class="app-account-export" id="exportDataBtn">Export data</button>
+      </section>
+      <section class="app-account-section app-account-danger">
+        <h4>Delete account</h4>
+        <p>This permanently removes your account, notes, shares, sessions, and uploaded images. Type <strong>DELETE</strong> to continue.</p>
+        <input id="deleteAccountConfirm" type="text" autocomplete="off" placeholder="Type DELETE" aria-label="Type DELETE to confirm">
+        <button type="button" id="deleteAccountBtn" disabled>Delete account permanently</button>
+      </section>
+      <div class="app-account-status" id="accountStatus" aria-live="polite"></div>
+    </div>
   </div>
   <!-- Delete forever confirm (no alert) -->
   <div class="app-modal" id="deleteModal" hidden>

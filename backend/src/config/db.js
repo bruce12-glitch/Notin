@@ -165,6 +165,31 @@ const db = {
   async query(text, params) {
     return query(text, params);
   },
+  async $transaction(callback) {
+    if (usePostgres && pool) {
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        const result = await callback({ query: (text, params = []) => client.query(text, params) });
+        await client.query('COMMIT');
+        return result;
+      } catch (error) {
+        await client.query('ROLLBACK').catch(() => {});
+        throw error;
+      } finally {
+        client.release();
+      }
+    }
+    querySqlite('BEGIN');
+    try {
+      const result = await callback({ query: (text, params = []) => Promise.resolve(querySqlite(text, params)) });
+      querySqlite('COMMIT');
+      return result;
+    } catch (error) {
+      try { querySqlite('ROLLBACK'); } catch {}
+      throw error;
+    }
+  },
   get usePostgres() { return usePostgres; },
   get sqlitePath() { return sqlitePath; },
   user: {

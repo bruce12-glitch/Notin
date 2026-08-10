@@ -18686,6 +18686,14 @@ var newBtn = document.getElementById("newNoteBtn");
 var newBtnEmpty = document.getElementById("newNoteBtnEmpty");
 var newWrap = document.getElementById("newNoteWrap");
 var logoutBtn = document.getElementById("logoutBtn");
+var accountBtn = document.getElementById("accountBtn");
+var accountModal = document.getElementById("accountModal");
+var accountModalBackdrop = document.getElementById("accountModalBackdrop");
+var accountModalClose = document.getElementById("accountModalClose");
+var exportDataBtn = document.getElementById("exportDataBtn");
+var deleteAccountConfirm = document.getElementById("deleteAccountConfirm");
+var deleteAccountBtn = document.getElementById("deleteAccountBtn");
+var accountStatus = document.getElementById("accountStatus");
 var errorBanner = document.getElementById("appError");
 var mobileBar = document.getElementById("mobileBar");
 var mobileBack = document.getElementById("mobileBack");
@@ -19912,6 +19920,83 @@ if (searchClear) searchClear.addEventListener("click", () => {
 if (clearSearchEmptyBtn) clearSearchEmptyBtn.addEventListener("click", () => {
   clearSearchNow();
   if (searchInput) searchInput.focus();
+});
+function openAccountModal() {
+  if (!accountModal) return;
+  accountModal.hidden = false;
+  if (accountStatus) accountStatus.textContent = "";
+  if (deleteAccountConfirm) deleteAccountConfirm.value = "";
+  if (deleteAccountBtn) deleteAccountBtn.disabled = true;
+  exportDataBtn?.focus();
+}
+function closeAccountModal() {
+  if (accountModal) accountModal.hidden = true;
+  if (accountStatus) accountStatus.textContent = "";
+  if (deleteAccountConfirm) deleteAccountConfirm.value = "";
+  if (deleteAccountBtn) deleteAccountBtn.disabled = true;
+}
+if (accountBtn) accountBtn.addEventListener("click", openAccountModal);
+if (accountModalClose) accountModalClose.addEventListener("click", closeAccountModal);
+if (accountModalBackdrop) accountModalBackdrop.addEventListener("click", closeAccountModal);
+if (deleteAccountConfirm) deleteAccountConfirm.addEventListener("input", () => {
+  if (deleteAccountBtn) deleteAccountBtn.disabled = deleteAccountConfirm.value !== "DELETE";
+  if (accountStatus) accountStatus.textContent = "";
+});
+if (exportDataBtn) exportDataBtn.addEventListener("click", async () => {
+  exportDataBtn.disabled = true;
+  if (accountStatus) accountStatus.textContent = "Preparing export\u2026";
+  try {
+    const res = await fetchWithAuth(API_BASE2 + "/api/users/me/export", { method: "GET" });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(j.message || `Export failed ${res.status}`);
+    }
+    const blob = await res.blob();
+    const disposition = res.headers.get("content-disposition") || "";
+    const filename = disposition.match(/filename="([^"]+)"/)?.[1] || "notin-export.json";
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1e3);
+    if (accountStatus) accountStatus.textContent = "Export downloaded";
+  } catch (e) {
+    if (accountStatus) accountStatus.textContent = e.message || "Could not export data";
+  } finally {
+    exportDataBtn.disabled = false;
+  }
+});
+if (deleteAccountBtn) deleteAccountBtn.addEventListener("click", async () => {
+  if (deleteAccountConfirm?.value !== "DELETE") return;
+  deleteAccountBtn.disabled = true;
+  if (exportDataBtn) exportDataBtn.disabled = true;
+  if (accountStatus) accountStatus.textContent = "Deleting account and files\u2026";
+  try {
+    const res = await fetchWithAuth(API_BASE2 + "/api/users/me", {
+      method: "DELETE",
+      body: JSON.stringify({ confirm: "DELETE" })
+    });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(j.message || `Delete failed ${res.status}`);
+    }
+    memToken = null;
+    try {
+      sessionStorage.removeItem("notin_email");
+    } catch {
+    }
+    redirectToLogin();
+  } catch (e) {
+    if (accountStatus) accountStatus.textContent = e.message || "Could not delete account";
+    deleteAccountBtn.disabled = deleteAccountConfirm?.value !== "DELETE";
+    if (exportDataBtn) exportDataBtn.disabled = false;
+  }
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && accountModal && !accountModal.hidden) closeAccountModal();
 });
 if (logoutBtn) logoutBtn.addEventListener("click", async () => {
   try {
