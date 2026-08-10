@@ -70,6 +70,14 @@ SENTRY_ENVIRONMENT=production
 
 An empty DSN is a no-op. A malformed DSN is ignored with a warning and does not prevent startup. Reports intentionally strip request data, users, extras, and breadcrumbs; never place passwords, OTPs, refresh/access tokens, reset tokens, or share tokens in manually captured metadata.
 
+## PWA / offline read
+
+`/app.html` links `manifest.webmanifest` and registers `/sw.js` on HTTPS or localhost. The service worker caches only versioned static shell assets (app/share HTML, JS, CSS, manifest, and icons). It deliberately bypasses every `/api/*` and `/auth/*` request, so Bearer-authenticated responses never enter shared Cache Storage.
+
+After successful online reads, the app stores a last-known notes/notebooks/tags snapshot in IndexedDB under the JWT user ID; no access or refresh token is persisted. The active user ID is session-only and is cleared on logout/account deletion, so another login reads only its own key. When `navigator.onLine` is false, the cached list and note body are read-only: create/edit/save, organize mutations, image loading, sharing, and account operations are disabled, and a clear offline banner is shown. This is not a sync engine—offline edits and attachment caching are intentionally unsupported.
+
+Manual check: sign in online, open/list notes, then in Chromium DevTools set **Network → Offline** and reload `/app.html`. Confirm the shell, cached list/body, and offline banner appear and editing is disabled. Reconnect and reload to resume normal online behavior. Service-worker registration is skipped under Playwright webdriver to keep E2E deterministic; the smoke suite still verifies the manifest, worker, and icons are served.
+
 ## E2E smoke test
 
 Install Chromium once, then run from `backend/`:

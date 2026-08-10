@@ -4,6 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Notin — Your notes</title>
+  <meta name="theme-color" content="#00a82d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -33,6 +38,9 @@
   </script>
 </head>
 <body>
+  <div class="app-offline-banner" id="offlineBanner" role="status" aria-live="polite" hidden>
+    You’re offline — saved notes are available read-only. Changes are disabled.
+  </div>
   <div class="app-layout is-list" id="appLayout">
     <!-- Sidebar ~220px -->
     <aside class="app-sidebar" aria-label="Sidebar">

@@ -18633,6 +18633,9 @@ var currentNotebookId = null;
 var tags = [];
 var currentTagId = null;
 var currentSort = "updated";
+var currentUserId = null;
+var offlineReadOnly = !navigator.onLine;
+var offlineSnapshot = null;
 var emailEl = document.getElementById("appEmail");
 var countEl = document.getElementById("noteCount");
 var countAllEl = document.getElementById("countAll");
@@ -18694,6 +18697,7 @@ var exportDataBtn = document.getElementById("exportDataBtn");
 var deleteAccountConfirm = document.getElementById("deleteAccountConfirm");
 var deleteAccountBtn = document.getElementById("deleteAccountBtn");
 var accountStatus = document.getElementById("accountStatus");
+var offlineBanner = document.getElementById("offlineBanner");
 var errorBanner = document.getElementById("appError");
 var mobileBar = document.getElementById("mobileBar");
 var mobileBack = document.getElementById("mobileBack");
@@ -18801,6 +18805,113 @@ function sortNotes(arr) {
   arr.sort(compareNotes);
   return arr;
 }
+var OFFLINE_DB_NAME = "notin-offline-v1";
+var OFFLINE_STORE = "snapshots";
+function idbRequest(request) {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+function idbTransactionDone(tx) {
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error || new Error("IndexedDB transaction aborted"));
+  });
+}
+async function openOfflineDb() {
+  if (!("indexedDB" in window)) return null;
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(OFFLINE_DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(OFFLINE_STORE)) db.createObjectStore(OFFLINE_STORE, { keyPath: "userId" });
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+async function readOfflineSnapshot(userId = currentUserId) {
+  if (!userId) return null;
+  try {
+    const db = await openOfflineDb();
+    if (!db) return null;
+    const tx = db.transaction(OFFLINE_STORE, "readonly");
+    const value = await idbRequest(tx.objectStore(OFFLINE_STORE).get(userId));
+    db.close();
+    return value || null;
+  } catch {
+    return null;
+  }
+}
+async function updateOfflineSnapshot(patch) {
+  if (!currentUserId || offlineReadOnly) return;
+  try {
+    const db = await openOfflineDb();
+    if (!db) return;
+    const tx = db.transaction(OFFLINE_STORE, "readwrite");
+    const store = tx.objectStore(OFFLINE_STORE);
+    const existing = await idbRequest(store.get(currentUserId)) || { userId: currentUserId, notes: [], notebooks: [], tags: [] };
+    const next = { ...existing, ...patch, userId: currentUserId, email: getEmail(), savedAt: (/* @__PURE__ */ new Date()).toISOString() };
+    store.put(next);
+    await idbTransactionDone(tx);
+    offlineSnapshot = next;
+    db.close();
+  } catch {
+  }
+}
+async function deleteOfflineSnapshot(userId = currentUserId) {
+  if (!userId) return;
+  try {
+    const db = await openOfflineDb();
+    if (!db) return;
+    const tx = db.transaction(OFFLINE_STORE, "readwrite");
+    tx.objectStore(OFFLINE_STORE).delete(userId);
+    await idbTransactionDone(tx);
+    db.close();
+  } catch {
+  }
+}
+function userIdFromToken(token) {
+  try {
+    const encoded = token.split(".")[1];
+    const normalized = encoded.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(encoded.length / 4) * 4, "=");
+    return JSON.parse(atob(normalized)).sub || null;
+  } catch {
+    return null;
+  }
+}
+function cachedNotesForCurrentView() {
+  let cached = Array.isArray(offlineSnapshot?.notes) ? [...offlineSnapshot.notes] : [];
+  cached = cached.filter((note) => currentFilter === "trash" ? !!note.isTrashed : !note.isTrashed);
+  if (currentNotebookId) cached = cached.filter((note) => note.notebookId === currentNotebookId);
+  if (currentTagId) cached = cached.filter((note) => (note.tags || []).some((tag) => tag.id === currentTagId));
+  if (currentQuery) {
+    const q = currentQuery.toLowerCase();
+    cached = cached.filter((note) => `${note.title || ""} ${plainFromNote(note)}`.toLowerCase().includes(q));
+  }
+  return sortNotes(cached);
+}
+function loadCachedNotes() {
+  notes = cachedNotesForCurrentView();
+  renderList();
+  const all = Array.isArray(offlineSnapshot?.notes) ? offlineSnapshot.notes : [];
+  const activeCount = all.filter((note) => !note.isTrashed).length;
+  const trashCount = all.filter((note) => !!note.isTrashed).length;
+  if (countAllEl) countAllEl.textContent = String(activeCount);
+  if (countTrashEl) countTrashEl.textContent = String(trashCount);
+  if (countEl) countEl.textContent = `${notes.length} ${notes.length === 1 ? "note" : "notes"}`;
+  if (notes.length) {
+    const next = notes.find((note) => note.id === selectedId) || notes[0];
+    selectNote(next.id);
+  } else {
+    selectedId = null;
+    titleInput.value = "";
+    if (editor) editor.commands.setContent(createEmptyDoc(), false);
+    updateEditorForSelection(null);
+  }
+}
 async function bootstrapToken() {
   try {
     const r = await fetch(API_BASE2 + "/api/auth/refresh", { method: "POST", credentials: "include" });
@@ -18864,6 +18975,12 @@ function updateNav() {
   renderTags();
 }
 async function updateCounts() {
+  if (offlineReadOnly) {
+    const all = Array.isArray(offlineSnapshot?.notes) ? offlineSnapshot.notes : [];
+    if (countAllEl) countAllEl.textContent = String(all.filter((note) => !note.isTrashed).length);
+    if (countTrashEl) countTrashEl.textContent = String(all.filter((note) => !!note.isTrashed).length);
+    return;
+  }
   try {
     const [activeRes, trashRes] = await Promise.all([
       fetchWithAuth(API_BASE2 + "/api/notes?filter=active", { method: "GET" }),
@@ -18871,6 +18988,7 @@ async function updateCounts() {
     ]);
     const a = activeRes.ok ? await activeRes.json() : [];
     const t = trashRes.ok ? await trashRes.json() : [];
+    if (activeRes.ok && trashRes.ok) await updateOfflineSnapshot({ notes: [...Array.isArray(a) ? a : [], ...Array.isArray(t) ? t : []] });
     const aCount = Array.isArray(a) ? a.length : 0;
     const tCount = Array.isArray(t) ? t.length : 0;
     if (countAllEl) countAllEl.textContent = String(aCount);
@@ -18987,6 +19105,10 @@ function updateToolbar() {
 }
 async function loadNotes() {
   setError("");
+  if (offlineReadOnly) {
+    loadCachedNotes();
+    return;
+  }
   try {
     const qs = `/api/notes?filter=${currentFilter}` + (currentQuery ? `&q=${encodeURIComponent(currentQuery)}` : "") + (currentNotebookId ? `&notebookId=${encodeURIComponent(currentNotebookId)}` : "") + (currentTagId ? `&tagId=${encodeURIComponent(currentTagId)}` : "");
     const res = await fetchWithAuth(API_BASE2 + qs, { method: "GET" });
@@ -19077,26 +19199,31 @@ function escapeHtml(s) {
 function updateEditorForSelection(note) {
   const isTrashed = !!(note && note.isTrashed);
   const hasSelection2 = !!note;
-  updateEditorDisabled(!hasSelection2 || isTrashed);
+  const readOnly = offlineReadOnly;
+  updateEditorDisabled(!hasSelection2 || isTrashed || readOnly);
   if (nbSelect) {
-    nbSelect.disabled = !hasSelection2 || isTrashed;
+    nbSelect.disabled = !hasSelection2 || isTrashed || readOnly;
     nbSelect.value = note && note.notebookId || "";
   }
   renderTagChips(hasSelection2 ? note : null);
-  if (shareBtn) shareBtn.hidden = !hasSelection2 || isTrashed;
+  if (tagAddSelect) tagAddSelect.disabled = readOnly || !hasSelection2 || isTrashed;
+  tagChips?.querySelectorAll("button").forEach((button) => {
+    button.disabled = readOnly;
+  });
+  if (shareBtn) shareBtn.hidden = !hasSelection2 || isTrashed || readOnly;
   if (sharePanel) {
-    if (!hasSelection2 || isTrashed) sharePanel.hidden = true;
+    if (!hasSelection2 || isTrashed || readOnly) sharePanel.hidden = true;
     else if (sharedNoteId === note.id && shareLinkInput?.value) sharePanel.hidden = false;
   }
   if (attachmentRow) attachmentRow.hidden = !hasSelection2;
   if (attachImageBtn) {
-    attachImageBtn.hidden = !hasSelection2 || isTrashed;
-    attachImageBtn.disabled = !hasSelection2 || isTrashed;
+    attachImageBtn.hidden = !hasSelection2 || isTrashed || readOnly;
+    attachImageBtn.disabled = !hasSelection2 || isTrashed || readOnly;
   }
   if (!hasSelection2) clearAttachmentGallery();
   if (pinBtn) {
-    pinBtn.hidden = !hasSelection2 || isTrashed;
-    pinBtn.disabled = !hasSelection2 || isTrashed;
+    pinBtn.hidden = !hasSelection2 || isTrashed || readOnly;
+    pinBtn.disabled = !hasSelection2 || isTrashed || readOnly;
     const pinned = !!(note && note.isPinned);
     pinBtn.classList.toggle("is-pinned", pinned);
     pinBtn.setAttribute("aria-pressed", pinned ? "true" : "false");
@@ -19104,15 +19231,17 @@ function updateEditorForSelection(note) {
     const lbl = pinBtn.querySelector(".app-pin-toggle-label");
     if (lbl) lbl.textContent = pinned ? "Pinned" : "Pin";
   }
-  if (trashBtn) trashBtn.hidden = !hasSelection2 || isTrashed;
-  if (restoreBtn) restoreBtn.hidden = !isTrashed;
-  if (deleteBtn) deleteBtn.hidden = !isTrashed;
+  if (trashBtn) trashBtn.hidden = !hasSelection2 || isTrashed || readOnly;
+  if (restoreBtn) restoreBtn.hidden = !isTrashed || readOnly;
+  if (deleteBtn) deleteBtn.hidden = !isTrashed || readOnly;
   const tb = document.getElementById("toolbar");
   if (tb) {
-    tb.style.opacity = isTrashed ? "0.5" : "1";
-    tb.style.pointerEvents = isTrashed ? "none" : "auto";
+    tb.style.opacity = isTrashed || readOnly ? "0.5" : "1";
+    tb.style.pointerEvents = isTrashed || readOnly ? "none" : "auto";
   }
-  if (isTrashed) {
+  if (readOnly && hasSelection2) {
+    setSaveStatus("Offline \xB7 read only", "is-error");
+  } else if (isTrashed) {
     setSaveStatus("Trashed", "is-error");
   } else if (hasSelection2) {
     setSaveStatus("Saved", "is-saved");
@@ -19146,7 +19275,7 @@ function updateEditorDisabled(disabled) {
   if (saveBtn) saveBtn.disabled = disabled;
   if (editor) {
     const isTrashed = !!notes.find((n) => n.id === selectedId)?.isTrashed;
-    const shouldDisable = disabled || isTrashed;
+    const shouldDisable = disabled || isTrashed || offlineReadOnly;
     editor.setEditable(!shouldDisable);
     const el = document.querySelector(".tiptap-editor");
     if (el) el.style.opacity = shouldDisable ? "0.5" : "1";
@@ -19166,7 +19295,7 @@ function resetSharePanel() {
 }
 if (shareBtn) shareBtn.addEventListener("click", async () => {
   const cur = notes.find((n) => n.id === selectedId);
-  if (!cur || cur.isTrashed) return;
+  if (offlineReadOnly || !cur || cur.isTrashed) return;
   shareBtn.disabled = true;
   if (sharePanel) sharePanel.hidden = false;
   if (shareStatus) shareStatus.textContent = "Creating link\u2026";
@@ -19230,6 +19359,11 @@ function clearAttachmentGallery() {
 }
 async function loadAttachments(note) {
   if (!attachmentGallery || !note) return;
+  if (offlineReadOnly) {
+    clearAttachmentGallery();
+    if (attachmentStatus) attachmentStatus.textContent = "Images are unavailable offline";
+    return;
+  }
   const version = ++attachmentLoadVersion;
   attachmentObjectUrls.forEach((url) => URL.revokeObjectURL(url));
   attachmentObjectUrls = [];
@@ -19280,7 +19414,7 @@ if (attachImageBtn) attachImageBtn.addEventListener("click", () => attachImageIn
 if (attachImageInput) attachImageInput.addEventListener("change", async () => {
   const cur = notes.find((n) => n.id === selectedId);
   const files = [...attachImageInput.files || []];
-  if (!cur || cur.isTrashed || !files.length) return;
+  if (offlineReadOnly || !cur || cur.isTrashed || !files.length) return;
   const form = new FormData();
   files.forEach((file) => form.append("images", file));
   if (attachmentStatus) attachmentStatus.textContent = "Uploading\u2026";
@@ -19298,6 +19432,10 @@ if (attachImageInput) attachImageInput.addEventListener("change", async () => {
   }
 });
 async function createNote() {
+  if (offlineReadOnly) {
+    setSaveStatus("Offline \xB7 read only", "is-error");
+    return;
+  }
   if (currentQuery) clearSearchNow(false);
   if (currentFilter === "trash") {
     currentFilter = "active";
@@ -19336,6 +19474,10 @@ async function createNote() {
   }
 }
 async function saveNote() {
+  if (offlineReadOnly) {
+    setSaveStatus("Offline \xB7 read only", "is-error");
+    return;
+  }
   if (!selectedId) return;
   const cur = notes.find((n) => n.id === selectedId);
   if (cur && cur.isTrashed) {
@@ -19538,11 +19680,18 @@ if (navTrash) navTrash.addEventListener("click", async () => {
   await loadNotes();
 });
 async function loadNotebooks() {
+  if (offlineReadOnly) {
+    notebooks = Array.isArray(offlineSnapshot?.notebooks) ? offlineSnapshot.notebooks : [];
+    renderNotebooks();
+    populateNbSelect();
+    return;
+  }
   try {
     const res = await fetchWithAuth(API_BASE2 + "/api/notebooks", { method: "GET" });
     if (!res.ok) throw new Error(`Fetch failed ${res.status}`);
     const data = await res.json();
     notebooks = Array.isArray(data) ? data : [];
+    await updateOfflineSnapshot({ notebooks });
   } catch (e) {
     notebooks = [];
   }
@@ -19571,7 +19720,9 @@ function renderNotebooks() {
       </button>
       <button type="button" class="app-nb-del" title="Delete notebook" aria-label="Delete notebook ${escapeHtml(nb.name)}">\xD7</button>`;
     row.querySelector(".app-nb-open").addEventListener("click", () => selectNotebook(nb.id));
-    row.querySelector(".app-nb-del").addEventListener("click", () => confirmDeleteNotebook(row, nb));
+    const deleteControl = row.querySelector(".app-nb-del");
+    if (offlineReadOnly) deleteControl.hidden = true;
+    else deleteControl.addEventListener("click", () => confirmDeleteNotebook(row, nb));
     notebookListEl.appendChild(row);
   });
 }
@@ -19629,6 +19780,7 @@ function hideNotebookForm() {
   if (newNotebookErr) newNotebookErr.textContent = "";
 }
 async function submitNotebook() {
+  if (offlineReadOnly) return;
   const name = (newNotebookInput?.value || "").trim();
   if (!name) {
     if (newNotebookErr) newNotebookErr.textContent = "Name your notebook.";
@@ -19683,11 +19835,18 @@ if (nbSelect) nbSelect.addEventListener("change", async () => {
   }
 });
 async function loadTags() {
+  if (offlineReadOnly) {
+    tags = Array.isArray(offlineSnapshot?.tags) ? offlineSnapshot.tags : [];
+    renderTags();
+    renderTagChips(notes.find((n) => n.id === selectedId) || null);
+    return;
+  }
   try {
     const res = await fetchWithAuth(API_BASE2 + "/api/tags", { method: "GET" });
     if (!res.ok) throw new Error(`Fetch failed ${res.status}`);
     const data = await res.json();
     tags = Array.isArray(data) ? data : [];
+    await updateOfflineSnapshot({ tags });
   } catch (e) {
     tags = [];
   }
@@ -19717,7 +19876,9 @@ function renderTags() {
       </button>
       <button type="button" class="app-nb-del" title="Delete tag" aria-label="Delete tag ${escapeHtml(t.name)}">\xD7</button>`;
     row.querySelector(".app-nb-open").addEventListener("click", () => selectTag(t.id));
-    row.querySelector(".app-nb-del").addEventListener("click", () => confirmDeleteTag(row, t));
+    const deleteControl = row.querySelector(".app-nb-del");
+    if (offlineReadOnly) deleteControl.hidden = true;
+    else deleteControl.addEventListener("click", () => confirmDeleteTag(row, t));
     tagListEl.appendChild(row);
   });
 }
@@ -19776,6 +19937,7 @@ function hideTagForm() {
   if (newTagErr) newTagErr.textContent = "";
 }
 async function submitTag() {
+  if (offlineReadOnly) return;
   const name = (newTagInput?.value || "").trim();
   if (!name) {
     if (newTagErr) newTagErr.textContent = "Name your tag.";
@@ -19861,6 +20023,7 @@ if (tagAddSelect) tagAddSelect.addEventListener("change", async () => {
   }
 });
 async function togglePin(id) {
+  if (offlineReadOnly) return;
   if (!id) return;
   const cur = notes.find((n) => n.id === id);
   if (!cur || cur.isTrashed) return;
@@ -19921,6 +20084,47 @@ if (clearSearchEmptyBtn) clearSearchEmptyBtn.addEventListener("click", () => {
   clearSearchNow();
   if (searchInput) searchInput.focus();
 });
+function updateConnectivityUi() {
+  if (offlineBanner) offlineBanner.hidden = !offlineReadOnly;
+  document.body.classList.toggle("is-offline", offlineReadOnly);
+  if (newBtn) newBtn.disabled = offlineReadOnly;
+  if (newBtnEmpty) newBtnEmpty.disabled = offlineReadOnly;
+  if (newNotebookBtn) newNotebookBtn.disabled = offlineReadOnly;
+  if (newTagBtn) newTagBtn.disabled = offlineReadOnly;
+  if (accountBtn) accountBtn.disabled = offlineReadOnly;
+  if (offlineReadOnly && accountModal && !accountModal.hidden) closeAccountModal();
+  renderNotebooks();
+  renderTags();
+  const selected = notes.find((note) => note.id === selectedId) || null;
+  updateEditorForSelection(selected);
+}
+window.addEventListener("offline", async () => {
+  offlineReadOnly = true;
+  offlineSnapshot = await readOfflineSnapshot() || offlineSnapshot;
+  updateConnectivityUi();
+  loadCachedNotes();
+});
+window.addEventListener("online", async () => {
+  offlineReadOnly = false;
+  updateConnectivityUi();
+  if (!memToken) {
+    location.reload();
+    return;
+  }
+  await loadNotebooks();
+  await loadTags();
+  await loadNotes();
+});
+async function registerServiceWorker() {
+  const local = ["localhost", "127.0.0.1", "::1"].includes(location.hostname);
+  if (!("serviceWorker" in navigator) || !window.isSecureContext && !local) return;
+  if (navigator.webdriver) return;
+  try {
+    await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+  } catch (e) {
+    console.warn("Service worker registration failed", e);
+  }
+}
 function openAccountModal() {
   if (!accountModal) return;
   accountModal.hidden = false;
@@ -19983,9 +20187,12 @@ if (deleteAccountBtn) deleteAccountBtn.addEventListener("click", async () => {
       const j = await res.json().catch(() => ({}));
       throw new Error(j.message || `Delete failed ${res.status}`);
     }
+    await deleteOfflineSnapshot();
     memToken = null;
+    currentUserId = null;
     try {
       sessionStorage.removeItem("notin_email");
+      sessionStorage.removeItem("notin_offline_user_id");
     } catch {
     }
     redirectToLogin();
@@ -20008,8 +20215,10 @@ if (logoutBtn) logoutBtn.addEventListener("click", async () => {
   } catch {
   }
   memToken = null;
+  currentUserId = null;
   try {
     sessionStorage.removeItem("notin_email");
+    sessionStorage.removeItem("notin_offline_user_id");
   } catch {
   }
   redirectToLogin();
@@ -20023,6 +20232,7 @@ if (mobileBack) {
   });
 }
 initEditor();
+registerServiceWorker();
 (async () => {
   const email = getEmail();
   if (emailEl) {
@@ -20031,9 +20241,35 @@ initEditor();
   }
   const tok = await bootstrapToken();
   if (!tok) {
+    if (!navigator.onLine) {
+      try {
+        currentUserId = sessionStorage.getItem("notin_offline_user_id");
+      } catch {
+      }
+      offlineSnapshot = await readOfflineSnapshot();
+      offlineReadOnly = true;
+      notebooks = Array.isArray(offlineSnapshot?.notebooks) ? offlineSnapshot.notebooks : [];
+      tags = Array.isArray(offlineSnapshot?.tags) ? offlineSnapshot.tags : [];
+      updateConnectivityUi();
+      updateNav();
+      loadCachedNotes();
+      if (!currentUserId || !offlineSnapshot) setError("No saved notes are available for this offline session. Reconnect to sign in.");
+      if (layout) layout.classList.add("is-list");
+      return;
+    }
     redirectToLogin();
     return;
   }
+  currentUserId = userIdFromToken(tok);
+  if (currentUserId) {
+    try {
+      sessionStorage.setItem("notin_offline_user_id", currentUserId);
+    } catch {
+    }
+    offlineSnapshot = await readOfflineSnapshot(currentUserId);
+  }
+  offlineReadOnly = false;
+  updateConnectivityUi();
   updateEditorDisabled(true);
   await loadNotebooks();
   await loadTags();

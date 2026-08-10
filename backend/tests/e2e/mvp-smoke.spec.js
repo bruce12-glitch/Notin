@@ -21,6 +21,16 @@ test('health endpoint reports the unified API is ready', async ({ request }) => 
     ok: true,
     service: 'notin-api',
   });
+  const manifestResponse = await request.get('/manifest.webmanifest');
+  expect(manifestResponse.ok()).toBeTruthy();
+  await expect(manifestResponse.json()).resolves.toMatchObject({
+    name: 'Notin — Your Second Brain',
+    start_url: '/app.html',
+    display: 'standalone',
+  });
+  expect((await request.get('/sw.js')).ok()).toBeTruthy();
+  expect((await request.get('/icons/icon-192.png')).ok()).toBeTruthy();
+  expect((await request.get('/icons/icon-512.png')).ok()).toBeTruthy();
 });
 
 test('MVP journey: OTP, note persistence, organize, search, share, pin, trash, restore, logout', async ({ page, request, browser }) => {
