@@ -7,3 +7,6 @@ prisma/migrations
 # Playwright artifacts
 playwright-report/
 test-results/
+
+# Local image attachment storage
+uploads/

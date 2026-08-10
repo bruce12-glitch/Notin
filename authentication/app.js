@@ -61,6 +61,14 @@ const tagAddSelect = document.getElementById('tagAddSelect');
 // WP-APP-007 — pin notes + sort control
 const pinBtn = document.getElementById('pinBtn');       // editor action (hidden until a note is selected)
 const sortSelect = document.getElementById('sortSelect'); // list-header sort dropdown
+// WP-APP-008 — image attachments
+const attachmentRow = document.getElementById('attachmentRow');
+const attachImageBtn = document.getElementById('attachImageBtn');
+const attachImageInput = document.getElementById('attachImageInput');
+const attachmentStatus = document.getElementById('attachmentStatus');
+const attachmentGallery = document.getElementById('attachmentGallery');
+let attachmentObjectUrls = [];
+let attachmentLoadVersion = 0;
 const titleInput = document.getElementById('editorTitle');
 const saveBtn = document.getElementById('saveBtn');
 const saveStatus = document.getElementById('saveStatus');
@@ -189,9 +197,10 @@ async function bootstrapToken(){
   return null;
 }
 async function fetchWithAuth(url, opts={}){
-  const headers = opts.headers || {};
+  const headers = {...(opts.headers || {})};
   if(memToken) headers['Authorization'] = `Bearer ${memToken}`;
-  headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+  // Let the browser add multipart boundaries for FormData uploads.
+  if(!(opts.body instanceof FormData)) headers['Content-Type'] = headers['Content-Type'] || 'application/json';
   let res = await fetch(url, {...opts, headers, credentials:'include'});
   if(res.status===401){
     const newTok = await bootstrapToken();
@@ -428,6 +437,13 @@ function updateEditorForSelection(note){
   }
   // WP-APP-006 — tag chips reflect selection (hidden for trashed/empty)
   renderTagChips(hasSelection ? note : null);
+  // WP-APP-008 — attachments remain visible in Trash but uploads/removals are read-only.
+  if(attachmentRow) attachmentRow.hidden = !hasSelection;
+  if(attachImageBtn){
+    attachImageBtn.hidden = !hasSelection || isTrashed;
+    attachImageBtn.disabled = !hasSelection || isTrashed;
+  }
+  if(!hasSelection) clearAttachmentGallery();
   // WP-APP-007 — editor pin control mirrors the selected note (hidden in Trash/no selection)
   if(pinBtn){
     pinBtn.hidden = !hasSelection || isTrashed;
@@ -469,6 +485,7 @@ function selectNote(id){
     setTimeout(()=> updateToolbar(), 30);
   }
   updateEditorForSelection(n);
+  loadAttachments(n);
   renderList();
   titleInput.focus();
 }
@@ -483,6 +500,78 @@ function updateEditorDisabled(disabled){
     if(el) el.style.opacity = shouldDisable ? '0.5' : '1';
   }
 }
+
+// ── WP-APP-008 — image attachments ──
+function clearAttachmentGallery(){
+  attachmentLoadVersion++;
+  attachmentObjectUrls.forEach(url=> URL.revokeObjectURL(url));
+  attachmentObjectUrls = [];
+  if(attachmentGallery) attachmentGallery.innerHTML = '';
+  if(attachmentStatus) attachmentStatus.textContent = '';
+}
+async function loadAttachments(note){
+  if(!attachmentGallery || !note) return;
+  const version = ++attachmentLoadVersion;
+  attachmentObjectUrls.forEach(url=> URL.revokeObjectURL(url));
+  attachmentObjectUrls = [];
+  attachmentGallery.innerHTML = '';
+  if(attachmentStatus) attachmentStatus.textContent = 'Loading images…';
+  try{
+    const res = await fetchWithAuth(API_BASE + `/api/notes/${note.id}/attachments`, {method:'GET'});
+    const items = await res.json().catch(()=>[]);
+    if(!res.ok) throw new Error(items.message || `Image list failed ${res.status}`);
+    if(version!==attachmentLoadVersion || selectedId!==note.id) return;
+    for(const item of items){
+      const fileRes = await fetchWithAuth(API_BASE + item.url, {method:'GET'});
+      if(!fileRes.ok) continue;
+      const blob = await fileRes.blob();
+      if(version!==attachmentLoadVersion || selectedId!==note.id) return;
+      const objectUrl = URL.createObjectURL(blob);
+      attachmentObjectUrls.push(objectUrl);
+      const card = document.createElement('div');
+      card.className = 'app-attachment-item';
+      card.dataset.attachmentId = item.id;
+      const safeName = escapeHtml(item.filename || 'image');
+      card.innerHTML = `<img alt="${safeName}"><span class="app-attachment-name" title="${safeName}">${safeName}</span>${note.isTrashed ? '' : `<button type="button" class="app-attachment-remove" aria-label="Remove image ${safeName}" title="Remove image">×</button>`}`;
+      card.querySelector('img').src = objectUrl;
+      const remove = card.querySelector('.app-attachment-remove');
+      if(remove) remove.addEventListener('click', ()=> removeAttachment(item.id, note));
+      attachmentGallery.appendChild(card);
+    }
+    if(attachmentStatus) attachmentStatus.textContent = items.length ? `${items.length} ${items.length===1?'image':'images'}` : 'No images';
+  }catch(e){
+    if(version===attachmentLoadVersion && attachmentStatus) attachmentStatus.textContent = e.message || 'Could not load images';
+  }
+}
+async function removeAttachment(id, note){
+  if(!id || !note || note.isTrashed) return;
+  if(attachmentStatus) attachmentStatus.textContent = 'Removing…';
+  try{
+    const res = await fetchWithAuth(API_BASE + `/api/attachments/${id}`, {method:'DELETE'});
+    if(!res.ok){ const j=await res.json().catch(()=>({})); throw new Error(j.message || `Remove failed ${res.status}`); }
+    await loadAttachments(note);
+  }catch(e){ if(attachmentStatus) attachmentStatus.textContent = e.message || 'Could not remove image'; }
+}
+if(attachImageBtn) attachImageBtn.addEventListener('click', ()=> attachImageInput?.click());
+if(attachImageInput) attachImageInput.addEventListener('change', async ()=>{
+  const cur = notes.find(n=>n.id===selectedId);
+  const files = [...(attachImageInput.files || [])];
+  if(!cur || cur.isTrashed || !files.length) return;
+  const form = new FormData();
+  files.forEach(file=> form.append('images', file));
+  if(attachmentStatus) attachmentStatus.textContent = 'Uploading…';
+  if(attachImageBtn) attachImageBtn.disabled = true;
+  try{
+    const res = await fetchWithAuth(API_BASE + `/api/notes/${cur.id}/attachments`, {method:'POST', body:form});
+    const j = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(j.message || `Upload failed ${res.status}`);
+    await loadAttachments(cur);
+  }catch(e){ if(attachmentStatus) attachmentStatus.textContent = e.message || 'Image upload failed'; }
+  finally{
+    attachImageInput.value = '';
+    if(attachImageBtn) attachImageBtn.disabled = false;
+  }
+});
 
 async function createNote(){
   // WP-APP-004 — a new note must never hide behind an active search filter

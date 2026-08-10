@@ -18665,6 +18665,13 @@ var tagChips = document.getElementById("tagChips");
 var tagAddSelect = document.getElementById("tagAddSelect");
 var pinBtn = document.getElementById("pinBtn");
 var sortSelect = document.getElementById("sortSelect");
+var attachmentRow = document.getElementById("attachmentRow");
+var attachImageBtn = document.getElementById("attachImageBtn");
+var attachImageInput = document.getElementById("attachImageInput");
+var attachmentStatus = document.getElementById("attachmentStatus");
+var attachmentGallery = document.getElementById("attachmentGallery");
+var attachmentObjectUrls = [];
+var attachmentLoadVersion = 0;
 var titleInput = document.getElementById("editorTitle");
 var saveBtn = document.getElementById("saveBtn");
 var saveStatus = document.getElementById("saveStatus");
@@ -18801,9 +18808,9 @@ async function bootstrapToken() {
   return null;
 }
 async function fetchWithAuth(url, opts = {}) {
-  const headers = opts.headers || {};
+  const headers = { ...opts.headers || {} };
   if (memToken) headers["Authorization"] = `Bearer ${memToken}`;
-  headers["Content-Type"] = headers["Content-Type"] || "application/json";
+  if (!(opts.body instanceof FormData)) headers["Content-Type"] = headers["Content-Type"] || "application/json";
   let res = await fetch(url, { ...opts, headers, credentials: "include" });
   if (res.status === 401) {
     const newTok = await bootstrapToken();
@@ -19061,6 +19068,12 @@ function updateEditorForSelection(note) {
     nbSelect.value = note && note.notebookId || "";
   }
   renderTagChips(hasSelection2 ? note : null);
+  if (attachmentRow) attachmentRow.hidden = !hasSelection2;
+  if (attachImageBtn) {
+    attachImageBtn.hidden = !hasSelection2 || isTrashed;
+    attachImageBtn.disabled = !hasSelection2 || isTrashed;
+  }
+  if (!hasSelection2) clearAttachmentGallery();
   if (pinBtn) {
     pinBtn.hidden = !hasSelection2 || isTrashed;
     pinBtn.disabled = !hasSelection2 || isTrashed;
@@ -19103,6 +19116,7 @@ function selectNote(id) {
     setTimeout(() => updateToolbar(), 30);
   }
   updateEditorForSelection(n);
+  loadAttachments(n);
   renderList();
   titleInput.focus();
 }
@@ -19117,6 +19131,82 @@ function updateEditorDisabled(disabled) {
     if (el) el.style.opacity = shouldDisable ? "0.5" : "1";
   }
 }
+function clearAttachmentGallery() {
+  attachmentLoadVersion++;
+  attachmentObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+  attachmentObjectUrls = [];
+  if (attachmentGallery) attachmentGallery.innerHTML = "";
+  if (attachmentStatus) attachmentStatus.textContent = "";
+}
+async function loadAttachments(note) {
+  if (!attachmentGallery || !note) return;
+  const version = ++attachmentLoadVersion;
+  attachmentObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+  attachmentObjectUrls = [];
+  attachmentGallery.innerHTML = "";
+  if (attachmentStatus) attachmentStatus.textContent = "Loading images\u2026";
+  try {
+    const res = await fetchWithAuth(API_BASE2 + `/api/notes/${note.id}/attachments`, { method: "GET" });
+    const items = await res.json().catch(() => []);
+    if (!res.ok) throw new Error(items.message || `Image list failed ${res.status}`);
+    if (version !== attachmentLoadVersion || selectedId !== note.id) return;
+    for (const item of items) {
+      const fileRes = await fetchWithAuth(API_BASE2 + item.url, { method: "GET" });
+      if (!fileRes.ok) continue;
+      const blob = await fileRes.blob();
+      if (version !== attachmentLoadVersion || selectedId !== note.id) return;
+      const objectUrl = URL.createObjectURL(blob);
+      attachmentObjectUrls.push(objectUrl);
+      const card = document.createElement("div");
+      card.className = "app-attachment-item";
+      card.dataset.attachmentId = item.id;
+      const safeName = escapeHtml(item.filename || "image");
+      card.innerHTML = `<img alt="${safeName}"><span class="app-attachment-name" title="${safeName}">${safeName}</span>${note.isTrashed ? "" : `<button type="button" class="app-attachment-remove" aria-label="Remove image ${safeName}" title="Remove image">\xD7</button>`}`;
+      card.querySelector("img").src = objectUrl;
+      const remove = card.querySelector(".app-attachment-remove");
+      if (remove) remove.addEventListener("click", () => removeAttachment(item.id, note));
+      attachmentGallery.appendChild(card);
+    }
+    if (attachmentStatus) attachmentStatus.textContent = items.length ? `${items.length} ${items.length === 1 ? "image" : "images"}` : "No images";
+  } catch (e) {
+    if (version === attachmentLoadVersion && attachmentStatus) attachmentStatus.textContent = e.message || "Could not load images";
+  }
+}
+async function removeAttachment(id, note) {
+  if (!id || !note || note.isTrashed) return;
+  if (attachmentStatus) attachmentStatus.textContent = "Removing\u2026";
+  try {
+    const res = await fetchWithAuth(API_BASE2 + `/api/attachments/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(j.message || `Remove failed ${res.status}`);
+    }
+    await loadAttachments(note);
+  } catch (e) {
+    if (attachmentStatus) attachmentStatus.textContent = e.message || "Could not remove image";
+  }
+}
+if (attachImageBtn) attachImageBtn.addEventListener("click", () => attachImageInput?.click());
+if (attachImageInput) attachImageInput.addEventListener("change", async () => {
+  const cur = notes.find((n) => n.id === selectedId);
+  const files = [...attachImageInput.files || []];
+  if (!cur || cur.isTrashed || !files.length) return;
+  const form = new FormData();
+  files.forEach((file) => form.append("images", file));
+  if (attachmentStatus) attachmentStatus.textContent = "Uploading\u2026";
+  if (attachImageBtn) attachImageBtn.disabled = true;
+  try {
+    const res = await fetchWithAuth(API_BASE2 + `/api/notes/${cur.id}/attachments`, { method: "POST", body: form });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(j.message || `Upload failed ${res.status}`);
+    await loadAttachments(cur);
+  } catch (e) {
+    if (attachmentStatus) attachmentStatus.textContent = e.message || "Image upload failed";
+  } finally {
+    attachImageInput.value = "";
+    if (attachImageBtn) attachImageBtn.disabled = false;
+  }
+});
 async function createNote() {
   if (currentQuery) clearSearchNow(false);
   if (currentFilter === "trash") {

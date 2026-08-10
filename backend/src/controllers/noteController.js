@@ -1,4 +1,5 @@
 import prisma from '../config/db.js';
+import { deleteAttachmentsForNote } from './attachmentController.js';
 
 export const createNote = async (req, res) => {
   const { title, description, contentJson, contentText, notebookId } = req.body;
@@ -203,6 +204,9 @@ export const deleteNote = async (req, res) => {
       return res.status(400).json({ message: 'Move to Trash first. Delete forever only allowed for trashed notes.' });
     }
 
+    // Metadata and local image files are retained while trashed/restored, and
+    // removed only when the owning note is permanently deleted.
+    await deleteAttachmentsForNote(id, userId);
     await prisma.note.delete({ where: { id } });
     res.status(200).json({ message: 'Note deleted successfully' });
   } catch (error) {

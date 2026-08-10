@@ -70,6 +70,31 @@ test('MVP journey: OTP, note persistence, organize, search, pin, trash, restore,
   await expect(page.locator('#saveStatus')).toHaveText('Saved');
   await expect(noteRow(page)).toBeVisible();
 
+  // Attach a generated 1x1 PNG through the UI (no binary fixture is committed).
+  const imageBytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');
+  const [uploadResponse] = await Promise.all([
+    page.waitForResponse((response) => response.url().includes('/attachments') && response.request().method() === 'POST'),
+    page.locator('#attachImageInput').setInputFiles({ name: `pixel-${runId}.png`, mimeType: 'image/png', buffer: imageBytes }),
+  ]);
+  expect(uploadResponse.status()).toBe(201);
+  const ownerAuthorization = uploadResponse.request().headers().authorization;
+  const [uploadedAttachment] = await uploadResponse.json();
+  const attachmentCard = page.locator(`[data-attachment-id="${uploadedAttachment.id}"]`);
+  await expect(attachmentCard).toBeVisible();
+  await expect(attachmentCard.locator('img')).toBeVisible();
+  await expect.poll(() => attachmentCard.locator('img').evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
+
+  // A second authenticated user cannot fetch another user's image bytes.
+  const otherEmail = `notin-e2e-other-${runId}@example.test`;
+  const otherChallengeResponse = await request.post('/api/auth/otp/demo-request', { data: { email: otherEmail } });
+  expect(otherChallengeResponse.ok()).toBeTruthy();
+  const otherChallenge = await otherChallengeResponse.json();
+  const otherAuthResponse = await request.post('/api/auth/otp/verify', { data: { challenge: otherChallenge.challenge, code: '123456' } });
+  expect(otherAuthResponse.ok()).toBeTruthy();
+  const otherAuth = await otherAuthResponse.json();
+  const forbiddenFile = await request.get(uploadedAttachment.url, { headers: { Authorization: `Bearer ${otherAuth.accessToken || otherAuth.token}` } });
+  expect(forbiddenFile.status()).toBe(404);
+
   // Assign and filter by tag using the shipped editor/sidebar controls.
   await page.locator('#tagAddSelect').selectOption({ label: tagName });
   await expect(page.locator('#tagChips')).toContainText(tagName);
@@ -96,6 +121,10 @@ test('MVP journey: OTP, note persistence, organize, search, pin, trash, restore,
   await noteRow(page).click();
   await expect(page.locator('#editorTitle')).toHaveValue(noteTitle);
   await expect(page.locator('#tiptapEditor .ProseMirror')).toContainText(noteBody);
+  const persistedAttachment = page.locator(`[data-attachment-id="${uploadedAttachment.id}"]`);
+  await expect(persistedAttachment).toBeVisible();
+  await expect(persistedAttachment.locator('img')).toBeVisible();
+  await expect.poll(() => persistedAttachment.locator('img').evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
 
   // Search is UI-driven and waits for the product's 300 ms debounce.
   await Promise.all([
@@ -116,9 +145,22 @@ test('MVP journey: OTP, note persistence, organize, search, pin, trash, restore,
   await expect(noteRow(page)).toBeVisible();
   await noteRow(page).click();
   await expect(page.locator('#restoreBtn')).toBeVisible();
+  await expect(page.locator(`[data-attachment-id="${uploadedAttachment.id}"]`)).toBeVisible();
   await page.locator('#restoreBtn').click();
   await expect(page.locator('#listTitle')).toHaveText('All Notes');
   await expect(noteRow(page)).toBeVisible();
+
+  // Permanent deletion removes attachment metadata/file access as well.
+  await page.locator('#trashBtn').click();
+  await page.locator('#navTrash').click();
+  await expect(noteRow(page)).toBeVisible();
+  await noteRow(page).click();
+  await page.locator('#deleteBtn').click();
+  await expect(page.locator('#deleteModal')).toBeVisible();
+  await page.locator('#modalConfirm').click();
+  await expect(noteRow(page)).toHaveCount(0);
+  const deletedFile = await request.get(uploadedAttachment.url, { headers: { Authorization: ownerAuthorization } });
+  expect(deletedFile.status()).toBe(404);
 
   // Logout revokes the refresh session and the app can no longer remain open.
   await page.locator('#logoutBtn').click();

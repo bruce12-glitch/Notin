@@ -168,6 +168,15 @@
           <option value="">+ Tag</option>
         </select>
       </div>
+      <!-- WP-APP-008 — image attachments (local-disk backed, protected API) -->
+      <div class="app-attachments" id="attachmentRow" hidden>
+        <div class="app-attachment-actions">
+          <button type="button" class="app-attach-btn" id="attachImageBtn">+ Image</button>
+          <input id="attachImageInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
+          <span class="app-attachment-status" id="attachmentStatus" aria-live="polite"></span>
+        </div>
+        <div class="app-attachment-gallery" id="attachmentGallery"></div>
+      </div>
       <!-- TipTap toolbar -->
       <div class="app-toolbar" id="toolbar" aria-label="Formatting toolbar">
         <button type="button" class="tb-btn" data-cmd="bold" title="Bold (Ctrl+B)"><b>B</b></button>

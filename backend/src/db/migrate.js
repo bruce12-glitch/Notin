@@ -128,6 +128,22 @@ async function migratePostgres(pool) {
   await pool.query(`CREATE INDEX IF NOT EXISTS "NoteTag_noteId_idx" ON "NoteTag" ("noteId");`);
   await pool.query(`CREATE INDEX IF NOT EXISTS "NoteTag_tagId_idx" ON "NoteTag" ("tagId");`);
 
+  // WP-APP-008 — image attachment metadata. Files live under UPLOAD_DIR on local disk.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "Attachment" (
+      id TEXT PRIMARY KEY,
+      "noteId" TEXT NOT NULL REFERENCES "Note"(id) ON DELETE CASCADE,
+      "userId" TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+      filename TEXT NOT NULL,
+      mime TEXT NOT NULL,
+      size INTEGER NOT NULL,
+      path TEXT NOT NULL,
+      "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "Attachment_noteId_idx" ON "Attachment" ("noteId");`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "Attachment_userId_idx" ON "Attachment" ("userId");`);
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS otp_challenges (
       id TEXT PRIMARY KEY,
@@ -252,6 +268,22 @@ function migrateSqlite(dbPath) {
   `);
   db.exec(`CREATE INDEX IF NOT EXISTS "NoteTag_noteId_idx" ON "NoteTag" ("noteId");`);
   db.exec(`CREATE INDEX IF NOT EXISTS "NoteTag_tagId_idx" ON "NoteTag" ("tagId");`);
+
+  // WP-APP-008 — image attachment metadata. Files live under UPLOAD_DIR on local disk.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS "Attachment" (
+      id TEXT PRIMARY KEY,
+      "noteId" TEXT NOT NULL REFERENCES "Note"(id) ON DELETE CASCADE,
+      "userId" TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+      filename TEXT NOT NULL,
+      mime TEXT NOT NULL,
+      size INTEGER NOT NULL,
+      path TEXT NOT NULL,
+      "createdAt" TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS "Attachment_noteId_idx" ON "Attachment" ("noteId");`);
+  db.exec(`CREATE INDEX IF NOT EXISTS "Attachment_userId_idx" ON "Attachment" ("userId");`);
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS otp_challenges (

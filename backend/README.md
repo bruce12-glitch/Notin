@@ -40,7 +40,19 @@ npm run dev
 - `PUT    /api/notes/:id`
 - `DELETE /api/notes/:id`
 
-All note routes require `Authorization: Bearer <token>` header.
+### Image attachments (Protected)
+- `GET  /api/notes/:noteId/attachments`
+- `POST /api/notes/:noteId/attachments` — multipart field `images`
+- `GET  /api/attachments/:id/file`
+- `DELETE /api/attachments/:id`
+
+All note and attachment routes require `Authorization: Bearer <token>`.
+
+## Image attachment storage
+
+Image files are stored on local disk in `backend/uploads/` by default (override with `UPLOAD_DIR`); only metadata is stored in the `Attachment` table. The upload directory is Git-ignored. PNG, JPEG, WebP, and GIF are accepted, up to **5 MB per file** and **10 images per note**. Original filenames are metadata only; random server filenames prevent path traversal and collisions.
+
+Attachment lists and file bytes are served only after bearer-token ownership checks. Images are retained while a note is in Trash and remain available after restore. Permanent note deletion removes both attachment rows and local files. Local-disk storage is intended for development/single-instance deployment; durable multi-instance production would require shared object storage.
 
 ## MVP smoke E2E (Playwright)
 

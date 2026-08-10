@@ -83,6 +83,20 @@
 .app-tag-hash{ flex:none; font-size:13px; font-weight:700; color:#8a8a85; }
 .app-nb-item.is-active .app-tag-hash{ color:#00a82d; }
 .app-tag-row{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:8px 18px; border-bottom:1px solid #eee; background:#fbfbfa; }
+/* WP-APP-008 — compact image attachment strip; auth page visuals remain untouched. */
+.app-attachments{ padding:8px 18px 10px; border-bottom:1px solid #eee; background:#fbfbfa; }
+.app-attachment-actions{ display:flex; align-items:center; gap:10px; min-height:30px; }
+.app-attach-btn{ border:1px solid #d8d8d4; border-radius:7px; background:#fff; color:#333; font:600 12px/1 Inter,sans-serif; padding:7px 10px; cursor:pointer; }
+.app-attach-btn:hover{ border-color:#00a82d; color:#007a22; }
+.app-attach-btn:disabled{ opacity:.5; cursor:not-allowed; }
+.app-attachment-status{ color:#6b6b6b; font-size:12px; }
+.app-attachment-gallery{ display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; }
+.app-attachment-gallery:empty{ display:none; }
+.app-attachment-item{ position:relative; width:112px; }
+.app-attachment-item img{ display:block; width:112px; height:82px; object-fit:cover; border:1px solid #ddd; border-radius:8px; background:#f0f0ed; }
+.app-attachment-name{ display:block; margin-top:4px; overflow:hidden; color:#666; font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+.app-attachment-remove{ position:absolute; top:4px; right:4px; width:22px; height:22px; border:0; border-radius:50%; background:rgba(20,20,20,.78); color:#fff; cursor:pointer; font-size:15px; line-height:22px; }
+.app-attachment-remove:hover{ background:#c5221f; }
 .app-tag-chips{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
 .app-chip{ display:inline-flex; align-items:center; gap:3px; height:24px; padding:0 6px 0 8px; background:#e8f4ec; color:#0b6b2f; border:1px solid #cfe8d6; border-radius:999px; font-size:12px; font-weight:600; line-height:1; }
 .app-chip-hash{ font-weight:700; opacity:0.7; margin-right:1px; }
