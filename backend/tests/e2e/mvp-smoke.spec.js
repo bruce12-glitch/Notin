@@ -21,7 +21,7 @@ test('health endpoint reports the unified API is ready', async ({ request }) => 
   });
 });
 
-test('MVP journey: OTP, note persistence, organize, search, pin, trash, restore, logout', async ({ page, request }) => {
+test('MVP journey: OTP, note persistence, organize, search, share, pin, trash, restore, logout', async ({ page, request, browser }) => {
   test.setTimeout(60_000);
 
   const authHealth = await request.get('/api/auth/health');
@@ -92,8 +92,39 @@ test('MVP journey: OTP, note persistence, organize, search, pin, trash, restore,
   const otherAuthResponse = await request.post('/api/auth/otp/verify', { data: { challenge: otherChallenge.challenge, code: '123456' } });
   expect(otherAuthResponse.ok()).toBeTruthy();
   const otherAuth = await otherAuthResponse.json();
-  const forbiddenFile = await request.get(uploadedAttachment.url, { headers: { Authorization: `Bearer ${otherAuth.accessToken || otherAuth.token}` } });
+  const otherAuthorization = `Bearer ${otherAuth.accessToken || otherAuth.token}`;
+  const forbiddenFile = await request.get(uploadedAttachment.url, { headers: { Authorization: otherAuthorization } });
   expect(forbiddenFile.status()).toBe(404);
+
+  // The foreign user cannot create a share for the owner's note.
+  const foreignShare = await request.post(`/api/notes/${uploadedAttachment.noteId}/share`, { headers: { Authorization: otherAuthorization } });
+  expect(foreignShare.status()).toBe(404);
+
+  // Create the share through the owner UI, then open it in a fresh logged-out context.
+  const [shareResponse] = await Promise.all([
+    page.waitForResponse((response) => response.url().endsWith(`/api/notes/${uploadedAttachment.noteId}/share`) && response.request().method() === 'POST'),
+    page.locator('#shareBtn').click(),
+  ]);
+  expect(shareResponse.status()).toBe(201);
+  let share = await shareResponse.json();
+  await expect(page.locator('#shareLinkInput')).toHaveValue(share.url);
+  const publicPayloadResponse = await request.get(`/api/public/share/${share.token}`);
+  expect(publicPayloadResponse.ok()).toBeTruthy();
+  const publicPayload = await publicPayloadResponse.json();
+  expect(publicPayload).toMatchObject({ title: noteTitle, contentText: noteBody });
+  expect(publicPayload.images).toHaveLength(1);
+  const publicImage = await request.get(publicPayload.images[0].url);
+  expect(publicImage.ok()).toBeTruthy();
+  expect(publicImage.headers()['content-type']).toContain('image/png');
+
+  const publicContext = await browser.newContext();
+  const publicPage = await publicContext.newPage();
+  await publicPage.goto(share.url);
+  await expect(publicPage.locator('#sharedTitle')).toHaveText(noteTitle);
+  await expect(publicPage.locator('#sharedBody')).toContainText(noteBody);
+  await expect(publicPage.locator('#sharedImages img')).toHaveCount(1);
+  await expect.poll(() => publicPage.locator('#sharedImages img').evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
+  await publicContext.close();
 
   // Assign and filter by tag using the shipped editor/sidebar controls.
   await page.locator('#tagAddSelect').selectOption({ label: tagName });
@@ -126,6 +157,17 @@ test('MVP journey: OTP, note persistence, organize, search, pin, trash, restore,
   await expect(persistedAttachment.locator('img')).toBeVisible();
   await expect.poll(() => persistedAttachment.locator('img').evaluate((img) => img.naturalWidth)).toBeGreaterThan(0);
 
+  // Rotate after reload so this browser session can later exercise the Revoke UI.
+  const firstShareToken = share.token;
+  const [rotatedShareResponse] = await Promise.all([
+    page.waitForResponse((response) => response.url().endsWith(`/api/notes/${uploadedAttachment.noteId}/share`) && response.request().method() === 'POST'),
+    page.locator('#shareBtn').click(),
+  ]);
+  expect(rotatedShareResponse.status()).toBe(201);
+  share = await rotatedShareResponse.json();
+  expect((await request.get(`/api/public/share/${firstShareToken}`)).status()).toBe(404);
+  expect((await request.get(`/api/public/share/${share.token}`)).ok()).toBeTruthy();
+
   // Search is UI-driven and waits for the product's 300 ms debounce.
   await Promise.all([
     page.waitForResponse((response) => response.url().includes('/api/notes?') && response.url().includes(`q=${searchToken}`) && response.ok()),
@@ -139,6 +181,8 @@ test('MVP journey: OTP, note persistence, organize, search, pin, trash, restore,
   // Trash, verify absence from All Notes, then restore from Trash.
   await page.locator('#trashBtn').click();
   await expect(noteRow(page)).toHaveCount(0);
+  const trashedShare = await request.get(`/api/public/share/${share.token}`);
+  expect(trashedShare.status()).toBe(404);
   await page.locator('#navAllNotes').click();
   await expect(noteRow(page)).toHaveCount(0);
   await page.locator('#navTrash').click();
@@ -149,6 +193,19 @@ test('MVP journey: OTP, note persistence, organize, search, pin, trash, restore,
   await page.locator('#restoreBtn').click();
   await expect(page.locator('#listTitle')).toHaveText('All Notes');
   await expect(noteRow(page)).toBeVisible();
+  const restoredShare = await request.get(`/api/public/share/${share.token}`);
+  expect(restoredShare.ok()).toBeTruthy();
+
+  // Revoke through the owner UI; the same secret immediately becomes invalid.
+  await expect(page.locator('#sharePanel')).toBeVisible();
+  const [revokeResponse] = await Promise.all([
+    page.waitForResponse((response) => response.url().endsWith(`/api/notes/${uploadedAttachment.noteId}/share`) && response.request().method() === 'DELETE'),
+    page.locator('#revokeShareBtn').click(),
+  ]);
+  expect(revokeResponse.status()).toBe(204);
+  await expect(page.locator('#shareStatus')).toHaveText('Link revoked');
+  const revokedShare = await request.get(`/api/public/share/${share.token}`);
+  expect(revokedShare.status()).toBe(404);
 
   // Permanent deletion removes attachment metadata/file access as well.
   await page.locator('#trashBtn').click();

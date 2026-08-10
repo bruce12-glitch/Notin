@@ -18665,6 +18665,13 @@ var tagChips = document.getElementById("tagChips");
 var tagAddSelect = document.getElementById("tagAddSelect");
 var pinBtn = document.getElementById("pinBtn");
 var sortSelect = document.getElementById("sortSelect");
+var shareBtn = document.getElementById("shareBtn");
+var sharePanel = document.getElementById("sharePanel");
+var shareLinkInput = document.getElementById("shareLinkInput");
+var copyShareBtn = document.getElementById("copyShareBtn");
+var revokeShareBtn = document.getElementById("revokeShareBtn");
+var shareStatus = document.getElementById("shareStatus");
+var sharedNoteId = null;
 var attachmentRow = document.getElementById("attachmentRow");
 var attachImageBtn = document.getElementById("attachImageBtn");
 var attachImageInput = document.getElementById("attachImageInput");
@@ -19068,6 +19075,11 @@ function updateEditorForSelection(note) {
     nbSelect.value = note && note.notebookId || "";
   }
   renderTagChips(hasSelection2 ? note : null);
+  if (shareBtn) shareBtn.hidden = !hasSelection2 || isTrashed;
+  if (sharePanel) {
+    if (!hasSelection2 || isTrashed) sharePanel.hidden = true;
+    else if (sharedNoteId === note.id && shareLinkInput?.value) sharePanel.hidden = false;
+  }
   if (attachmentRow) attachmentRow.hidden = !hasSelection2;
   if (attachImageBtn) {
     attachImageBtn.hidden = !hasSelection2 || isTrashed;
@@ -19101,6 +19113,7 @@ function updateEditorForSelection(note) {
   }
 }
 function selectNote(id) {
+  if (sharedNoteId && sharedNoteId !== id) resetSharePanel();
   selectedId = id;
   const n = notes.find((x) => x.id === id);
   if (!n) return;
@@ -19131,6 +19144,75 @@ function updateEditorDisabled(disabled) {
     if (el) el.style.opacity = shouldDisable ? "0.5" : "1";
   }
 }
+function resetSharePanel() {
+  sharedNoteId = null;
+  if (sharePanel) sharePanel.hidden = true;
+  if (shareLinkInput) shareLinkInput.value = "";
+  if (copyShareBtn) copyShareBtn.hidden = false;
+  if (revokeShareBtn) revokeShareBtn.hidden = false;
+  if (shareStatus) shareStatus.textContent = "";
+  if (shareBtn) {
+    shareBtn.disabled = false;
+    shareBtn.textContent = "Share";
+  }
+}
+if (shareBtn) shareBtn.addEventListener("click", async () => {
+  const cur = notes.find((n) => n.id === selectedId);
+  if (!cur || cur.isTrashed) return;
+  shareBtn.disabled = true;
+  if (sharePanel) sharePanel.hidden = false;
+  if (shareStatus) shareStatus.textContent = "Creating link\u2026";
+  try {
+    const res = await fetchWithAuth(API_BASE2 + `/api/notes/${cur.id}/share`, { method: "POST" });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(j.message || `Share failed ${res.status}`);
+    sharedNoteId = cur.id;
+    if (shareLinkInput) shareLinkInput.value = j.url || "";
+    if (copyShareBtn) copyShareBtn.hidden = false;
+    if (revokeShareBtn) revokeShareBtn.hidden = false;
+    if (shareStatus) shareStatus.textContent = "Read-only link ready";
+    shareBtn.textContent = "Rotate link";
+  } catch (e) {
+    if (shareStatus) shareStatus.textContent = e.message || "Could not create share link";
+  } finally {
+    shareBtn.disabled = false;
+  }
+});
+if (copyShareBtn) copyShareBtn.addEventListener("click", async () => {
+  const value = shareLinkInput?.value || "";
+  if (!value) return;
+  try {
+    await navigator.clipboard.writeText(value);
+    if (shareStatus) shareStatus.textContent = "Copied";
+  } catch {
+    shareLinkInput.focus();
+    shareLinkInput.select();
+    const copied = document.execCommand("copy");
+    if (shareStatus) shareStatus.textContent = copied ? "Copied" : "Select and copy the link";
+  }
+});
+if (revokeShareBtn) revokeShareBtn.addEventListener("click", async () => {
+  if (!selectedId) return;
+  revokeShareBtn.disabled = true;
+  if (shareStatus) shareStatus.textContent = "Revoking\u2026";
+  try {
+    const res = await fetchWithAuth(API_BASE2 + `/api/notes/${selectedId}/share`, { method: "DELETE" });
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}));
+      throw new Error(j.message || `Revoke failed ${res.status}`);
+    }
+    sharedNoteId = null;
+    if (shareLinkInput) shareLinkInput.value = "";
+    if (copyShareBtn) copyShareBtn.hidden = true;
+    revokeShareBtn.hidden = true;
+    if (shareStatus) shareStatus.textContent = "Link revoked";
+    if (shareBtn) shareBtn.textContent = "Share";
+  } catch (e) {
+    if (shareStatus) shareStatus.textContent = e.message || "Could not revoke link";
+  } finally {
+    revokeShareBtn.disabled = false;
+  }
+});
 function clearAttachmentGallery() {
   attachmentLoadVersion++;
   attachmentObjectUrls.forEach((url) => URL.revokeObjectURL(url));

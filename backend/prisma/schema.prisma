@@ -18,6 +18,7 @@ model User {
 
   notes          Note[]
   attachments    Attachment[]
+  noteShares     NoteShare[]
   otpChallenges  OtpChallenge[]
   refreshTokens  RefreshToken[]
 }
@@ -36,6 +37,7 @@ model Note {
 
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   attachments Attachment[]
+  share       NoteShare?
 
   @@index([userId])
   @@index([isTrashed])
@@ -58,6 +60,22 @@ model Attachment {
   @@index([noteId])
   @@index([userId])
   @@map("Attachment")
+}
+
+model NoteShare {
+  id           String    @id
+  noteId       String    @unique @map("noteId")
+  userId       String    @map("userId")
+  tokenHash    String    @unique @map("tokenHash")
+  shareEnabled Boolean   @default(true) @map("shareEnabled")
+  createdAt    DateTime  @default(now()) @map("createdAt")
+  expiresAt    DateTime? @map("expiresAt")
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("NoteShare")
 }
 
 model OtpChallenge {

@@ -82,6 +82,14 @@
 /* WP-APP-006 — tags: sidebar hash icon + editor chips row */
 .app-tag-hash{ flex:none; font-size:13px; font-weight:700; color:#8a8a85; }
 .app-nb-item.is-active .app-tag-hash{ color:#00a82d; }
+.app-share-btn{ border:1px solid #d8d8d4; border-radius:7px; background:#fff; color:#333; font:600 12px/1 Inter,sans-serif; padding:7px 10px; cursor:pointer; }
+.app-share-btn:hover{ border-color:#00a82d; color:#007a22; }
+.app-share-panel{ display:flex; align-items:center; gap:7px; padding:8px 18px; border-bottom:1px solid #dfe8dc; background:#f3faef; }
+.app-share-panel input{ min-width:120px; flex:1; border:1px solid #cbd8c6; border-radius:6px; background:#fff; padding:7px 9px; color:#333; font-size:12px; outline:none; }
+.app-share-panel button{ border:1px solid #c7d2c2; border-radius:6px; background:#fff; padding:7px 10px; color:#333; font-size:12px; font-weight:600; cursor:pointer; }
+.app-share-panel button:hover{ border-color:#00a82d; }
+#revokeShareBtn{ color:#a22922; }
+#shareStatus{ color:#55704e; font-size:12px; white-space:nowrap; }
 .app-tag-row{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:8px 18px; border-bottom:1px solid #eee; background:#fbfbfa; }
 /* WP-APP-008 — compact image attachment strip; auth page visuals remain untouched. */
 .app-attachments{ padding:8px 18px 10px; border-bottom:1px solid #eee; background:#fbfbfa; }

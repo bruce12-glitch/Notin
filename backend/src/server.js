@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import db from './config/db.js';
@@ -13,6 +14,7 @@ import notebookRoutes from './routes/notebookRoutes.js';
 import tagRoutes from './routes/tagRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import attachmentRoutes from './routes/attachmentRoutes.js';
+import publicShareRoutes from './routes/publicShareRoutes.js';
 import { signup, signin } from './controllers/userController.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -80,6 +82,10 @@ app.use('/api/users', userRoutes);
 app.post('/api/auth/signup', signup);
 app.post('/api/auth/signin', signin);
 
+// Public share reads are token-gated rather than account-authenticated. Keep a
+// light IP limit to reduce token probing without affecting normal image loads.
+const publicShareLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 180, standardHeaders: true, legacyHeaders: false });
+app.use('/api/public/share', publicShareLimit, publicShareRoutes);
 app.use('/api', attachmentRoutes);
 app.use('/api/notes', noteRoutes);
 app.use('/api/notebooks', notebookRoutes);

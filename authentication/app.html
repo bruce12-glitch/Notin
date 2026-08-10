@@ -154,12 +154,20 @@
           <select class="app-nb-select" id="noteNotebookSelect" title="Notebook" disabled aria-label="Notebook">
             <option value="">None</option>
           </select>
+          <button type="button" class="app-share-btn" id="shareBtn" hidden>Share</button>
           <span class="app-save-status" id="saveStatus"></span>
           <button class="app-save" id="saveBtn" disabled>Save</button>
           <button class="app-btn-trash" id="trashBtn" hidden title="Move to Trash">Trash</button>
           <button class="app-btn-restore" id="restoreBtn" hidden>Restore</button>
           <button class="app-btn-delete" id="deleteBtn" hidden>Delete forever</button>
         </div>
+      </div>
+      <!-- WP-APP-009 — owner-only read-only share controls -->
+      <div class="app-share-panel" id="sharePanel" hidden>
+        <input id="shareLinkInput" type="text" readonly aria-label="Read-only share link">
+        <button type="button" id="copyShareBtn">Copy</button>
+        <button type="button" id="revokeShareBtn">Revoke</button>
+        <span id="shareStatus" aria-live="polite"></span>
       </div>
       <!-- WP-APP-006 — note tags row (chips + add-tag picker) -->
       <div class="app-tag-row" id="tagRow" hidden>

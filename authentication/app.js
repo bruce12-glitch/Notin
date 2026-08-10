@@ -61,6 +61,14 @@ const tagAddSelect = document.getElementById('tagAddSelect');
 // WP-APP-007 — pin notes + sort control
 const pinBtn = document.getElementById('pinBtn');       // editor action (hidden until a note is selected)
 const sortSelect = document.getElementById('sortSelect'); // list-header sort dropdown
+// WP-APP-009 — read-only share link controls
+const shareBtn = document.getElementById('shareBtn');
+const sharePanel = document.getElementById('sharePanel');
+const shareLinkInput = document.getElementById('shareLinkInput');
+const copyShareBtn = document.getElementById('copyShareBtn');
+const revokeShareBtn = document.getElementById('revokeShareBtn');
+const shareStatus = document.getElementById('shareStatus');
+let sharedNoteId = null;
 // WP-APP-008 — image attachments
 const attachmentRow = document.getElementById('attachmentRow');
 const attachImageBtn = document.getElementById('attachImageBtn');
@@ -437,6 +445,12 @@ function updateEditorForSelection(note){
   }
   // WP-APP-006 — tag chips reflect selection (hidden for trashed/empty)
   renderTagChips(hasSelection ? note : null);
+  // WP-APP-009 — sharing is disabled in Trash; existing public URLs resolve to 404 there.
+  if(shareBtn) shareBtn.hidden = !hasSelection || isTrashed;
+  if(sharePanel){
+    if(!hasSelection || isTrashed) sharePanel.hidden = true;
+    else if(sharedNoteId===note.id && shareLinkInput?.value) sharePanel.hidden = false;
+  }
   // WP-APP-008 — attachments remain visible in Trash but uploads/removals are read-only.
   if(attachmentRow) attachmentRow.hidden = !hasSelection;
   if(attachImageBtn){
@@ -473,6 +487,7 @@ function updateEditorForSelection(note){
   }
 }
 function selectNote(id){
+  if(sharedNoteId && sharedNoteId!==id) resetSharePanel();
   selectedId = id;
   const n = notes.find(x=>x.id===id);
   if(!n) return;
@@ -500,6 +515,67 @@ function updateEditorDisabled(disabled){
     if(el) el.style.opacity = shouldDisable ? '0.5' : '1';
   }
 }
+
+// ── WP-APP-009 — secret read-only share links ──
+function resetSharePanel(){
+  sharedNoteId = null;
+  if(sharePanel) sharePanel.hidden = true;
+  if(shareLinkInput) shareLinkInput.value = '';
+  if(copyShareBtn) copyShareBtn.hidden = false;
+  if(revokeShareBtn) revokeShareBtn.hidden = false;
+  if(shareStatus) shareStatus.textContent = '';
+  if(shareBtn){ shareBtn.disabled = false; shareBtn.textContent = 'Share'; }
+}
+if(shareBtn) shareBtn.addEventListener('click', async ()=>{
+  const cur = notes.find(n=>n.id===selectedId);
+  if(!cur || cur.isTrashed) return;
+  shareBtn.disabled = true;
+  if(sharePanel) sharePanel.hidden = false;
+  if(shareStatus) shareStatus.textContent = 'Creating link…';
+  try{
+    const res = await fetchWithAuth(API_BASE + `/api/notes/${cur.id}/share`, {method:'POST'});
+    const j = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(j.message || `Share failed ${res.status}`);
+    sharedNoteId = cur.id;
+    if(shareLinkInput) shareLinkInput.value = j.url || '';
+    if(copyShareBtn) copyShareBtn.hidden = false;
+    if(revokeShareBtn) revokeShareBtn.hidden = false;
+    if(shareStatus) shareStatus.textContent = 'Read-only link ready';
+    shareBtn.textContent = 'Rotate link';
+  }catch(e){
+    if(shareStatus) shareStatus.textContent = e.message || 'Could not create share link';
+  }finally{ shareBtn.disabled = false; }
+});
+if(copyShareBtn) copyShareBtn.addEventListener('click', async ()=>{
+  const value = shareLinkInput?.value || '';
+  if(!value) return;
+  try{
+    await navigator.clipboard.writeText(value);
+    if(shareStatus) shareStatus.textContent = 'Copied';
+  }catch{
+    shareLinkInput.focus();
+    shareLinkInput.select();
+    const copied = document.execCommand('copy');
+    if(shareStatus) shareStatus.textContent = copied ? 'Copied' : 'Select and copy the link';
+  }
+});
+if(revokeShareBtn) revokeShareBtn.addEventListener('click', async ()=>{
+  if(!selectedId) return;
+  revokeShareBtn.disabled = true;
+  if(shareStatus) shareStatus.textContent = 'Revoking…';
+  try{
+    const res = await fetchWithAuth(API_BASE + `/api/notes/${selectedId}/share`, {method:'DELETE'});
+    if(!res.ok){ const j=await res.json().catch(()=>({})); throw new Error(j.message || `Revoke failed ${res.status}`); }
+    sharedNoteId = null;
+    if(shareLinkInput) shareLinkInput.value = '';
+    if(copyShareBtn) copyShareBtn.hidden = true;
+    revokeShareBtn.hidden = true;
+    if(shareStatus) shareStatus.textContent = 'Link revoked';
+    if(shareBtn) shareBtn.textContent = 'Share';
+  }catch(e){
+    if(shareStatus) shareStatus.textContent = e.message || 'Could not revoke link';
+  }finally{ revokeShareBtn.disabled = false; }
+});
 
 // ── WP-APP-008 — image attachments ──
 function clearAttachmentGallery(){

@@ -46,7 +46,13 @@ npm run dev
 - `GET  /api/attachments/:id/file`
 - `DELETE /api/attachments/:id`
 
-All note and attachment routes require `Authorization: Bearer <token>`.
+### Read-only shares
+- `POST   /api/notes/:id/share` — owner only; creates or rotates the secret
+- `DELETE /api/notes/:id/share` — owner only; revokes the current secret
+- `GET    /api/public/share/:token` — public read-only payload
+- `GET    /api/public/share/:token/files/:attachmentId` — public image for that shared note only
+
+All note and attachment management routes require `Authorization: Bearer <token>`. Public share reads use the unguessable share token instead of account authentication.
 
 ## Image attachment storage
 
@@ -54,9 +60,17 @@ Image files are stored on local disk in `backend/uploads/` by default (override 
 
 Attachment lists and file bytes are served only after bearer-token ownership checks. Images are retained while a note is in Trash and remain available after restore. Permanent note deletion removes both attachment rows and local files. Local-disk storage is intended for development/single-instance deployment; durable multi-instance production would require shared object storage.
 
+## Read-only share security
+
+Creating a share generates a 32-byte cryptographically random base64url token. Only its SHA-256 hash is stored in `NoteShare`; creating another link rotates and invalidates the previous token. Revocation disables the row immediately. Tokens have no expiry by default (`expiresAt` is available for future policy).
+
+Public payloads contain only the note title, editor content, and that note's image metadata—never owner, notebook, tag, or authentication data. Public images use `/api/public/share/:token/files/:attachmentId`, which revalidates the active token, non-trashed note, and attachment-to-note relationship on every request. Trashed notes return **404** publicly and become visible again if restored while the share remains enabled. Public responses use `no-store` and a light IP rate limit. Permanent note deletion removes its share row.
+
+The app's **Share** button creates/rotates a link; **Copy** copies it and **Revoke** disables it. Because the raw token is never stored, the link is shown only in the browser session that created it; clicking Share again safely rotates it. `/share.html?token=…` is a plain read-only renderer and requires no login.
+
 ## MVP smoke E2E (Playwright)
 
-The Playwright tooling lives in `backend/`. The suite uses Chromium and exercises the shipped UI against the unified API/static server; it does not test Google/SMTP delivery, attachments, offline sync, billing, or other post-MVP features.
+The Playwright tooling lives in `backend/`. The suite uses Chromium and exercises the shipped UI against the unified API/static server, including image persistence and read-only share security; it does not test Google/SMTP delivery, offline sync, billing, or other post-MVP features.
 
 ### Prerequisites
 

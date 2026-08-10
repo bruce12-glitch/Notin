@@ -8,6 +8,7 @@ import {
   restoreNote,
 } from '../controllers/noteController.js';
 import auth from '../middleware/auth.js';
+import { createShare, revokeShare } from '../controllers/shareController.js';
 
 const router = express.Router();
 
@@ -22,6 +23,9 @@ router.patch('/:id', updateNote);
 // Trash / Restore dedicated endpoints
 router.post('/:id/trash', trashNote);
 router.post('/:id/restore', restoreNote);
+// Read-only secret share links (owner only; POST rotates, DELETE revokes)
+router.post('/:id/share', createShare);
+router.delete('/:id/share', revokeShare);
 // Permanent delete only when already trashed
 router.delete('/:id', deleteNote);
 
