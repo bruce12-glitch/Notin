@@ -455,7 +455,7 @@ function renderHome(){
   create.className = 'home-note-card home-create-card';
   create.id = 'homeCreateNote';
   create.disabled = offlineReadOnly;
-  create.innerHTML = '<span class="home-create-icon" aria-hidden="true">+</span><strong>Create new note</strong><small>Start with a blank note</small>';
+  create.innerHTML = '<span class="home-create-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></span><strong>Create new note</strong>';
   create.addEventListener('click', createNote);
   homeNoteGrid.appendChild(create);
   const recent = notes.filter(note=>!note.isTrashed).slice(0,7);
@@ -473,7 +473,7 @@ function renderHome(){
     card.type = 'button';
     card.className = 'home-note-card';
     card.dataset.noteId = note.id;
-    card.innerHTML = `<span class="home-card-book">${escapeHtml(notebook?.name || 'Unfiled note')}</span><h3>${escapeHtml(note.title || 'Untitled')}</h3><p class="home-card-snippet">${escapeHtml(snippetFromText(plainFromNote(note))) || 'No additional text'}</p><span class="home-card-date">Edited ${formatDate(note.updatedAt || note.createdAt)}</span>${note.isPinned?'<span class="home-card-pin" title="Pinned">●</span>':''}`;
+    card.innerHTML = `<span class="home-card-book">${escapeHtml(notebook?.name || 'Unfiled note')}</span><h3>${escapeHtml(note.title || 'Untitled')}</h3><span class="home-card-date">Edited ${formatDate(note.updatedAt || note.createdAt)}</span>${note.isPinned?'<span class="home-card-pin" title="Pinned">●</span>':''}`;
     card.addEventListener('click', ()=> openNoteFromHome(note.id));
     homeNoteGrid.appendChild(card);
   });
@@ -1340,6 +1340,19 @@ document.querySelectorAll('[data-soon]').forEach(button=> button.addEventListene
 if(sidebarOpen) sidebarOpen.addEventListener('click', ()=>{ document.body.classList.add('sidebar-open'); if(sidebarScrim) sidebarScrim.hidden=false; });
 if(sidebarClose) sidebarClose.addEventListener('click', closeMobileSidebar);
 if(sidebarScrim) sidebarScrim.addEventListener('click', closeMobileSidebar);
+// WP-UI-HOME-PIXEL-001 — desktop sidebar collapse chevron (icon-rail mode)
+const sidebarCollapseBtn = document.getElementById('sidebarCollapse');
+if(sidebarCollapseBtn) sidebarCollapseBtn.addEventListener('click', ()=>{
+  const collapsed = document.body.classList.toggle('sidebar-collapsed');
+  sidebarCollapseBtn.setAttribute('aria-expanded', String(!collapsed));
+  sidebarCollapseBtn.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+  sidebarCollapseBtn.setAttribute('aria-label', sidebarCollapseBtn.title);
+  try{ localStorage.setItem('notin_sidebar_collapsed', collapsed ? '1' : '0'); }catch{}
+});
+try{ if(localStorage.getItem('notin_sidebar_collapsed')==='1'){
+  document.body.classList.add('sidebar-collapsed');
+  if(sidebarCollapseBtn){ sidebarCollapseBtn.setAttribute('aria-expanded','false'); sidebarCollapseBtn.title='Expand sidebar'; }
+} }catch{}
 document.addEventListener('keydown', (event)=>{
   if((event.ctrlKey || event.metaKey) && event.key.toLowerCase()==='k'){
     event.preventDefault(); globalSearchInput?.focus();

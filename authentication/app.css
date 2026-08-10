@@ -1,331 +1,506 @@
-/* WP-APP-001 — App shell (sidebar 220 + list 300 + editor flex) — does NOT touch auth styles.css */
-.app-offline-banner{ position:fixed; top:0; left:0; right:0; z-index:80; min-height:38px; padding:10px 16px; background:#24281f; color:#d9f7b9; text-align:center; font:600 13px/18px "Inter",system-ui,sans-serif; box-shadow:0 2px 10px rgba(0,0,0,.18); }
-.app-offline-banner[hidden]{ display:none !important; }
-body.is-offline .app-layout{ padding-top:38px; }
-body.is-offline .app-sidebar, body.is-offline .app-list, body.is-offline .app-editor{ height:calc(100dvh - 38px); }
-body.is-offline .btn-new, body.is-offline .app-nb-add{ opacity:.45; cursor:not-allowed; }
-.app-layout{ min-height:100dvh; display:grid; grid-template-columns:220px 320px 1fr; height:100dvh; background:#fff; font-family:"Inter",system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
-.app-sidebar{ background:#fbfcf8; border-right:1px solid #e8e8e3; display:flex; flex-direction:column; padding:18px 14px; gap:14px; }
-.app-sidebar-top{ display:flex; align-items:center; gap:10px; padding:4px 6px; }
-.app-sidebar-mark{ width:28px; height:28px; display:flex; align-items:center; justify-content:center; }
-.app-sidebar-brand{ font-weight:800; letter-spacing:-0.03em; font-size:18px; color:#111; }
-.app-nav{ display:flex; flex-direction:column; gap:4px; margin-top:8px; }
-.app-nav-item{ display:flex; align-items:center; gap:8px; padding:9px 10px; border-radius:8px; font-size:14px; font-weight:600; border:none; background:transparent; color:#6b6b6b; cursor:pointer; text-align:left; width:100%; }
-.app-nav-item:hover{ background:#f0f0ec; color:#111; }
-.app-nav-item.is-active{ background:#111; color:#fff; }
-.app-nav-item svg{ width:16px; height:16px; opacity:0.9; }
-.nav-count{ margin-left:auto; font-size:12px; font-weight:600; background:#fff; color:#6b6b6b; border:1px solid #e8e8e3; padding:2px 6px; border-radius:999px; min-width:22px; text-align:center; }
-.app-nav-item.is-active .nav-count{ background:rgba(255,255,255,0.16); color:#fff; border-color:rgba(255,255,255,0.2); }
-.app-sidebar-bottom{ margin-top:auto; display:flex; flex-direction:column; gap:10px; padding:10px 6px; border-top:1px solid #e8e8e3; }
-.app-email{ font-size:13px; color:#6b6b6b; word-break:break-all; line-height:1.4; }
-.app-btn-account{ width:100%; height:36px; border-radius:8px; border:1px solid #d4d4cf; background:#fff; color:#333; font-weight:600; font-size:13px; cursor:pointer; }
-.app-btn-account:hover{ border-color:#00a82d; color:#007a22; }
-.app-btn-logout{ width:100%; height:38px; border-radius:8px; border:1px solid #111; background:#111; color:#fff; font-weight:600; font-size:14px; cursor:pointer; }
-.app-btn-logout:hover{ background:#000; }
+/* ============================================================
+   WP-UI-HOME-PIXEL-001 — Evernote Home (dark) clone shell
+   Dark tokens only. Does NOT touch auth login styles.css.
+   ============================================================ */
 
-.app-list{ background:#f6f7f5; border-right:1px solid #e8e8e3; display:flex; flex-direction:column; min-width:0; }
-.app-list-header{ padding:14px 14px 10px; display:flex; align-items:center; justify-content:space-between; gap:10px; border-bottom:1px solid #e8e8e3; background:#f6f7f5; position:sticky; top:0; z-index:1; }
-.app-list-title{ font-weight:700; font-size:15px; letter-spacing:-0.02em; color:#111; }
-.app-list-count{ font-size:12px; color:#6b6b6b; background:#fff; border:1px solid #e8e8e3; padding:3px 8px; border-radius:999px; }
-/* WP-APP-007 — sort control (list header); pinned notes always stay on top regardless */
-.app-list-tools{ display:flex; align-items:center; gap:8px; flex:none; }
-.app-sort{ height:26px; max-width:96px; padding:0 6px; border:1px solid #e8e8e3; border-radius:999px; background:#fff; color:#6b6b6b; font-size:11.5px; font-family:inherit; cursor:pointer; }
-.app-sort:hover{ color:#111; }
-.app-sort:focus{ outline:none; border-color:#00a82d; box-shadow:0 0 0 3px rgba(0,168,45,0.12); }
-/* WP-APP-004 — search box above the note list (All Notes + Trash) */
-.app-search{ display:flex; align-items:center; gap:8px; margin:10px 14px 0; padding:0 10px; height:38px; background:#fff; border:1px solid #e8e8e3; border-radius:8px; color:#6b6b6b; }
-.app-search:focus-within{ border-color:#00a82d; box-shadow:0 0 0 3px rgba(0,168,45,0.12); color:#111; }
-.app-search svg{ width:16px; height:16px; flex:none; }
-.app-search input{ flex:1; min-width:0; height:100%; border:none; outline:none; background:transparent; font-size:14px; color:#111; font-family:inherit; }
-.app-search input::placeholder{ color:#9a9a9a; }
-.app-search-clear{ flex:none; width:24px; height:24px; border:none; border-radius:999px; background:#efefec; color:#6b6b6b; font-size:15px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
-.app-search-clear:hover{ background:#e3e3de; color:#111; }
-
-/* WP-APP-005 — Notebooks (sidebar organize section) */
-.app-nb{ margin-top:14px; padding-top:10px; border-top:1px solid #e8e8e3; }
-.app-nb-head{ display:flex; align-items:center; justify-content:space-between; padding:2px 6px 8px; }
-.app-nb-title{ font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:#8a8a85; }
-.app-nb-add{ width:24px; height:24px; border:none; border-radius:6px; background:transparent; color:#6b6b6b; font-size:17px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; }
-.app-nb-add:hover{ background:#eceeeb; color:#00a82d; }
-.app-nb-form{ padding:2px 6px 10px; display:flex; flex-direction:column; gap:8px; }
-.app-nb-form input{ height:34px; padding:0 10px; border:1px solid #e8e8e3; border-radius:8px; font-size:13px; color:#111; background:#fff; outline:none; font-family:inherit; }
-.app-nb-form input:focus{ border-color:#00a82d; box-shadow:0 0 0 3px rgba(0,168,45,0.12); }
-.app-nb-form-row{ display:flex; gap:8px; }
-.app-nb-ok{ flex:1; height:30px; border:none; border-radius:7px; background:#00a82d; color:#fff; font-weight:600; font-size:13px; cursor:pointer; }
-.app-nb-ok:hover{ background:#009326; }
-.app-nb-ok:disabled{ background:#cfcfcf; cursor:not-allowed; }
-.app-nb-cancel{ height:30px; padding:0 12px; border:1px solid #e8e8e3; border-radius:7px; background:#fff; color:#6b6b6b; font-size:13px; cursor:pointer; }
-.app-nb-cancel:hover{ background:#f4f4f1; }
-.app-nb-err{ font-size:12px; color:#c0392b; min-height:0; }
-.app-nb-err:empty{ display:none; }
-.app-nb-empty{ padding:4px 10px; font-size:12.5px; color:#9a9a9a; }
-.app-nb-list{ display:flex; flex-direction:column; gap:2px; }
-.app-nb-item{ position:relative; display:flex; align-items:center; }
-.app-nb-open{ flex:1; min-width:0; display:flex; align-items:center; gap:8px; padding:7px 26px 7px 10px; border:none; border-radius:8px; background:transparent; color:#333; font-size:13.5px; cursor:pointer; text-align:left; }
-.app-nb-open svg{ width:15px; height:15px; flex:none; color:#8a8a85; }
-.app-nb-open:hover{ background:#eceeeb; }
-.app-nb-item.is-active .app-nb-open{ background:#e3f3e7; color:#0b6b2f; font-weight:600; }
-.app-nb-item.is-active .app-nb-open svg{ color:#00a82d; }
-.app-nb-name{ flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.app-nb-count{ flex:none; font-size:11px; color:#8a8a85; background:#fff; border:1px solid #e8e8e3; border-radius:999px; padding:1px 7px; }
-.app-nb-item.is-active .app-nb-count{ background:#fff; color:#0b6b2f; border-color:#cfe8d6; }
-.app-nb-del{ position:absolute; right:4px; top:50%; transform:translateY(-50%); width:20px; height:20px; border:none; border-radius:6px; background:transparent; color:#b0b0ab; font-size:14px; line-height:1; cursor:pointer; display:none; align-items:center; justify-content:center; }
-.app-nb-item:hover .app-nb-del{ display:flex; }
-.app-nb-del:hover{ background:#f6e3e1; color:#c0392b; }
-.app-nb-item.is-confirming{ display:block; }
-.app-nb-confirm{ padding:8px 10px; background:#fdf6f5; border:1px solid #f0d6d2; border-radius:8px; }
-.app-nb-confirm-text{ font-size:12.5px; color:#333; line-height:1.4; }
-.app-nb-confirm-text span{ display:block; color:#8a8a85; font-size:11.5px; margin-top:2px; }
-.app-nb-confirm-actions{ display:flex; gap:6px; margin-top:8px; }
-.app-nb-yes{ height:26px; padding:0 12px; border:none; border-radius:6px; background:#c0392b; color:#fff; font-size:12px; font-weight:600; cursor:pointer; }
-.app-nb-yes:hover{ background:#a93226; }
-.app-nb-no{ height:26px; padding:0 10px; border:1px solid #e8e8e3; border-radius:6px; background:#fff; color:#6b6b6b; font-size:12px; cursor:pointer; }
-
-/* WP-APP-005 — editor notebook picker */
-.app-nb-select{ height:32px; max-width:150px; padding:0 8px; border:1px solid #e8e8e3; border-radius:8px; background:#fff; color:#333; font-size:12.5px; font-family:inherit; cursor:pointer; }
-.app-nb-select:disabled{ opacity:0.45; cursor:not-allowed; }
-.app-nb-select:focus{ outline:none; border-color:#00a82d; box-shadow:0 0 0 3px rgba(0,168,45,0.12); }
-
-/* WP-APP-006 — tags: sidebar hash icon + editor chips row */
-.app-tag-hash{ flex:none; font-size:13px; font-weight:700; color:#8a8a85; }
-.app-nb-item.is-active .app-tag-hash{ color:#00a82d; }
-.app-share-btn{ border:1px solid #d8d8d4; border-radius:7px; background:#fff; color:#333; font:600 12px/1 Inter,sans-serif; padding:7px 10px; cursor:pointer; }
-.app-share-btn:hover{ border-color:#00a82d; color:#007a22; }
-.app-share-panel{ display:flex; align-items:center; gap:7px; padding:8px 18px; border-bottom:1px solid #dfe8dc; background:#f3faef; }
-.app-share-panel input{ min-width:120px; flex:1; border:1px solid #cbd8c6; border-radius:6px; background:#fff; padding:7px 9px; color:#333; font-size:12px; outline:none; }
-.app-share-panel button{ border:1px solid #c7d2c2; border-radius:6px; background:#fff; padding:7px 10px; color:#333; font-size:12px; font-weight:600; cursor:pointer; }
-.app-share-panel button:hover{ border-color:#00a82d; }
-#revokeShareBtn{ color:#a22922; }
-#shareStatus{ color:#55704e; font-size:12px; white-space:nowrap; }
-.app-tag-row{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; padding:8px 18px; border-bottom:1px solid #eee; background:#fbfbfa; }
-/* WP-APP-008 — compact image attachment strip; auth page visuals remain untouched. */
-.app-attachments{ padding:8px 18px 10px; border-bottom:1px solid #eee; background:#fbfbfa; }
-.app-attachment-actions{ display:flex; align-items:center; gap:10px; min-height:30px; }
-.app-attach-btn{ border:1px solid #d8d8d4; border-radius:7px; background:#fff; color:#333; font:600 12px/1 Inter,sans-serif; padding:7px 10px; cursor:pointer; }
-.app-attach-btn:hover{ border-color:#00a82d; color:#007a22; }
-.app-attach-btn:disabled{ opacity:.5; cursor:not-allowed; }
-.app-attachment-status{ color:#6b6b6b; font-size:12px; }
-.app-attachment-gallery{ display:flex; flex-wrap:wrap; gap:10px; margin-top:8px; }
-.app-attachment-gallery:empty{ display:none; }
-.app-attachment-item{ position:relative; width:112px; }
-.app-attachment-item img{ display:block; width:112px; height:82px; object-fit:cover; border:1px solid #ddd; border-radius:8px; background:#f0f0ed; }
-.app-attachment-name{ display:block; margin-top:4px; overflow:hidden; color:#666; font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
-.app-attachment-remove{ position:absolute; top:4px; right:4px; width:22px; height:22px; border:0; border-radius:50%; background:rgba(20,20,20,.78); color:#fff; cursor:pointer; font-size:15px; line-height:22px; }
-.app-attachment-remove:hover{ background:#c5221f; }
-.app-tag-chips{ display:flex; align-items:center; flex-wrap:wrap; gap:6px; }
-.app-chip{ display:inline-flex; align-items:center; gap:3px; height:24px; padding:0 6px 0 8px; background:#e8f4ec; color:#0b6b2f; border:1px solid #cfe8d6; border-radius:999px; font-size:12px; font-weight:600; line-height:1; }
-.app-chip-hash{ font-weight:700; opacity:0.7; margin-right:1px; }
-.app-chip-x{ width:16px; height:16px; margin-left:2px; border:none; border-radius:999px; background:transparent; color:#0b6b2f; font-size:13px; line-height:1; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding:0; opacity:0.65; }
-.app-chip-x:hover{ background:rgba(0,168,45,0.15); opacity:1; }
-.app-tag-add{ height:24px; padding:0 6px; border:1px dashed #c8cec9; border-radius:999px; background:#fff; color:#6b6b6b; font-size:12px; font-family:inherit; cursor:pointer; }
-.app-tag-add:focus{ outline:none; border-color:#00a82d; }
-.app-tag-add:disabled{ opacity:0.45; cursor:not-allowed; }
-.app-new{ width:100%; padding:10px 14px; border-bottom:1px solid #e8e8e3; }
-.btn-new{ width:100%; height:40px; border-radius:8px; border:none; background:#00a82d; color:#fff; font-weight:700; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; }
-.btn-new:hover{ background:#009326; }
-.btn-new:disabled{ background:#cfcfcf; cursor:not-allowed; }
-.app-list-items{ flex:1; overflow:auto; padding:8px; display:flex; flex-direction:column; gap:8px; }
-.app-note-item{ background:#fff; border:1px solid #e8e8e3; border-radius:10px; padding:12px 12px; cursor:pointer; transition:border-color .12s, box-shadow .12s; text-align:left; }
-.app-note-item:hover{ border-color:#d0d0d0; box-shadow:0 4px 12px rgba(0,0,0,0.06); }
-.app-note-item.is-active{ border-color:#111; box-shadow:0 6px 16px rgba(0,0,0,0.08); }
-.app-note-title{ font-weight:600; font-size:14px; color:#111; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.app-note-snippet{ font-size:13px; color:#6b6b6b; line-height:1.4; margin-top:4px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; min-height:18px; }
-.app-note-meta{ font-size:12px; color:#9a9a9a; margin-top:6px; }
-/* WP-APP-007 — pin notes: row pin control + pinned emphasis */
-.app-note-item{ position:relative; user-select:none; }
-.app-note-item:focus-visible{ outline:2px solid #00a82d; outline-offset:1px; }
-.app-note-pin{ position:absolute; top:8px; right:8px; width:26px; height:26px; border:none; border-radius:7px; background:transparent; color:#b6b6b0; cursor:pointer; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity .12s, background .12s, color .12s; padding:0; }
-.app-note-pin svg{ width:15px; height:15px; }
-.app-note-item:hover .app-note-pin,
-.app-note-item:focus-within .app-note-pin{ opacity:1; }
-.app-note-pin:hover{ background:#eef1ec; color:#111; }
-.app-note-pin.is-on{ opacity:1; color:#00a82d; }
-.app-note-pin--static{ cursor:default; }
-.app-note-pin--static:hover{ background:transparent; color:#00a82d; }
-.app-note-item.is-pinned{ background:#f5faf6; border-color:#cfe8d6; }
-.app-note-item.is-pinned:hover{ border-color:#b8dcc4; }
-.app-note-item.is-pinned.is-active{ border-color:#00a82d; }
-/* WP-APP-007 — editor pin action */
-.app-pin-toggle{ height:36px; padding:0 12px; border-radius:8px; border:1px solid #e6e6e6; background:#fff; color:#333; font-weight:600; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; font-family:inherit; }
-.app-pin-toggle svg{ width:14px; height:14px; color:#8a8a85; }
-.app-pin-toggle:hover{ background:#f4f6f3; }
-.app-pin-toggle.is-pinned{ background:#e8f4ec; border-color:#cfe8d6; color:#0b6b2f; }
-.app-pin-toggle.is-pinned svg{ color:#00a82d; }
-.app-pin-toggle:disabled{ opacity:0.45; cursor:not-allowed; }
-.app-empty{ padding:32px 14px; text-align:center; color:#6b6b6b; }
-.app-empty-cta{ margin-top:12px; display:inline-flex; align-items:center; gap:6px; background:#111; color:#fff; border:none; border-radius:8px; padding:10px 14px; font-weight:600; cursor:pointer; }
-
-.app-editor{ display:flex; flex-direction:column; min-width:0; background:#fff; }
-.app-editor-header{ padding:14px 18px; border-bottom:1px solid #eee; display:flex; align-items:center; justify-content:space-between; gap:12px; }
-.app-editor-title{ flex:1; min-width:0; }
-.app-editor-title input{ width:100%; border:none; outline:none; font-size:22px; font-weight:700; letter-spacing:-0.02em; color:#111; background:transparent; }
-.app-editor-title input::placeholder{ color:#a8a8a8; font-weight:600; }
-.app-editor-actions{ display:flex; align-items:center; gap:8px; }
-.app-save{ height:36px; padding:0 14px; border-radius:8px; border:none; background:#111; color:#fff; font-weight:700; font-size:14px; cursor:pointer; }
-.app-save:hover{ background:#000; }
-.app-save:disabled{ background:#cfcfcf; cursor:not-allowed; }
-.app-save-status{ font-size:13px; color:#6b6b6b; min-width:60px; text-align:right; }
-.app-btn-trash,.app-btn-restore,.app-btn-delete{ height:36px; padding:0 14px; border-radius:8px; font-weight:600; font-size:13px; cursor:pointer; border:1px solid #e6e6e6; background:#fff; color:#111; }
-.app-btn-trash{ border-color:#e8e8e3; }
-.app-btn-trash:hover{ background:#fef2f2; border-color:#fecaca; color:#b91c1c; }
-.app-btn-restore{ background:#00a82d; color:#fff; border-color:#00a82d; }
-.app-btn-restore:hover{ background:#009326; }
-.app-btn-delete{ background:#fff; color:#b91c1c; border-color:#fecaca; }
-.app-btn-delete:hover{ background:#fef2f2; }
-.app-modal{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; z-index:50; }
-.app-modal[hidden]{ display:none !important; }
-.app-modal-backdrop{ position:absolute; inset:0; background:rgba(0,0,0,0.32); backdrop-filter:blur(2px); }
-.app-modal-card{ position:relative; background:#fff; border-radius:12px; padding:20px; width:min(420px, calc(100% - 32px)); box-shadow:0 20px 40px rgba(0,0,0,0.18); border:1px solid #e8e8e3; }
-.app-account-card{ width:min(500px, calc(100% - 32px)); }
-.app-account-head{ display:flex; align-items:center; justify-content:space-between; gap:16px; }
-.app-account-head h3{ margin:0; font-size:19px; }
-.app-account-close{ width:30px; height:30px; border:0; border-radius:50%; background:#f1f1ed; color:#555; cursor:pointer; font-size:20px; line-height:28px; }
-.app-account-section{ margin-top:18px; padding-top:17px; border-top:1px solid #e8e8e3; }
-.app-account-section h4{ margin:0 0 6px; font-size:14px; }
-.app-account-section p{ margin:0 0 12px; color:#666; font-size:13px; line-height:1.5; }
-.app-account-export{ border:1px solid #111; border-radius:7px; background:#111; color:#fff; padding:9px 13px; cursor:pointer; font-weight:600; }
-.app-account-danger{ border-color:#f0d2cf; }
-.app-account-danger h4{ color:#a22922; }
-.app-account-danger input{ width:100%; border:1px solid #d8c6c4; border-radius:7px; padding:9px 10px; outline:none; }
-.app-account-danger input:focus{ border-color:#c5221f; box-shadow:0 0 0 2px rgba(197,34,31,.1); }
-#deleteAccountBtn{ width:100%; margin-top:9px; border:0; border-radius:7px; background:#c5221f; color:#fff; padding:10px 12px; cursor:pointer; font-weight:700; }
-#deleteAccountBtn:disabled{ opacity:.45; cursor:not-allowed; }
-.app-account-status{ min-height:18px; margin-top:12px; color:#666; font-size:12px; }
-.app-save-status.is-saving{ color:#6b6b6b; }
-.app-save-status.is-saved{ color:#00a82d; }
-.app-save-status.is-error{ color:#d93025; }
-.app-editor-body{ flex:1; display:flex; flex-direction:column; padding:18px; overflow:auto; }
-.app-editor-body textarea{ width:100%; flex:1; min-height:260px; border:none; outline:none; resize:none; font-size:15px; line-height:1.65; color:#222; background:transparent; }
-.app-editor-body textarea::placeholder{ color:#a8a8a8; }
-
-/* TipTap toolbar — minimal Evernote-ish light UI */
-.app-toolbar{ display:flex; align-items:center; gap:6px; padding:10px 14px; border-bottom:1px solid #eee; background:#fbfbf9; flex-wrap:wrap; }
-.tb-btn{ min-width:32px; height:32px; padding:0 8px; border:1px solid #e6e6e6; background:#fff; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; color:#222; }
-.tb-btn:hover{ background:#111; color:#fff; border-color:#111; }
-.tb-btn.is-active{ background:#111; color:#fff; border-color:#111; }
-.tb-sep{ width:1px; height:18px; background:#e8e8e3; margin:0 2px; }
-.tiptap-editor{ flex:1; min-height:260px; outline:none; font-size:15px; line-height:1.65; color:#222; }
-.tiptap-editor .ProseMirror{ min-height:260px; outline:none; padding:2px 0; }
-.tiptap-editor .ProseMirror p{ margin:0 0 10px 0; }
-.tiptap-editor .ProseMirror h1{ font-size:26px; font-weight:800; letter-spacing:-0.02em; margin:14px 0 10px; line-height:1.2; }
-.tiptap-editor .ProseMirror h2{ font-size:20px; font-weight:700; letter-spacing:-0.02em; margin:12px 0 8px; line-height:1.3; }
-.tiptap-editor .ProseMirror ul, .tiptap-editor .ProseMirror ol{ margin:8px 0 12px 22px; }
-.tiptap-editor .ProseMirror li{ margin:4px 0; }
-.tiptap-editor .ProseMirror ul[data-type="taskList"]{ list-style:none; margin-left:0; padding-left:0; }
-.tiptap-editor .ProseMirror ul[data-type="taskList"] li{ display:flex; gap:8px; align-items:flex-start; }
-.tiptap-editor .ProseMirror ul[data-type="taskList"] li > label{ flex:0 0 auto; margin-top:2px; }
-.tiptap-editor .ProseMirror ul[data-type="taskList"] li > div{ flex:1; }
-.tiptap-editor .ProseMirror p.is-editor-empty:first-child::before{ content: attr(data-placeholder); float:left; color:#a8a8a8; pointer-events:none; height:0; }
-.app-editor-body{ flex:1; display:flex; flex-direction:column; padding:18px; overflow:auto; }
-#tiptapEditor{ flex:1; display:flex; flex-direction:column; }
-.app-inline-error{ margin:0 18px; padding:10px 12px; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; border-radius:8px; font-size:13px; text-align:center; }
-.app-inline-error:empty{ display:none; }
-.app-mobile-bar{ display:none; padding:10px 14px; border-bottom:1px solid #eee; align-items:center; gap:10px; }
-.app-mobile-back{ height:34px; padding:0 12px; border-radius:8px; border:1px solid #e6e6e6; background:#fff; font-weight:600; cursor:pointer; }
-@media (max-width: 900px){
-  .app-layout{ grid-template-columns:1fr; }
-  .app-sidebar{ display:none; }
-  .app-list{ border-right:none; }
-  .app-editor{ display:none; }
-  .app-layout.is-list .app-list{ display:flex; }
-  .app-layout.is-editor .app-editor{ display:flex; }
-  .app-layout.is-editor .app-list{ display:none; }
-  .app-mobile-bar{ display:flex; }
-  .app-list-header{ position:sticky; }
-}
-
-/* WP-UI-HOME-001 — Evernote-inspired dark authenticated shell */
 :root{
-  --app-bg:#121212;
-  --app-sidebar:#181818;
-  --app-panel:#202020;
-  --app-card:#292929;
-  --app-card-hover:#323232;
-  --app-line:#383838;
-  --app-text:#f5f5f5;
-  --app-muted:#9c9c9c;
+  /* WP-UI-HOME-PIXEL-001 dark Evernote-home tokens */
+  --env-bg:#0e0e0e;            /* outer chrome */
+  --env-sidebar:#161616;       /* left sidebar */
+  --env-panel:#1c1c1c;         /* floating main stage */
+  --env-panel-border:#2a2a2a;
+  --env-input:#2a2a2a;         /* search pill / icon buttons */
+  --env-input-hover:#343434;
+  --env-card:#242424;          /* note cards */
+  --env-card-hover:#2c2c2c;
+  --env-line:#303030;
+  --env-text:#f5f5f5;
+  --env-muted:#a8a8a8;
+  --env-faint:#767676;
+  --env-green:#8fe333;         /* Evernote lime (brand swap) */
+  --env-green-ink:#101c07;
+  --env-yellow:#f5c518;        /* upgrade bolt */
+  --env-yellow-ink:#171300;
+  --env-scratch:#5c5a2e;       /* scratch pad olive-gold */
+  --env-scratch-ink:#efecc9;
+  --env-scratch-dim:#c7c49a;
+  --env-selected:#2c2c2c;      /* nav selected row */
+  --env-hover:#222222;         /* nav hover row */
+  --env-danger:#e05c5c;
+  --app-bg:var(--env-bg);
+  --app-sidebar:var(--env-sidebar);
+  --app-panel:var(--env-panel);
+  --app-card:var(--env-card);
+  --app-card-hover:var(--env-card-hover);
+  --app-line:var(--env-line);
+  --app-text:var(--env-text);
+  --app-muted:var(--env-muted);
   --app-green:#8fe333;
   --app-green-deep:#00a82d;
-  --app-yellow:#f4c95d;
+  --app-yellow:#f5c518;
 }
-[hidden]{display:none!important}
-html,body{background:var(--app-bg);color:var(--app-text);overflow:hidden}
-.app-layout{grid-template-columns:224px minmax(0,1fr);height:100dvh;min-height:100dvh;background:var(--app-bg);color:var(--app-text)}
-.app-stage{min-width:0;height:100dvh;overflow:hidden;background:var(--app-bg)}
-.editor-workspace{display:grid;grid-template-columns:320px minmax(0,1fr);height:100%;min-width:0}
 
-/* Global sidebar */
-.app-sidebar{position:relative;z-index:40;height:100dvh;min-height:0;overflow:hidden;background:var(--app-sidebar);border-right:1px solid #2c2c2c;padding:14px 10px 10px;gap:8px;color:var(--app-text)}
-.app-sidebar-top{padding:3px 6px 9px;gap:9px}
-.app-sidebar-brand{color:var(--app-text);font-size:17px}
-.app-sidebar-close{display:none;margin-left:auto;width:30px;height:30px;border:0;border-radius:7px;background:transparent;color:var(--app-muted);font-size:22px;cursor:pointer}
-.app-sidebar-search{display:flex;align-items:center;gap:9px;width:100%;height:36px;padding:0 10px;border:1px solid #353535;border-radius:7px;background:#222;color:#c8c8c8;font:500 13px Inter,sans-serif;cursor:pointer;text-align:left}
-.app-sidebar-search:hover{border-color:#505050;background:#292929;color:#fff}
-.app-sidebar-search span{font-size:20px;line-height:1}
-.app-sidebar-search kbd{margin-left:auto;border:0;background:transparent;color:#777;font:500 10px Inter,sans-serif}
-.app-create-note{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:39px;margin:2px 0 3px;border:0;border-radius:8px;background:var(--app-green);color:#102008;font:700 14px Inter,sans-serif;cursor:pointer;box-shadow:0 5px 18px rgba(143,227,51,.1)}
-.app-create-note:hover{background:#a0ef4a}
-.app-create-note:disabled{opacity:.45;cursor:not-allowed}
-.app-create-note span{font-size:19px}
-.app-nav{gap:1px;margin-top:1px;overflow-y:auto;min-height:0;scrollbar-width:thin;scrollbar-color:#444 transparent}
-.app-nav-item{min-height:31px;padding:6px 9px;border-radius:6px;color:#aaa;font-size:12.5px;font-weight:500;gap:9px}
-.app-nav-item:hover{background:#262626;color:#f1f1f1}
-.app-nav-item.is-active{background:#303030;color:#fff;box-shadow:inset 2px 0 var(--app-green)}
-.nav-icon{display:inline-flex;align-items:center;justify-content:center;width:17px;flex:none;color:#aaa;font-size:15px;font-weight:700}
-.app-nav-item.is-active .nav-icon{color:var(--app-green)}
-.nav-count{border:0;background:#303030;color:#8c8c8c;padding:1px 5px;font-size:10px}
-.app-nav-item.is-active .nav-count{border:0;background:#3b3b3b;color:#ddd}
-.soon-badge{margin-left:auto;color:#686868;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
-.app-nav-stub{cursor:pointer}
-.app-organize-panel{max-height:210px;overflow:auto;margin-top:2px;padding:8px 2px;border-top:1px solid #303030;background:#1c1c1c;border-radius:7px}
-.app-nb-head{padding:2px 7px 7px}.app-nb-title{color:#858585}.app-nb-add{color:#aaa}.app-nb-add:hover{background:#303030;color:var(--app-green)}
-.app-nb-form input{border-color:#444;background:#252525;color:#fff}.app-nb-cancel{border-color:#444;background:#292929;color:#bbb}.app-nb-open{color:#bbb}.app-nb-open:hover{background:#292929}.app-nb-item.is-active .app-nb-open{background:#293224;color:var(--app-green)}.app-nb-count{border-color:#3d3d3d;background:#292929;color:#999}
-.app-sidebar-bottom{padding:8px 3px 0;border-top:1px solid #303030;gap:6px}
-.app-upgrade{display:flex;align-items:center;justify-content:center;height:31px;border-radius:6px;background:#3b321c;color:var(--app-yellow);font-size:12px;font-weight:700;text-decoration:none}
-.app-upgrade:hover{background:#4a3c1d}
-.app-user{display:flex;align-items:center;gap:8px;width:100%;padding:6px;border:0;border-radius:7px;background:transparent;color:#bbb;text-align:left;cursor:pointer}
-.app-user:hover{background:#282828}.app-avatar{display:flex;align-items:center;justify-content:center;width:29px;height:29px;flex:none;border-radius:50%;background:#3e4e31;color:var(--app-green);font-size:12px;font-weight:800}.app-user-copy{display:flex;flex:1;min-width:0;flex-direction:column}.app-user-copy strong{font-size:11px;color:#ddd}.app-email{overflow:hidden;color:#777;font-size:9.5px;text-overflow:ellipsis;white-space:nowrap;word-break:normal}.app-btn-logout{height:28px;border:0;background:transparent;color:#777;font-size:11px}.app-btn-logout:hover{background:#2a2020;color:#ef9a9a}
-.app-toast{position:absolute;left:12px;right:12px;bottom:122px;padding:10px 12px;border:1px solid #444;border-radius:8px;background:#303030;color:#ddd;font-size:12px;box-shadow:0 12px 28px rgba(0,0,0,.35)}
-.app-mobile-menu{display:none;position:fixed;z-index:35;top:14px;left:14px;width:38px;height:38px;border:1px solid #424242;border-radius:8px;background:#222;color:#fff;font-size:19px;cursor:pointer}.app-sidebar-scrim{position:fixed;z-index:39;inset:0;background:rgba(0,0,0,.64)}
+html,body{height:100%;background:var(--env-bg);color:var(--env-text);overflow:hidden}
+body{font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 
-/* Home */
-.home-view{height:100%;overflow:auto;padding:48px clamp(28px,5vw,72px) 56px;background:radial-gradient(circle at 82% 0%,rgba(143,227,51,.055),transparent 31%),var(--app-bg)}
-.home-header{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;max-width:1280px;margin:0 auto 48px}.home-eyebrow{margin:0 0 8px;color:var(--app-green);font-size:11px;font-weight:700;letter-spacing:.13em;text-transform:uppercase}.home-header h1{margin:0;color:#fff;font-size:42px;line-height:1;letter-spacing:-.045em}.home-greeting{margin:12px 0 0;color:var(--app-muted);font-size:14px}.home-new-top{height:40px;padding:0 17px;border:0;border-radius:8px;background:var(--app-green);color:#122008;font-weight:700;cursor:pointer}.home-new-top:hover{background:#a0ef4a}.home-new-top:disabled{opacity:.45;cursor:not-allowed}
-.home-section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;max-width:1280px;margin:0 auto 18px}.home-section-head h2{margin:0 0 5px;font-size:20px;letter-spacing:-.02em}.home-section-head p{margin:0;color:var(--app-muted);font-size:12px}.home-section-head button{border:0;background:transparent;color:#aaa;font-size:12px;cursor:pointer}.home-section-head button:hover{color:var(--app-green)}
-.home-note-grid{display:grid;grid-template-columns:repeat(4,minmax(180px,1fr));gap:14px;max-width:1280px;margin:0 auto}.home-note-card{position:relative;display:flex;min-height:210px;flex-direction:column;padding:18px;border:1px solid #373737;border-radius:10px;background:var(--app-card);color:var(--app-text);text-align:left;cursor:pointer;transition:transform .16s,border-color .16s,background .16s,box-shadow .16s}.home-note-card:hover{transform:translateY(-3px);border-color:#555;background:var(--app-card-hover);box-shadow:0 16px 30px rgba(0,0,0,.22)}.home-note-card:focus-visible{outline:2px solid var(--app-green);outline-offset:2px}.home-card-book{overflow:hidden;margin-bottom:24px;color:var(--app-green);font-size:10px;font-weight:700;letter-spacing:.06em;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap}.home-note-card h3{display:-webkit-box;overflow:hidden;margin:0;color:#fff;font-size:16px;line-height:1.35;-webkit-box-orient:vertical;-webkit-line-clamp:2}.home-card-snippet{display:-webkit-box;overflow:hidden;margin:9px 0 18px;color:#a4a4a4;font-size:12px;line-height:1.5;-webkit-box-orient:vertical;-webkit-line-clamp:3}.home-card-date{margin-top:auto;color:#777;font-size:10px}.home-card-pin{position:absolute;right:15px;bottom:14px;color:var(--app-green);font-size:12px}.home-create-card{align-items:center;justify-content:center;border-style:dashed;background:#202020}.home-create-card:hover{border-color:var(--app-green);background:#252b21}.home-create-icon{display:flex;align-items:center;justify-content:center;width:48px;height:48px;margin-bottom:16px;border-radius:50%;background:var(--app-green);color:#17240d;font-size:28px}.home-create-card strong{font-size:14px}.home-create-card small{margin-top:7px;color:#777;font-size:11px}.home-empty-copy{grid-column:span 2;display:flex;min-height:210px;align-items:center;justify-content:center;border:1px solid #303030;border-radius:10px;color:#777;text-align:center}
-.home-lower-grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(260px,1fr);gap:16px;max-width:1280px;margin:38px auto 0}.scratch-card,.capture-card{min-height:220px;border:1px solid #333;border-radius:10px;background:#1d1d1d}.scratch-card{display:flex;flex-direction:column;padding:18px}.home-panel-title{display:flex;align-items:center;justify-content:space-between;color:#eee;font-size:14px;font-weight:700}.home-panel-title small{color:#666;font-size:9px;font-weight:500}.scratch-card textarea{flex:1;min-height:130px;margin-top:14px;padding:14px;border:1px solid #343434;border-radius:8px;outline:0;resize:none;background:#242424;color:#ddd;font:13px/1.6 Inter,sans-serif}.scratch-card textarea:focus{border-color:#596d47}.scratch-card textarea::placeholder{color:#666}.scratch-status{margin-top:8px;color:#5f5f5f;font-size:9px;text-align:right}.capture-card{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:24px}.capture-icon{display:flex;align-items:center;justify-content:center;width:36px;height:36px;margin-bottom:15px;border-radius:9px;background:#292929;color:#777}.capture-card h2{margin:0;font-size:15px}.capture-card p{margin:8px 0 17px;color:#777;font-size:11px;line-height:1.55}.capture-soon{border:1px solid #3c3c3c;border-radius:7px;background:#242424;color:#aaa;padding:8px 11px;font-size:11px;cursor:pointer}.capture-soon span{margin-left:6px;color:#666;font-size:8px;text-transform:uppercase}
+/* ── Offline banner ─────────────────────────────────────── */
+.app-offline-banner{position:fixed;top:0;left:0;right:0;z-index:80;min-height:38px;padding:10px 16px;background:#262b1c;color:#d9f7b9;text-align:center;font:600 13px/18px "Inter",system-ui,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+.app-offline-banner[hidden]{display:none !important}
+body.is-offline .app-layout{padding-top:38px}
+body.is-offline .app-sidebar,body.is-offline .app-stage{height:calc(100dvh - 38px)}
 
-/* Existing notes/editor inside the dark shell */
-.app-list{height:100%;background:#191919;border-color:#333}.app-list-header{background:#191919;border-color:#333}.app-list-title{color:#f2f2f2}.app-list-count,.app-sort{border-color:#3c3c3c;background:#252525;color:#999}.app-search{border-color:#383838;background:#242424;color:#888}.app-search input{color:#eee}.app-new{border-color:#333}.btn-new{background:var(--app-green);color:#15200d}.btn-new:hover{background:#a0ef4a}.app-list-items{scrollbar-color:#444 transparent}.app-note-item{border-color:#353535;background:#242424}.app-note-item:hover{border-color:#505050;background:#2a2a2a;box-shadow:0 4px 12px rgba(0,0,0,.22)}.app-note-item.is-active{border-color:var(--app-green);background:#293024}.app-note-item.is-pinned{border-color:#405235;background:#262d22}.app-note-title{color:#eee}.app-note-snippet{color:#999}.app-note-meta{color:#666}.app-note-pin:hover{background:#383838;color:#fff}.app-empty{color:#888}.app-empty-cta{background:var(--app-green);color:#16210f}
-.app-editor{height:100%;background:#202020}.app-editor-header{border-color:#373737;background:#202020}.app-editor-title input{color:#fff}.app-editor-title input::placeholder{color:#666}.app-editor-actions button,.app-nb-select,.app-share-btn{border-color:#414141;background:#292929;color:#ccc}.app-save{background:var(--app-green)!important;color:#14200d!important}.app-save:disabled{background:#3b3b3b!important;color:#777!important}.app-save-status{color:#888}.app-toolbar{border-color:#373737;background:#1b1b1b}.tb-btn{border-color:#3e3e3e;background:#272727;color:#bbb}.tb-btn:hover,.tb-btn.is-active{border-color:var(--app-green);background:#333;color:var(--app-green)}.tb-sep{background:#444}.app-editor-body{background:#202020}.tiptap-editor{color:#ddd}.app-tag-row,.app-attachments{border-color:#383838;background:#1e1e1e}.app-share-panel{border-color:#3c4a35;background:#232a20}.app-share-panel input,.app-share-panel button,.app-attach-btn,.app-tag-add{border-color:#414141;background:#292929;color:#ccc}.app-chip{border-color:#45583c;background:#293323;color:var(--app-green)}.app-inline-error{border-color:#663b3b;background:#382525;color:#f1a0a0}.app-modal-card{border-color:#444;background:#242424;color:#eee}.app-account-section{border-color:#444}.app-account-section p{color:#aaa}.app-account-close{background:#333;color:#aaa}.app-account-danger input{border-color:#554040;background:#1c1c1c;color:#fff}.app-mobile-bar{border-color:#3a3a3a;background:#1c1c1c}.app-mobile-back{border-color:#444;background:#282828;color:#ddd}
+/* ── Frame: sidebar + floating stage ────────────────────── */
+.app-layout{min-height:100dvh;height:100dvh;display:grid;grid-template-columns:240px minmax(0,1fr);background:var(--env-bg);font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;transition:grid-template-columns .18s ease}
+.app-stage{position:relative;min-width:0;height:100dvh;padding:14px 14px 14px 0;overflow:hidden;background:var(--env-bg)}
 
-@media (max-width:1100px){.home-note-grid{grid-template-columns:repeat(3,minmax(170px,1fr))}.home-note-card{min-height:190px}}
-@media (max-width:900px){
-  html,body{overflow:hidden}.app-layout{display:block}.app-stage{height:100dvh}.app-sidebar{display:flex;position:fixed;top:0;bottom:0;left:0;width:250px;transform:translateX(-105%);transition:transform .2s ease;box-shadow:12px 0 30px rgba(0,0,0,.4)}body.sidebar-open .app-sidebar{transform:translateX(0)}.app-sidebar-close{display:block}.app-mobile-menu{display:block}.home-view{padding:72px 20px 38px}.home-header{align-items:flex-start;margin-bottom:36px}.home-header h1{font-size:34px}.home-note-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.home-lower-grid{grid-template-columns:1fr}.editor-workspace{grid-template-columns:1fr}.app-editor{display:none}.app-layout.is-list .app-list{display:flex}.app-layout.is-editor .app-editor{display:flex}.app-layout.is-editor .app-list{display:none}.app-list{border-right:0}.app-mobile-bar{display:flex}.home-new-top{display:none}
-}
-@media (max-width:560px){.home-note-grid{grid-template-columns:1fr}.home-note-card{min-height:170px}.home-empty-copy{grid-column:span 1}.home-section-head{align-items:flex-start;flex-direction:column}.home-header{margin-bottom:30px}.home-greeting{max-width:230px}.app-editor-header{align-items:flex-start;flex-direction:column}.app-editor-actions{width:100%;overflow-x:auto}.app-share-panel{align-items:stretch;flex-wrap:wrap}.app-share-panel input{flex-basis:100%}}
+/* ── Left sidebar (exact Evernote IA) ───────────────────── */
+.app-sidebar{position:relative;z-index:40;height:100dvh;min-height:0;display:flex;flex-direction:column;gap:12px;padding:14px 12px 12px;overflow:hidden;background:var(--env-sidebar);border-right:1px solid #232323;color:var(--env-text)}
+.app-sidebar-top{display:flex;align-items:center;gap:9px;padding:2px 4px}
+.app-sidebar-mark{width:28px;height:28px;flex:none;display:flex;align-items:center;justify-content:center}
+.app-sidebar-brand{flex:1;min-width:0;font-weight:800;letter-spacing:-.03em;font-size:17px;color:var(--env-text);white-space:nowrap;overflow:hidden}
+.app-sidebar-collapse{flex:none;display:flex;align-items:center;justify-content:center;width:26px;height:26px;border:0;border-radius:7px;background:transparent;color:var(--env-faint);font-size:17px;line-height:1;cursor:pointer;transition:transform .18s ease,color .14s}
+.app-sidebar-collapse:hover{background:var(--env-hover);color:var(--env-text)}
+.app-sidebar-close{display:none;flex:none;width:28px;height:28px;border:0;border-radius:7px;background:transparent;color:var(--env-muted);font-size:21px;cursor:pointer}
+.app-sidebar-close:hover{background:var(--env-hover);color:#fff}
 
-/* WP-UI-HOME-002 — integrated search and dedicated organize views */
-.app-sidebar-search input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:#ddd;font:500 13px Inter,sans-serif}
-.app-sidebar-search input::placeholder{color:#aaa}
+/* Search pill */
+.app-sidebar-search{display:flex;align-items:center;gap:8px;height:38px;padding:0 12px;background:var(--env-input);border:1px solid transparent;border-radius:10px;color:#8c8c8c;font-family:inherit}
+.app-sidebar-search svg{width:16px;height:16px;flex:none}
+.app-sidebar-search:focus-within{border-color:#4c4c4c;color:#d8d8d8}
+.app-sidebar-search input{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;color:#eee;font:500 13px "Inter",sans-serif}
+.app-sidebar-search input::placeholder{color:#8c8c8c}
 .app-sidebar-search button{display:flex;align-items:center;justify-content:center;width:20px;height:20px;flex:none;border:0;border-radius:50%;background:#3a3a3a;color:#aaa;cursor:pointer;font-size:13px}
 .app-sidebar-search button:hover{background:#4a4a4a;color:#fff}
-.app-sidebar-search:focus-within{border-color:#647d50;box-shadow:0 0 0 2px rgba(143,227,51,.08)}
-.home-empty-copy{align-items:flex-start;flex-direction:column;padding:30px;text-align:left}
-.home-empty-copy strong{color:#ddd;font-size:15px}.home-empty-copy span{color:#777;font-size:12px;line-height:1.6}.home-empty-cta{margin-top:17px;border:1px solid #455a38;border-radius:7px;background:#283123;color:var(--app-green);padding:9px 12px;font-size:11px;font-weight:700;cursor:pointer}.home-empty-cta:hover{background:#303d29}
-.organize-view{height:100%;overflow:auto;padding:48px clamp(28px,5vw,72px) 56px;background:radial-gradient(circle at 85% 0%,rgba(143,227,51,.045),transparent 30%),var(--app-bg)}
-.organize-header{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;max-width:1100px;margin:0 auto 42px}.organize-header h1{margin:0;color:#fff;font-size:38px;line-height:1;letter-spacing:-.04em}.organize-header p:not(.home-eyebrow){margin:12px 0 0;color:var(--app-muted);font-size:13px}
-.organize-create-form{max-width:1100px;margin:-18px auto 32px;padding:17px;border:1px solid #3b4635;border-radius:9px;background:#20251d}.organize-create-form label{display:block;margin-bottom:8px;color:#bbb;font-size:11px;font-weight:700}.organize-create-form>div{display:flex;gap:8px}.organize-create-form input{height:38px;flex:1;min-width:0;padding:0 11px;border:1px solid #424a3e;border-radius:7px;outline:0;background:#181b17;color:#fff;font:13px Inter,sans-serif}.organize-create-form input:focus{border-color:var(--app-green)}.organize-create-form button{height:38px;padding:0 14px;border:1px solid #454545;border-radius:7px;background:#292929;color:#bbb;font-weight:600;cursor:pointer}.organize-create-form button[type="submit"]{border-color:var(--app-green);background:var(--app-green);color:#15200e}.organize-create-form p{min-height:14px;margin:7px 0 0;color:#ef9a9a;font-size:11px}
-.organize-summary{display:flex;align-items:center;justify-content:space-between;max-width:1100px;margin:0 auto 14px}.organize-summary h2{margin:0;font-size:17px}.organize-summary span{color:#777;font-size:11px}
-.organize-grid{display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:12px;max-width:1100px;margin:0 auto}.organize-card{display:flex;min-height:116px;align-items:center;gap:15px;padding:17px;border:1px solid #363636;border-radius:9px;background:#222;color:#eee;text-align:left;cursor:pointer;transition:border-color .14s,background .14s,transform .14s}.organize-card:hover{transform:translateY(-2px);border-color:#56684a;background:#282b26}.organize-card-icon{display:flex;align-items:center;justify-content:center;width:39px;height:39px;flex:none;border-radius:9px;background:#30372b;color:var(--app-green);font-size:17px;font-weight:700}.organize-card-copy{min-width:0;flex:1}.organize-card-copy strong{display:block;overflow:hidden;font-size:13px;text-overflow:ellipsis;white-space:nowrap}.organize-card-copy span{display:block;margin-top:6px;color:#777;font-size:10px}.organize-card-arrow{color:#5f5f5f}.organize-empty{grid-column:1/-1;padding:50px 24px;border:1px dashed #383838;border-radius:9px;color:#777;text-align:center}.organize-empty strong{display:block;color:#bbb;font-size:14px}.organize-empty span{display:block;margin-top:7px;font-size:11px}
-.capture-soon.is-coming{border-color:#526445;color:var(--app-green)}
-@media(max-width:900px){.organize-view{padding:72px 20px 38px}.organize-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.organize-header{align-items:flex-start}.organize-header .home-new-top{display:block}}
-@media(max-width:560px){.organize-grid{grid-template-columns:1fr}.organize-header{flex-direction:column}.organize-create-form>div{align-items:stretch;flex-direction:column}.organize-create-form input,.organize-create-form button{width:100%}}
+.app-sidebar-search kbd{flex:none;font:600 10px "JetBrains Mono",monospace;color:#6d6d6d;background:#1f1f1f;border:1px solid #3a3a3a;border-radius:5px;padding:2px 5px}
 
-/* WP-UI-HOME-003 — pinned-note Shortcuts view */
-.shortcuts-view{height:100%;overflow:auto;padding:48px clamp(28px,5vw,72px) 56px;background:radial-gradient(circle at 84% 0%,rgba(143,227,51,.05),transparent 30%),var(--app-bg)}
-.shortcuts-header{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;max-width:1100px;margin:0 auto 42px}.shortcuts-header h1{margin:0;color:#fff;font-size:38px;line-height:1;letter-spacing:-.04em}.shortcuts-header p:not(.home-eyebrow){margin:12px 0 0;color:var(--app-muted);font-size:13px}
-.shortcuts-summary{display:flex;align-items:center;justify-content:space-between;max-width:1100px;margin:0 auto 14px}.shortcuts-summary h2{margin:0;font-size:17px}.shortcuts-summary span{color:#777;font-size:11px}
-.shortcuts-grid{display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:13px;max-width:1100px;margin:0 auto}.shortcut-card{position:relative;display:flex;min-height:190px;flex-direction:column;padding:18px;border:1px solid #384032;border-radius:10px;background:#242722;color:#eee;text-align:left;cursor:pointer;transition:transform .15s,border-color .15s,background .15s}.shortcut-card:hover{transform:translateY(-3px);border-color:#607c4c;background:#2b3027}.shortcut-card-book{overflow:hidden;margin-bottom:25px;color:var(--app-green);font-size:10px;font-weight:700;letter-spacing:.06em;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap}.shortcut-card h3{display:-webkit-box;overflow:hidden;margin:0;color:#fff;font-size:16px;line-height:1.35;-webkit-box-orient:vertical;-webkit-line-clamp:2}.shortcut-card p{display:-webkit-box;overflow:hidden;margin:9px 0 18px;color:#999;font-size:11px;line-height:1.55;-webkit-box-orient:vertical;-webkit-line-clamp:3}.shortcut-card-date{margin-top:auto;color:#6f6f6f;font-size:10px}.shortcut-pin{position:absolute;right:16px;bottom:14px;color:var(--app-green);font-size:11px}.shortcuts-empty{grid-column:1/-1;display:flex;min-height:260px;align-items:center;justify-content:center;flex-direction:column;border:1px dashed #3b3b3b;border-radius:10px;background:#171717;text-align:center}.shortcuts-empty-icon{display:flex;align-items:center;justify-content:center;width:48px;height:48px;margin-bottom:17px;border-radius:50%;background:#293123;color:var(--app-green);font-size:24px}.shortcuts-empty strong{color:#ddd;font-size:15px}.shortcuts-empty p{margin:8px 0 18px;color:#777;font-size:11px}.shortcuts-empty-actions{display:flex;gap:8px}.shortcuts-empty-actions button{height:35px;padding:0 13px;border:1px solid #424242;border-radius:7px;background:#242424;color:#bbb;font-size:11px;font-weight:600;cursor:pointer}.shortcuts-empty-actions button:first-child{border-color:var(--app-green);background:var(--app-green);color:#15200e}
-@media(max-width:900px){.shortcuts-view{padding:72px 20px 38px}.shortcuts-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.shortcuts-header{align-items:flex-start}.shortcuts-header .home-new-top{display:block}}
-@media(max-width:560px){.shortcuts-grid{grid-template-columns:1fr}.shortcuts-header{flex-direction:column}.shortcut-card{min-height:170px}}
+/* Action row: green Note pill + circular icon stubs */
+.app-sidebar-actions{display:flex;align-items:center;gap:8px}
+.app-create-note{display:flex;align-items:center;justify-content:center;gap:7px;height:40px;flex:1;min-width:0;border:0;border-radius:999px;background:var(--env-green);color:#111;font:700 14px "Inter",sans-serif;cursor:pointer;box-shadow:0 4px 14px rgba(143,227,51,.14)}
+.app-create-note svg{width:17px;height:17px;flex:none}
+.app-create-note:hover{background:#a0ef4a}
+.app-create-note:disabled{opacity:.45;cursor:not-allowed}
+.app-icon-btn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex:none;border:0;border-radius:50%;background:var(--env-input);color:#b3b3b3;cursor:pointer;transition:background .14s,color .14s}
+.app-icon-btn svg{width:18px;height:18px}
+.app-icon-btn:hover{background:var(--env-input-hover);color:#fff}
+
+/* Nav list — exact order: Home, Shortcuts, Notes, Trash, Tasks, Files, Calendar, Templates, Notebooks, Tags, Shared, Spaces, More */
+.app-nav{flex:1;min-height:0;display:flex;flex-direction:column;gap:2px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#333 transparent}
+.app-nav-item{display:flex;align-items:center;gap:10px;height:40px;flex:none;padding:0 12px;border:0;border-radius:10px;background:transparent;color:#a5a5a5;font:500 14px "Inter",sans-serif;cursor:pointer;text-align:left;width:100%}
+.app-nav-item:hover{background:var(--env-hover);color:#e8e8e8}
+.app-nav-item.is-active{background:var(--env-selected);color:#fff;font-weight:600}
+.nav-icon{display:flex;align-items:center;justify-content:center;width:20px;height:20px;flex:none}
+.nav-icon svg{width:20px;height:20px}
+.app-nav-item.is-active .nav-icon{color:var(--env-green)}
+.nav-label{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nav-count{margin-left:auto;flex:none;font-size:11px;font-weight:600;background:#2a2a2a;color:#a5a5a5;border-radius:999px;padding:2px 7px;min-width:22px;text-align:center}
+.app-nav-item.is-active .nav-count{background:rgba(143,227,51,.16);color:var(--env-green)}
+
+/* Sidebar organize panels (notebooks/tags quick lists) */
+.app-organize-panel{flex:0 1 auto;min-height:0;overflow-y:auto;border-top:1px solid #262626;padding-top:10px;margin-top:2px}
+.app-nb-head{display:flex;align-items:center;justify-content:space-between;padding:2px 7px 8px}
+.app-nb-title{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7d7d7d}
+.app-nb-add{width:24px;height:24px;border:0;border-radius:6px;background:transparent;color:#9a9a9a;font-size:17px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.app-nb-add:hover{background:#2c2c2c;color:var(--env-green)}
+.app-nb-form{padding:2px 7px 10px;display:flex;flex-direction:column;gap:8px}
+.app-nb-form input{height:34px;padding:0 10px;border:1px solid #3d3d3d;border-radius:8px;font-size:13px;color:#eee;background:#232323;outline:none;font-family:inherit}
+.app-nb-form input:focus{border-color:var(--env-green)}
+.app-nb-form-row{display:flex;gap:8px}
+.app-nb-ok{flex:1;height:30px;border:0;border-radius:7px;background:var(--env-green);color:#102008;font-weight:600;font-size:13px;cursor:pointer}
+.app-nb-ok:hover{background:#a0ef4a}
+.app-nb-ok:disabled{background:#3a3a3a;color:#777;cursor:not-allowed}
+.app-nb-cancel{height:30px;padding:0 12px;border:1px solid #3d3d3d;border-radius:7px;background:#262626;color:#b0b0b0;font-size:13px;cursor:pointer}
+.app-nb-cancel:hover{background:#2e2e2e}
+.app-nb-err{font-size:12px;color:#e07a6a;min-height:0}
+.app-nb-err:empty{display:none}
+.app-nb-empty{padding:4px 10px;font-size:12.5px;color:#7d7d7d}
+.app-nb-list{display:flex;flex-direction:column;gap:2px}
+.app-nb-item{position:relative;display:flex;align-items:center}
+.app-nb-open{flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:7px 26px 7px 10px;border:0;border-radius:8px;background:transparent;color:#b5b5b5;font-size:13.5px;cursor:pointer;text-align:left}
+.app-nb-open svg{width:15px;height:15px;flex:none;color:#7d7d7d}
+.app-nb-open:hover{background:var(--env-hover)}
+.app-nb-item.is-active .app-nb-open{background:#28311f;color:var(--env-green);font-weight:600}
+.app-nb-item.is-active .app-nb-open svg{color:var(--env-green)}
+.app-nb-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-nb-count{flex:none;font-size:11px;color:#8a8a8a;background:#262626;border-radius:999px;padding:1px 7px}
+.app-nb-item.is-active .app-nb-count{background:#1d2416;color:var(--env-green)}
+.app-nb-del{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:20px;height:20px;border:0;border-radius:6px;background:transparent;color:#8a8a8a;font-size:14px;line-height:1;cursor:pointer;display:none;align-items:center;justify-content:center}
+.app-nb-item:hover .app-nb-del{display:flex}
+.app-nb-del:hover{background:#3a2626;color:#e07a6a}
+.app-nb-item.is-confirming{display:block}
+.app-nb-confirm{padding:8px 10px;background:#2a1f1f;border:1px solid #4a3232;border-radius:8px}
+.app-nb-confirm-text{font-size:12.5px;color:#ddd;line-height:1.4}
+.app-nb-confirm-text span{display:block;color:#8a8a8a;font-size:11.5px;margin-top:2px}
+.app-nb-confirm-actions{display:flex;gap:6px;margin-top:8px}
+.app-nb-yes{height:26px;padding:0 12px;border:0;border-radius:6px;background:#b3412f;color:#fff;font-size:12px;font-weight:600;cursor:pointer}
+.app-nb-yes:hover{background:#c94f3b}
+.app-nb-no{height:26px;padding:0 10px;border:1px solid #3d3d3d;border-radius:6px;background:#262626;color:#b0b0b0;font-size:12px;cursor:pointer}
+
+/* Bottom: user chip + yellow Upgrade */
+.app-sidebar-bottom{margin-top:auto;display:flex;flex-direction:column;gap:9px;padding:10px 2px 2px;border-top:1px solid #262626}
+.app-upgrade{display:flex;align-items:center;justify-content:center;gap:8px;height:38px;border-radius:10px;background:var(--env-yellow);color:#111;font:800 13.5px "Inter",sans-serif;text-decoration:none;cursor:pointer;box-shadow:0 3px 12px rgba(245,197,24,.12)}
+.app-upgrade svg{width:16px;height:16px;flex:none}
+.app-upgrade:hover{background:#ffd94d}
+.app-user{display:flex;align-items:center;gap:10px;width:100%;padding:7px 6px;border:0;border-radius:10px;background:transparent;color:var(--env-text);cursor:pointer;text-align:left}
+.app-user:hover{background:var(--env-hover)}
+.app-avatar{display:flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;border-radius:50%;background:#3e4e31;color:var(--env-green);font-size:13px;font-weight:800}
+.app-user-copy{display:flex;flex:1;min-width:0;flex-direction:column}
+.app-user-copy strong{font-size:12.5px;color:#eee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-email{overflow:hidden;color:#8a8a8a;font-size:10.5px;text-overflow:ellipsis;white-space:nowrap;word-break:normal}
+.app-user-more{color:#7d7d7d;font-size:15px}
+.app-btn-logout{height:30px;border:0;border-radius:8px;background:transparent;color:#8a8a8a;font-size:12px;font-weight:600;cursor:pointer}
+.app-btn-logout:hover{background:#2b2020;color:#ef9a9a}
+.app-toast{position:absolute;left:12px;right:12px;bottom:10px;z-index:60;padding:9px 12px;border-radius:9px;background:#262b1c;border:1px solid #3c4527;color:#d9f7b9;font-size:12.5px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.app-toast[hidden]{display:none}
+
+/* ── Collapsed sidebar (chevron) ────────────────────────── */
+body.sidebar-collapsed .app-layout{grid-template-columns:64px minmax(0,1fr)}
+body.sidebar-collapsed .app-sidebar{padding:14px 10px 12px}
+body.sidebar-collapsed .app-sidebar-brand,
+body.sidebar-collapsed .nav-label,
+body.sidebar-collapsed .app-sidebar-search input,
+body.sidebar-collapsed .app-sidebar-search kbd,
+body.sidebar-collapsed .app-create-note span,
+body.sidebar-collapsed .app-user-copy,
+body.sidebar-collapsed .app-user-more,
+body.sidebar-collapsed .app-upgrade span{display:none}
+body.sidebar-collapsed .app-sidebar-collapse{transform:rotate(180deg)}
+body.sidebar-collapsed .app-sidebar-search{padding:0;justify-content:center;background:transparent}
+body.sidebar-collapsed .app-sidebar-search svg{width:18px;height:18px}
+body.sidebar-collapsed .app-create-note{width:40px;flex:0 0 40px;border-radius:50%}
+body.sidebar-collapsed .app-nav-item{justify-content:center;padding:0}
+body.sidebar-collapsed .nav-count{display:none}
+body.sidebar-collapsed .app-upgrade{width:40px;height:40px;border-radius:50%;padding:0;justify-content:center}
+body.sidebar-collapsed .app-user{justify-content:center;padding:7px 0}
+body.sidebar-collapsed .app-btn-logout{font-size:0;width:36px;height:36px;border-radius:50%;align-self:center}
+body.sidebar-collapsed .app-btn-logout::before{content:"⏻";font-size:15px}
+
+/* ── Floating main stage panels ─────────────────────────── */
+.home-view,.shortcuts-view,.organize-view,.editor-workspace{height:100%;border-radius:18px;border:1px solid var(--env-panel-border);background:var(--env-panel);box-shadow:0 10px 34px rgba(0,0,0,.35)}
+
+/* ── Home view (Evernote Home clone) ────────────────────── */
+.home-view{overflow:auto;padding:30px 34px 44px;scrollbar-width:thin;scrollbar-color:#333 transparent}
+.home-header{display:flex;align-items:center;justify-content:space-between;margin:0 0 30px}
+.home-header h1{margin:0;color:var(--env-text);font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1}
+.home-pen{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border:1px solid #3d3d3d;border-radius:50%;background:#232323;color:#cfcfcf;cursor:pointer;transition:border-color .14s,color .14s,background .14s}
+.home-pen svg{width:18px;height:18px}
+.home-pen:hover{border-color:var(--env-green);color:var(--env-green);background:#26291f}
+.home-pen:disabled{opacity:.45;cursor:not-allowed}
+
+/* Notes band: cards row + scratch pad on the right (same vertical band) */
+.home-band{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:30px;align-items:start;max-width:1160px;margin:0 auto}
+.home-notes-col,.home-scratch-col{min-width:0}
+.home-section-label-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.home-section-label{font-size:14px;font-weight:600;color:#cfcfcf;letter-spacing:.01em}
+.home-view-all{border:0;background:transparent;color:#8a8a8a;font-size:12px;font-weight:500;cursor:pointer;padding:2px 4px}
+.home-view-all:hover{color:var(--env-green)}
+
+/* Notes cards — horizontal row, square-ish tiles */
+.home-note-grid{display:flex;gap:14px;overflow-x:auto;padding:2px 2px 10px;scrollbar-width:thin;scrollbar-color:#333 transparent}
+.home-note-card{position:relative;display:flex;flex:0 0 184px;height:212px;flex-direction:column;padding:16px 16px 14px;border:1px solid #303030;border-radius:14px;background:var(--env-card);color:var(--env-text);text-align:left;cursor:pointer;transition:transform .16s,border-color .16s,background .16s,box-shadow .16s;font-family:inherit}
+.home-note-card:hover{transform:translateY(-2px);border-color:#4a4a4a;background:var(--env-card-hover);box-shadow:0 14px 26px rgba(0,0,0,.28)}
+.home-note-card:focus-visible{outline:2px solid var(--env-green);outline-offset:2px}
+.home-card-book{overflow:hidden;margin-bottom:14px;color:#9a9a9a;font-size:11px;font-weight:500;letter-spacing:.04em;text-overflow:ellipsis;white-space:nowrap}
+.home-note-card h3{display:-webkit-box;overflow:hidden;margin:0;color:#fff;font-size:15px;font-weight:600;line-height:1.4;-webkit-box-orient:vertical;-webkit-line-clamp:3}
+.home-card-date{margin-top:auto;color:#8a8a8a;font-size:11px}
+.home-card-pin{position:absolute;top:12px;right:13px;color:var(--env-green);font-size:11px}
+
+/* Create card: centered green circle + label */
+.home-create-card{align-items:center;justify-content:center;gap:12px;border-style:dashed;background:#1e1e1e}
+.home-create-card:hover{border-color:var(--env-green);background:#232a1b}
+.home-create-icon{display:flex;align-items:center;justify-content:center;width:56px;height:56px;border-radius:50%;background:var(--env-green);color:#fff;box-shadow:0 8px 22px rgba(143,227,51,.28)}
+.home-create-icon svg{width:24px;height:24px}
+.home-create-card strong{font-size:13px;font-weight:600;color:#d8d8d8}
+
+/* Home empty state (fresh account) */
+.home-empty-copy{display:flex;flex:1;min-width:300px;min-height:212px;align-items:center;justify-content:center;flex-direction:column;gap:8px;border:1px dashed #343434;border-radius:14px;color:var(--env-faint);text-align:center;padding:24px}
+.home-empty-copy strong{color:#cfcfcf;font-size:14px;font-weight:600}
+.home-empty-copy span{color:#8a8a8a;font-size:12px;line-height:1.6}
+.home-empty-cta{margin-top:10px;border:1px solid #455a38;border-radius:999px;background:#22291a;color:var(--env-green);padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+.home-empty-cta:hover{background:#2c3821}
+
+/* Scratch pad — olive-gold sticky, right of notes cards */
+.scratch-panel{display:flex;flex-direction:column;height:212px;padding:16px 16px 12px;border-radius:14px;background:var(--env-scratch);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 12px 26px rgba(0,0,0,.22)}
+.scratch-panel textarea{flex:1;min-height:0;width:100%;resize:none;border:0;outline:0;background:transparent;color:var(--env-scratch-ink);font:500 14px/1.55 "Inter",sans-serif}
+.scratch-panel textarea::placeholder{color:var(--env-scratch-dim)}
+.scratch-status{margin-top:8px;color:var(--env-scratch-dim);font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+
+/* Recently captured band — full width below */
+.capture-band{max-width:1160px;margin:36px auto 0}
+.capture-band-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.capture-select{display:flex;align-items:center;gap:6px;border:0;background:transparent;color:#9a9a9a;font-size:12.5px;font-weight:500;cursor:pointer;padding:3px 6px;border-radius:7px;font-family:inherit}
+.capture-select svg{width:13px;height:13px}
+.capture-select:hover{background:var(--env-hover);color:#ddd}
+.capture-panel{display:flex;flex-direction:column;align-items:center;gap:12px;padding:46px 24px 42px;border:1px solid #333;border-radius:14px;background:#191919}
+.capture-illus{width:118px;height:78px;color:#5f5f5f;margin-bottom:6px}
+.capture-panel p{margin:0;color:#a0a0a0;font-size:14px}
+.capture-soon{border:1px solid #4a4a4a;border-radius:999px;background:transparent;color:#cfcfcf;padding:9px 20px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;transition:border-color .14s,color .14s,background .14s}
+.capture-soon:hover{border-color:#7d9a5f;color:var(--env-green);background:#1d2417}
+.capture-soon.is-coming{border-color:#526445;color:var(--env-green);cursor:default}
+.capture-soon.is-coming span{display:block;font-size:10px;color:#8a8a8a;margin-top:2px}
+
+/* ── FAB (AI stub, bottom-right) ────────────────────────── */
+.app-fab{position:absolute;right:26px;bottom:26px;z-index:20;display:flex;align-items:center;justify-content:center;width:46px;height:46px;border:0;border-radius:50%;background:#f2f2f2;color:#161616;cursor:pointer;box-shadow:0 10px 26px rgba(0,0,0,.4);transition:transform .14s,background .14s}
+.app-fab svg{width:22px;height:22px}
+.app-fab:hover{transform:translateY(-2px) scale(1.04);background:#fff}
+
+/* ── Shortcuts view (pinned notes) ──────────────────────── */
+.shortcuts-view{overflow:auto;padding:30px 34px 44px;background:radial-gradient(circle at 84% 0%,rgba(143,227,51,.04),transparent 30%),var(--env-panel);scrollbar-width:thin;scrollbar-color:#333 transparent}
+.shortcuts-header{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;max-width:1100px;margin:0 auto 34px}
+.home-eyebrow{margin:0 0 8px;color:var(--env-green);font-size:10.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase}
+.shortcuts-header h1{margin:0;color:#fff;font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1}
+.shortcuts-header p:not(.home-eyebrow){margin:12px 0 0;color:var(--env-muted);font-size:13px}
+.shortcuts-summary{display:flex;align-items:center;justify-content:space-between;max-width:1100px;margin:0 auto 14px}
+.shortcuts-summary h2{margin:0;font-size:16px;font-weight:600}
+.shortcuts-summary span{color:#8a8a8a;font-size:11px}
+.shortcuts-grid{display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:13px;max-width:1100px;margin:0 auto}
+.shortcut-card{position:relative;display:flex;min-height:190px;flex-direction:column;padding:18px;border:1px solid #343434;border-radius:12px;background:#222;color:var(--env-text);text-align:left;cursor:pointer;transition:transform .15s,border-color .15s,background .15s;font-family:inherit}
+.shortcut-card:hover{transform:translateY(-3px);border-color:#5a7046;background:#262b21}
+.shortcut-card-book{overflow:hidden;margin-bottom:22px;color:#8a8a8a;font-size:10.5px;font-weight:600;letter-spacing:.06em;text-overflow:ellipsis;text-transform:uppercase;white-space:nowrap}
+.shortcut-card h3{display:-webkit-box;overflow:hidden;margin:0;color:#fff;font-size:15px;font-weight:600;line-height:1.4;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.shortcut-card p{display:-webkit-box;overflow:hidden;margin:9px 0 18px;color:#8f8f8f;font-size:11px;line-height:1.55;-webkit-box-orient:vertical;-webkit-line-clamp:3}
+.shortcut-card-date{margin-top:auto;color:#6f6f6f;font-size:10.5px}
+.shortcut-pin{position:absolute;right:16px;bottom:14px;color:var(--env-green);font-size:11px}
+.shortcuts-empty{grid-column:1/-1;display:flex;min-height:260px;align-items:center;justify-content:center;flex-direction:column;border:1px dashed #3b3b3b;border-radius:12px;background:#191919;text-align:center}
+.shortcuts-empty-icon{display:flex;align-items:center;justify-content:center;width:48px;height:48px;margin-bottom:17px;border-radius:50%;background:#293123;color:var(--env-green);font-size:22px}
+.shortcuts-empty strong{color:#ddd;font-size:15px}
+.shortcuts-empty p{margin:8px 0 18px;color:#8a8a8a;font-size:11px}
+.shortcuts-empty-actions{display:flex;gap:8px}
+.shortcuts-empty-actions button{height:35px;padding:0 13px;border:1px solid #424242;border-radius:999px;background:#242424;color:#bbb;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit}
+.shortcuts-empty-actions button:first-child{border-color:var(--env-green);background:var(--env-green);color:#15200e}
+.shortcuts-empty-actions button:first-child:hover{background:#a0ef4a}
+
+/* ── Organize views (notebooks / tags) ──────────────────── */
+.organize-view{overflow:auto;padding:30px 34px 44px;background:radial-gradient(circle at 85% 0%,rgba(143,227,51,.04),transparent 30%),var(--env-panel);scrollbar-width:thin;scrollbar-color:#333 transparent}
+.organize-header{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;max-width:1100px;margin:0 auto 34px}
+.organize-header h1{margin:0;color:#fff;font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1}
+.organize-header p:not(.home-eyebrow){margin:12px 0 0;color:var(--env-muted);font-size:13px}
+.organize-create-form{max-width:1100px;margin:-14px auto 30px;padding:17px;border:1px solid #363636;border-radius:12px;background:#1e1e1e}
+.organize-create-form label{display:block;margin-bottom:8px;color:#bbb;font-size:11px;font-weight:700}
+.organize-create-form>div{display:flex;gap:8px}
+.organize-create-form input{height:38px;flex:1;min-width:0;padding:0 11px;border:1px solid #3d3d3d;border-radius:8px;outline:0;background:#222;color:#fff;font:13px "Inter",sans-serif}
+.organize-create-form input:focus{border-color:var(--env-green)}
+.organize-create-form button{height:38px;padding:0 14px;border:1px solid #404040;border-radius:8px;background:#262626;color:#bbb;font-weight:600;cursor:pointer;font-family:inherit}
+.organize-create-form button[type="submit"]{border-color:var(--env-green);background:var(--env-green);color:#15200e}
+.organize-create-form p{min-height:14px;margin:7px 0 0;color:#ef9a9a;font-size:11px}
+.organize-summary{display:flex;align-items:center;justify-content:space-between;max-width:1100px;margin:0 auto 14px}
+.organize-summary h2{margin:0;font-size:16px;font-weight:600}
+.organize-summary span{color:#8a8a8a;font-size:11px}
+.organize-grid{display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:12px;max-width:1100px;margin:0 auto}
+.organize-card{display:flex;min-height:112px;align-items:center;gap:15px;padding:17px;border:1px solid #333;border-radius:12px;background:#222;color:var(--env-text);text-align:left;cursor:pointer;transition:border-color .14s,background .14s,transform .14s;font-family:inherit}
+.organize-card:hover{transform:translateY(-2px);border-color:#56684a;background:#262b21}
+.organize-card-icon{display:flex;align-items:center;justify-content:center;width:39px;height:39px;flex:none;border-radius:10px;background:#30372b;color:var(--env-green);font-size:16px;font-weight:700}
+.organize-card-copy{min-width:0;flex:1}
+.organize-card-copy strong{display:block;overflow:hidden;font-size:13px;text-overflow:ellipsis;white-space:nowrap}
+.organize-card-copy span{display:block;margin-top:6px;color:#8a8a8a;font-size:10.5px}
+.organize-card-arrow{color:#5f5f5f}
+.organize-empty{grid-column:1/-1;padding:50px 24px;border:1px dashed #383838;border-radius:12px;color:#8a8a8a;text-align:center}
+.organize-empty strong{display:block;color:#bbb;font-size:14px}
+.organize-empty span{display:block;margin-top:7px;font-size:11px}
+
+/* ── Editor workspace: 3-pane notes + TipTap (dark) ─────── */
+.editor-workspace{display:grid;grid-template-columns:320px minmax(0,1fr);overflow:hidden}
+.app-list{height:100%;min-width:0;display:flex;flex-direction:column;background:#181818;border-right:1px solid #2b2b2b}
+.app-list-header{padding:14px 14px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #2b2b2b;background:#181818;position:sticky;top:0;z-index:1}
+.app-list-title{font-weight:700;font-size:15px;letter-spacing:-.02em;color:#f2f2f2}
+.app-list-tools{display:flex;align-items:center;gap:8px;flex:none}
+.app-list-count{font-size:11.5px;color:#999;background:#242424;border:1px solid #333;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.app-sort{height:26px;max-width:96px;padding:0 6px;border:1px solid #333;border-radius:999px;background:#242424;color:#999;font-size:11.5px;font-family:inherit;cursor:pointer}
+.app-sort:hover{color:#eee}
+.app-sort:focus{outline:none;border-color:var(--env-green)}
+.app-search{display:flex;align-items:center;gap:8px;margin:10px 14px 0;padding:0 10px;height:38px;background:#222;border:1px solid #333;border-radius:10px;color:#8a8a8a}
+.app-search:focus-within{border-color:#4d4d4d;color:#d8d8d8}
+.app-search svg{width:16px;height:16px;flex:none}
+.app-search input{flex:1;min-width:0;height:100%;border:none;outline:none;background:transparent;font-size:13.5px;color:#eee;font-family:inherit}
+.app-search input::placeholder{color:#8a8a8a}
+.app-search-clear{flex:none;width:22px;height:22px;border:none;border-radius:999px;background:#303030;color:#aaa;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.app-search-clear:hover{background:#3c3c3c;color:#fff}
+.app-new{padding:10px 14px 6px;border-bottom:1px solid #2b2b2b}
+.btn-new{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;height:38px;border:0;border-radius:999px;background:var(--env-green);color:#15200d;font:700 13.5px "Inter",sans-serif;cursor:pointer}
+.btn-new:hover{background:#a0ef4a}
+.btn-new:disabled{opacity:.45;cursor:not-allowed}
+.app-list-items{flex:1;min-height:0;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px;scrollbar-width:thin;scrollbar-color:#3a3a3a transparent}
+.app-note-item{position:relative;display:flex;width:100%;flex-direction:column;gap:4px;padding:11px 12px;border:1px solid #2e2e2e;border-radius:10px;background:#222;color:var(--env-text);text-align:left;cursor:pointer;transition:border-color .13s,background .13s;font-family:inherit}
+.app-note-item:hover{border-color:#484848;background:#272727}
+.app-note-item.is-active{border-color:var(--env-green);background:#232a1c}
+.app-note-item.is-pinned{border-color:#3a4a2e;background:#21271b}
+.app-note-title{font-size:13.5px;font-weight:600;color:#eee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-note-snippet{font-size:11.5px;color:#8f8f8f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-note-meta{font-size:10.5px;color:#666}
+.app-note-pin{position:absolute;right:8px;top:8px;border:0;background:transparent;color:#777;font-size:11px;cursor:pointer}
+.app-note-pin:hover{color:var(--env-green)}
+.app-note-pin.is-pinned{color:var(--env-green)}
+.app-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:36px 18px;color:#8a8a8a;text-align:center;font-size:12.5px}
+.app-empty-cta{margin-top:6px;height:34px;padding:0 16px;border:0;border-radius:999px;background:var(--env-green);color:#15200f;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+
+/* Editor pane */
+.app-editor{height:100%;min-width:0;display:flex;flex-direction:column;background:#1d1d1d}
+.app-mobile-bar{display:none;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #333;background:#1b1b1b}
+.app-mobile-back{border:1px solid #3d3d3d;border-radius:8px;background:#242424;color:#ccc;padding:7px 12px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
+.app-inline-error{margin:12px 18px 0;padding:9px 12px;border:1px solid #5c3a3a;border-radius:9px;background:#2c1f1f;color:#f0a0a0;font-size:12.5px}
+.app-inline-error:empty{display:none}
+.app-editor-header{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 18px 10px;border-bottom:1px solid #2f2f2f;background:#1d1d1d}
+.app-editor-title{flex:1;min-width:0}
+.app-editor-title input{width:100%;border:0;outline:0;background:transparent;color:#fff;font:700 22px/1.3 "Inter",sans-serif;letter-spacing:-.02em}
+.app-editor-title input::placeholder{color:#666}
+.app-editor-title input:disabled{opacity:.6}
+.app-editor-actions{display:flex;align-items:center;gap:8px;flex:none}
+.app-editor-actions button,.app-nb-select,.app-share-btn{border:1px solid #3a3a3a;border-radius:8px;background:#262626;color:#c4c4c4;font:600 12px/1 "Inter",sans-serif;padding:8px 11px;cursor:pointer}
+.app-editor-actions button:hover,.app-nb-select:hover,.app-share-btn:hover{border-color:#555;color:#fff}
+.app-editor-actions button:disabled{opacity:.45;cursor:not-allowed}
+.app-pin-toggle{display:flex;align-items:center;gap:5px}
+.app-pin-toggle svg{width:14px;height:14px}
+.app-pin-toggle-label{font-size:11px}
+.app-pin-toggle[aria-pressed="true"]{border-color:#5d7a3f;color:var(--env-green);background:#222a18}
+.app-nb-select{height:32px;max-width:150px;padding:0 8px;font-size:12.5px}
+.app-nb-select:disabled{opacity:.45;cursor:not-allowed}
+.app-nb-select:focus{outline:none;border-color:var(--env-green)}
+.app-share-btn:hover{border-color:#5d7a3f;color:var(--env-green)}
+.app-save-status{font-size:11.5px;color:#8a8a8a;white-space:nowrap}
+.app-save-status.is-saved{color:#a7d96a}
+.app-save-status.is-error{color:#ef9a9a}
+.app-save{background:var(--env-green) !important;color:#14200d !important;border-color:var(--env-green) !important;font-weight:700 !important}
+.app-save:disabled{background:#333 !important;color:#777 !important;border-color:#3a3a3a !important;cursor:not-allowed}
+.app-btn-trash{border-color:#4a3535 !important;color:#d88a8a !important}
+.app-btn-trash:hover{border-color:#8a4a4a !important;color:#f0b0b0 !important}
+.app-btn-restore{border-color:#3f5232 !important;color:#a7d96a !important}
+.app-btn-delete{border-color:#7a3a3a !important;background:#5c2626 !important;color:#fff !important}
+.app-btn-delete:hover{background:#7a3232 !important}
+
+/* Share panel */
+.app-share-panel{display:flex;align-items:center;gap:7px;padding:8px 18px;border-bottom:1px solid #333;background:#1e231a}
+.app-share-panel input{min-width:120px;flex:1;border:1px solid #3a3a3a;border-radius:7px;background:#1a1a1a;padding:7px 9px;color:#ddd;font-size:12px;outline:none;font-family:inherit}
+.app-share-panel button{border:1px solid #3f4a3a;border-radius:7px;background:#242c20;padding:7px 10px;color:#c9d9b8;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.app-share-panel button:hover{border-color:var(--env-green);color:var(--env-green)}
+#revokeShareBtn{color:#e08a7a}
+#shareStatus{color:#a7c98a;font-size:12px;white-space:nowrap}
+
+/* Tags row (editor chips) */
+.app-tag-row{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:8px 18px;border-bottom:1px solid #2e2e2e;background:#1c1c1c}
+.app-tag-chips{display:flex;flex-wrap:wrap;gap:6px}
+.app-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border:1px solid #3a4a2e;border-radius:999px;background:#20281a;color:var(--env-green);font-size:11.5px;font-weight:600}
+.app-chip button{border:0;background:transparent;color:#9db88a;font-size:12px;cursor:pointer;padding:0;line-height:1}
+.app-chip button:hover{color:#fff}
+.app-tag-add{height:28px;max-width:130px;border:1px solid #3a3a3a;border-radius:8px;background:#232323;color:#b5b5b5;font-size:12px;font-family:inherit;cursor:pointer}
+.app-tag-add:focus{outline:none;border-color:var(--env-green)}
+
+/* Attachments */
+.app-attachments{padding:10px 18px;border-bottom:1px solid #2e2e2e;background:#1c1c1c}
+.app-attachment-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.app-attach-btn{height:30px;padding:0 12px;border:1px solid #3a3a3a;border-radius:8px;background:#242424;color:#c4c4c4;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.app-attach-btn:hover{border-color:#5a7046;color:var(--env-green)}
+.app-attachment-status{font-size:11.5px;color:#8a8a8a}
+.app-attachment-gallery{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.app-attachment-thumb{position:relative;width:88px;height:88px;border:1px solid #333;border-radius:9px;overflow:hidden;background:#151515}
+.app-attachment-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.app-attachment-del{position:absolute;top:4px;right:4px;width:20px;height:20px;border:0;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.app-attachment-del:hover{background:#8a2a2a}
+
+/* TipTap toolbar + body */
+.app-toolbar{display:flex;align-items:center;gap:6px;padding:8px 18px;border-bottom:1px solid #2f2f2f;background:#191919;flex-wrap:wrap}
+.tb-btn{min-width:30px;height:28px;padding:0 8px;border:1px solid #363636;border-radius:7px;background:#242424;color:#b5b5b5;font:600 12px/1 "Inter",sans-serif;cursor:pointer}
+.tb-btn:hover,.tb-btn.is-active{border-color:#4f6a38;background:#2a2f23;color:var(--env-green)}
+.tb-sep{width:1px;height:18px;background:#3a3a3a}
+.app-editor-body{flex:1;min-height:0;overflow-y:auto;background:#1d1d1d;scrollbar-width:thin;scrollbar-color:#3a3a3a transparent}
+.tiptap-editor{padding:22px 28px 60px;color:#e6e6e6;font-size:15px;line-height:1.65;outline:none;max-width:820px;margin:0 auto}
+.tiptap-editor p{margin:0 0 12px}
+.tiptap-editor h1{font-size:24px;font-weight:700;margin:20px 0 10px}
+.tiptap-editor h2{font-size:19px;font-weight:700;margin:18px 0 9px}
+.tiptap-editor ul,.tiptap-editor ol{padding-left:22px;margin:0 0 12px}
+.tiptap-editor ul{list-style:disc}
+.tiptap-editor ol{list-style:decimal}
+.tiptap-editor ul[data-type="taskList"]{list-style:none;padding-left:4px}
+.tiptap-editor li[data-type="taskItem"]{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px}
+.tiptap-editor li[data-type="taskItem"] input{margin-top:4px;accent-color:var(--env-green)}
+.tiptap-editor .is-editor-empty:first-child::before{content:attr(data-placeholder);float:left;color:#5c5c5c;pointer-events:none;height:0}
+.tiptap-editor a{color:#a7d96a}
+.tiptap-editor blockquote{border-left:3px solid #3f5232;margin:12px 0;padding:2px 14px;color:#b9b9b9}
+
+/* ── Modals (dark) ──────────────────────────────────────── */
+.app-modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:20px}
+.app-modal[hidden]{display:none}
+.app-modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.6)}
+.app-modal-card{position:relative;z-index:1;width:100%;max-width:430px;max-height:86vh;overflow-y:auto;padding:22px;border:1px solid #3d3d3d;border-radius:16px;background:#222;color:#eee;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.app-account-card{max-width:470px}
+.app-account-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.app-account-head h3{margin:0;font-size:17px;font-weight:700}
+.app-account-close{width:30px;height:30px;border:0;border-radius:8px;background:#2c2c2c;color:#aaa;font-size:18px;cursor:pointer}
+.app-account-close:hover{background:#383838;color:#fff}
+.app-account-section{padding:15px 0;border-top:1px solid #333}
+.app-account-section h4{margin:0 0 6px;font-size:13.5px;color:#ddd}
+.app-account-section p{margin:0 0 12px;color:#9a9a9a;font-size:12.5px;line-height:1.55}
+.app-account-export{height:34px;padding:0 14px;border:1px solid #4a6338;border-radius:8px;background:#222a18;color:var(--env-green);font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
+.app-account-export:hover{background:#2b3821}
+.app-account-danger h4{color:#e58a7a}
+.app-account-danger input{width:100%;height:36px;padding:0 10px;border:1px solid #4a3030;border-radius:8px;background:#191919;color:#fff;font-size:13px;outline:none;font-family:inherit}
+.app-account-danger input:focus{border-color:#a04a4a}
+.app-account-danger button{width:100%;height:38px;margin-top:10px;border:0;border-radius:9px;background:#5c2626;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
+.app-account-danger button:disabled{opacity:.4;cursor:not-allowed}
+.app-account-status{margin-top:12px;font-size:12px;color:#a7d96a;min-height:0}
+.app-account-status:empty{display:none}
+.btn-social{height:36px;padding:0 14px;border:1px solid #3d3d3d;border-radius:8px;background:#262626;color:#ccc;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
+.btn-social:hover{background:#2f2f2f}
+
+/* ── Mobile ─────────────────────────────────────────────── */
+.app-mobile-menu{display:none;position:fixed;top:12px;left:12px;z-index:70;width:38px;height:38px;border:1px solid #3a3a3a;border-radius:10px;background:#1e1e1e;color:#ddd;font-size:16px;cursor:pointer}
+.app-sidebar-scrim{position:fixed;inset:0;z-index:55;background:rgba(0,0,0,.55)}
+
+@media (max-width:1100px){
+  .home-band{grid-template-columns:minmax(0,1fr) 264px;gap:20px}
+}
+@media (max-width:900px){
+  html,body{overflow:hidden}
+  .app-layout{display:block;grid-template-columns:1fr}
+  .app-stage{height:100dvh;padding:0}
+  .home-view,.shortcuts-view,.organize-view,.editor-workspace{border-radius:0;border:0}
+  .app-sidebar{display:flex;position:fixed;top:0;bottom:0;left:0;width:264px;transform:translateX(-105%);transition:transform .2s ease;box-shadow:12px 0 30px rgba(0,0,0,.5);height:100dvh}
+  body.sidebar-open .app-sidebar{transform:translateX(0)}
+  body.sidebar-collapsed .app-layout{grid-template-columns:1fr}
+  body.sidebar-collapsed .app-sidebar{width:264px;transform:translateX(-105%)}
+  body.sidebar-open.sidebar-collapsed .app-sidebar{transform:translateX(0)}
+  body.sidebar-collapsed .app-sidebar-brand,
+  body.sidebar-collapsed .nav-label,
+  body.sidebar-collapsed .app-sidebar-search input,
+  body.sidebar-collapsed .app-sidebar-search kbd,
+  body.sidebar-collapsed .app-create-note span,
+  body.sidebar-collapsed .app-user-copy,
+  body.sidebar-collapsed .app-user-more,
+  body.sidebar-collapsed .app-upgrade span{display:block}
+  body.sidebar-collapsed .app-sidebar-search{padding:0 12px;justify-content:flex-start;background:var(--env-input)}
+  body.sidebar-collapsed .app-create-note{width:auto;flex:1;border-radius:999px}
+  body.sidebar-collapsed .app-nav-item{justify-content:flex-start;padding:0 12px}
+  body.sidebar-collapsed .nav-count{display:inline-block}
+  body.sidebar-collapsed .app-upgrade{width:auto;height:38px;border-radius:10px;padding:0;justify-content:center}
+  body.sidebar-collapsed .app-user{justify-content:flex-start;padding:7px 6px}
+  body.sidebar-collapsed .app-btn-logout{font-size:12px;width:auto;height:30px;border-radius:8px}
+  body.sidebar-collapsed .app-btn-logout::before{content:""}
+  .app-sidebar-collapse{display:none}
+  .app-sidebar-close{display:flex}
+  .app-mobile-menu{display:block}
+  .app-sidebar-bottom{display:flex}
+  .home-view{padding:64px 18px 30px}
+  .home-header{margin-bottom:26px}
+  .home-band{grid-template-columns:1fr}
+  .home-note-grid{flex-wrap:nowrap}
+  .scratch-panel{height:190px}
+  .editor-workspace{grid-template-columns:1fr}
+  .app-editor{display:none}
+  .app-list{display:none;border-right:0}
+  .app-layout.is-list .app-list{display:flex}
+  .app-layout.is-editor .app-editor{display:flex}
+  .app-layout.is-editor .app-list{display:none}
+  .app-mobile-bar{display:flex}
+  .app-fab{right:16px;bottom:16px}
+}
+@media (max-width:560px){
+  .home-view{padding:58px 14px 26px}
+  .home-note-card{flex-basis:168px;height:196px}
+  .home-empty-copy{min-width:0}
+  .capture-panel{padding:36px 18px 34px}
+  .app-editor-header{align-items:flex-start;flex-direction:column}
+  .app-editor-actions{width:100%;overflow-x:auto}
+  .app-share-panel{align-items:stretch;flex-wrap:wrap}
+  .app-share-panel input{flex-basis:100%}
+  .shortcuts-grid,.organize-grid{grid-template-columns:1fr}
+  .shortcuts-header,.organize-header{flex-direction:column;align-items:flex-start}
+  .shortcut-card{min-height:170px}
+}

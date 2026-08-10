@@ -61,6 +61,28 @@ test('MVP journey: OTP, note persistence, organize, search, share, pin, trash, r
   await page.locator('.capture-soon').click();
   await expect(page.locator('.capture-soon')).toContainText('Coming soon');
   await expect(page).toHaveURL(/#\/home$/);
+
+  // WP-UI-HOME-PIXEL-001 — post-auth Home matches the Evernote Home layout:
+  // exact sidebar IA, floating stage, notes row + scratch pad band, capture band, FAB.
+  await expect(page.locator('#appSidebar')).toBeVisible();
+  await expect(page.locator('#globalSearchInput')).toHaveAttribute('placeholder', 'Search');
+  await expect(page.locator('.app-sidebar-actions .app-create-note')).toContainText('Note');
+  await expect(page.locator('.app-sidebar-actions .app-icon-btn')).toHaveCount(3);
+  await expect(page.locator('.app-nav .app-nav-item')).toHaveCount(13);
+  const navLabels = await page.locator('.app-nav .nav-label').allTextContents();
+  expect(navLabels).toEqual(['Home', 'Shortcuts', 'Notes', 'Trash', 'Tasks', 'Files', 'Calendar', 'Templates', 'Notebooks', 'Tags', 'Shared with me', 'Spaces', 'More']);
+  await expect(page.locator('#appSidebar .app-upgrade')).toContainText('Upgrade');
+  await expect(page.locator('#sidebarCollapse')).toBeVisible();
+  await expect(page.locator('.home-note-grid')).toBeVisible();
+  await expect(page.locator('.home-scratch-col .scratch-panel')).toBeVisible();
+  await expect(page.locator('.scratch-panel textarea')).toHaveAttribute('placeholder', 'Start writing…');
+  await expect(page.locator('.capture-band')).toContainText('Recently captured');
+  await expect(page.locator('.capture-panel')).toContainText('Save useful information from the web.');
+  await expect(page.locator('.app-fab')).toBeVisible();
+  await page.locator('#sidebarCollapse').click();
+  await expect(page.locator('body')).toHaveClass(/sidebar-collapsed/);
+  await page.locator('#sidebarCollapse').click();
+  await expect(page.locator('body')).not.toHaveClass(/sidebar-collapsed/);
   await page.locator('#navShortcuts').click();
   await expect(page.locator('.shortcuts-empty')).toContainText('Pin notes to see them here');
   await page.locator('.shortcuts-empty [data-action="home"]').click();
@@ -71,6 +93,11 @@ test('MVP journey: OTP, note persistence, organize, search, share, pin, trash, r
   await expect.poll(()=>page.evaluate(()=>Object.entries(localStorage).filter(([key])=>key.startsWith('notin_scratch_')))).toEqual([
     expect.arrayContaining([expect.stringMatching(/^notin_scratch_/), `Scratch ${runId}`]),
   ]);
+
+  // Reload re-bootstraps via the refresh cookie, lands back on Home, and rehydrates the scratch pad.
+  await page.reload();
+  await expect(page).toHaveURL(/#\/home$/);
+  await expect(page.locator('#scratchPad')).toHaveValue(`Scratch ${runId}`);
 
   // Dedicated Notebooks and Tags views create and display real API entities.
   await page.locator('#navNotebooks').click();
