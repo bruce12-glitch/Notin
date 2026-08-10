@@ -52,17 +52,23 @@ test('MVP journey: OTP, note persistence, organize, search, share, pin, trash, r
   await expect(page.locator('#otpStep')).toBeVisible();
   await page.locator('#otpInput').fill('123456');
   await page.locator('#otpVerifyBtn').click();
-  await expect(page).toHaveURL(/\/app\.html(?:\?|$)/);
+  await expect(page).toHaveURL(/\/app\.html#\/home$/);
   await expect(page.locator('#appEmail')).toHaveText(email);
-  await expect(page.locator('#newNoteBtn')).toBeEnabled();
+  await expect(page.getByRole('heading', { name: 'Home', exact: true })).toBeVisible();
+  await expect(page.locator('#navHome')).toHaveClass(/is-active/);
+  await expect(page.locator('#homeCreateNote')).toBeEnabled();
 
-  // Create notebook and tag through the UI before creating the note. New notes
-  // inherit the active notebook; the tag is attached later via the editor UI.
+  // Create notebook and tag through their real sidebar routes before creating
+  // the note. New notes inherit the active notebook; the tag is attached later.
+  await page.locator('#navNotebooks').click();
+  await expect(page).toHaveURL(/#\/notebooks$/);
   await page.locator('#newNotebookBtn').click();
   await page.locator('#newNotebookInput').fill(notebookName);
   await page.locator('#newNotebookAdd').click();
   await expect(page.locator('#listTitle')).toHaveText(notebookName);
 
+  await page.locator('#navTags').click();
+  await expect(page).toHaveURL(/#\/tags$/);
   await page.locator('#newTagBtn').click();
   await page.locator('#newTagInput').fill(tagName);
   await page.locator('#newTagAdd').click();
@@ -71,8 +77,9 @@ test('MVP journey: OTP, note persistence, organize, search, share, pin, trash, r
   await page.locator('#tagList .app-nb-item', { hasText: tagName }).locator('.app-nb-open').click();
   await expect(page.locator('#listTitle')).toHaveText(notebookName);
 
-  // Create and explicitly save a rich-text note through TipTap.
-  await page.locator('#newNoteBtn').click();
+  // Create through the global + Note action, then explicitly save through TipTap.
+  await page.locator('#sidebarNewNote').click();
+  await expect(page).toHaveURL(/#\/notes$/);
   await expect(page.locator('#editorTitle')).toBeEnabled();
   await page.locator('#editorTitle').fill(noteTitle);
   const editor = page.locator('#tiptapEditor .ProseMirror');
@@ -141,11 +148,13 @@ test('MVP journey: OTP, note persistence, organize, search, share, pin, trash, r
   // Assign and filter by tag using the shipped editor/sidebar controls.
   await page.locator('#tagAddSelect').selectOption({ label: tagName });
   await expect(page.locator('#tagChips')).toContainText(tagName);
+  await page.locator('#navTags').click();
   await page.locator('#tagList .app-nb-item', { hasText: tagName }).locator('.app-nb-open').click();
   await expect(page.locator('#listTitle')).toHaveText(`#${tagName}`);
   await expect(noteRow(page)).toBeVisible();
 
   // Notebook filter also contains the note.
+  await page.locator('#navNotebooks').click();
   const notebookRow = page.locator('#notebookList .app-nb-item', { hasText: notebookName });
   await notebookRow.locator('.app-nb-open').click();
   await expect(notebookRow).toHaveClass(/is-active/);
@@ -159,7 +168,7 @@ test('MVP journey: OTP, note persistence, organize, search, share, pin, trash, r
 
   // A hard reload proves refresh-cookie bootstrap and database persistence.
   await page.reload();
-  await expect(page).toHaveURL(/\/app\.html$/);
+  await expect(page).toHaveURL(/\/app\.html#\/notebooks$/);
   await expect(noteRow(page)).toBeVisible();
   await noteRow(page).click();
   await expect(page.locator('#editorTitle')).toHaveValue(noteTitle);
