@@ -77,6 +77,12 @@ const shareLinkInput = document.getElementById('shareLinkInput');
 const copyShareBtn = document.getElementById('copyShareBtn');
 const revokeShareBtn = document.getElementById('revokeShareBtn');
 const shareStatus = document.getElementById('shareStatus');
+// WP-AI-001 — manual note summarization
+const summarizeBtn = document.getElementById('summarizeBtn');
+const aiSummaryCard = document.getElementById('aiSummaryCard');
+const aiSummaryText = document.getElementById('aiSummaryText');
+const aiSummaryMeta = document.getElementById('aiSummaryMeta');
+const aiSummaryDismiss = document.getElementById('aiSummaryDismiss');
 let sharedNoteId = null;
 // WP-APP-008 — image attachments
 const attachmentRow = document.getElementById('attachmentRow');
@@ -398,6 +404,19 @@ function setSaveStatus(text, cls){
   saveStatus.textContent = text || '';
   saveStatus.className = 'app-save-status' + (cls ? ' ' + cls : '');
 }
+function hideAiSummary(){
+  if(aiSummaryCard) aiSummaryCard.hidden = true;
+}
+function renderAiSummary(note, meta){
+  const summary = typeof note?.summary === 'string' ? note.summary.trim() : '';
+  if(!aiSummaryCard || !summary){
+    hideAiSummary();
+    return;
+  }
+  if(aiSummaryText) aiSummaryText.textContent = summary;
+  if(aiSummaryMeta) aiSummaryMeta.textContent = meta || 'Saved summary — regenerate after edits.';
+  aiSummaryCard.hidden = false;
+}
 
 // ── WP-UI-HOME-001 — authenticated view router + Home dashboard ──
 const APP_ROUTES = new Set(['home','notes','shortcuts','notebooks','tags','trash','account']);
@@ -417,6 +436,7 @@ function closeMobileSidebar(){
   if(sidebarScrim) sidebarScrim.hidden = true;
 }
 function setViewChrome(view){
+  hideAiSummary();
   currentView = APP_ROUTES.has(view) ? view : 'home';
   const showHome = currentView==='home' || currentView==='account';
   const showShortcuts = currentView==='shortcuts';
@@ -853,6 +873,10 @@ function updateEditorForSelection(note){
   const isTrashed = !!(note && note.isTrashed);
   const hasSelection = !!note;
   const readOnly = offlineReadOnly;
+  hideAiSummary();
+  if(note && (currentView === 'notes' || currentView === 'trash')) {
+    renderAiSummary(note, 'Saved summary — regenerate after edits.');
+  }
   // Title and editor
   updateEditorDisabled(!hasSelection || isTrashed || readOnly);
   // WP-APP-005 — notebook picker reflects selection; disabled for trashed/empty/offline
@@ -866,6 +890,7 @@ function updateEditorForSelection(note){
   tagChips?.querySelectorAll('button').forEach(button=>{ button.disabled = readOnly; });
   // WP-APP-009 — sharing is disabled in Trash and offline.
   if(shareBtn) shareBtn.hidden = !hasSelection || isTrashed || readOnly;
+  if(summarizeBtn) summarizeBtn.hidden = !hasSelection || isTrashed || readOnly;
   if(sharePanel){
     if(!hasSelection || isTrashed || readOnly) sharePanel.hidden = true;
     else if(sharedNoteId===note.id && shareLinkInput?.value) sharePanel.hidden = false;
@@ -967,6 +992,44 @@ if(shareBtn) shareBtn.addEventListener('click', async ()=>{
     if(shareStatus) shareStatus.textContent = e.message || 'Could not create share link';
   }finally{ shareBtn.disabled = false; }
 });
+
+if(summarizeBtn) summarizeBtn.addEventListener('click', async ()=>{
+  if(!selectedId) return;
+  const noteId = selectedId;
+  summarizeBtn.disabled = true;
+  summarizeBtn.textContent = 'Summarizing…';
+  try{
+    const res = await fetchWithAuth(`${API_BASE}/api/notes/${noteId}/summarize`, { method: 'POST' });
+    const payload = await res.json().catch(()=>({}));
+    if(res.status === 200){
+      const { summary, provider } = payload;
+      const note = notes.find(n=>n.id===noteId);
+      if(note) note.summary = summary;
+      if(selectedId === noteId){
+        if(aiSummaryText) aiSummaryText.textContent = summary;
+        if(aiSummaryMeta) aiSummaryMeta.textContent = provider === 'mock'
+          ? 'Demo summary (no AI key configured)'
+          : 'Generated just now';
+        if(aiSummaryCard) aiSummaryCard.hidden = false;
+      }
+      setError('');
+      return;
+    }
+    if(res.status === 400){
+      setError(payload.message || 'Could not summarize this note');
+    }else if(res.status === 429){
+      setError('AI rate limit reached — try again in a few minutes.');
+    }else{
+      setError('AI is busy right now — try again in a moment.');
+    }
+  }catch{
+    setError('AI is busy right now — try again in a moment.');
+  }finally{
+    summarizeBtn.disabled = false;
+    summarizeBtn.textContent = '✨ Summarize';
+  }
+});
+if(aiSummaryDismiss) aiSummaryDismiss.addEventListener('click', ()=> hideAiSummary());
 if(copyShareBtn) copyShareBtn.addEventListener('click', async ()=>{
   const value = shareLinkInput?.value || '';
   if(!value) return;
