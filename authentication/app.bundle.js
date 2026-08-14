@@ -18677,6 +18677,11 @@ var shareLinkInput = document.getElementById("shareLinkInput");
 var copyShareBtn = document.getElementById("copyShareBtn");
 var revokeShareBtn = document.getElementById("revokeShareBtn");
 var shareStatus = document.getElementById("shareStatus");
+var summarizeBtn = document.getElementById("summarizeBtn");
+var aiSummaryCard = document.getElementById("aiSummaryCard");
+var aiSummaryText = document.getElementById("aiSummaryText");
+var aiSummaryMeta = document.getElementById("aiSummaryMeta");
+var aiSummaryDismiss = document.getElementById("aiSummaryDismiss");
 var sharedNoteId = null;
 var attachmentRow = document.getElementById("attachmentRow");
 var attachImageBtn = document.getElementById("attachImageBtn");
@@ -19006,6 +19011,19 @@ function setSaveStatus(text, cls) {
   saveStatus.textContent = text || "";
   saveStatus.className = "app-save-status" + (cls ? " " + cls : "");
 }
+function hideAiSummary() {
+  if (aiSummaryCard) aiSummaryCard.hidden = true;
+}
+function renderAiSummary(note, meta) {
+  const summary = typeof note?.summary === "string" ? note.summary.trim() : "";
+  if (!aiSummaryCard || !summary) {
+    hideAiSummary();
+    return;
+  }
+  if (aiSummaryText) aiSummaryText.textContent = summary;
+  if (aiSummaryMeta) aiSummaryMeta.textContent = meta || "Saved summary \u2014 regenerate after edits.";
+  aiSummaryCard.hidden = false;
+}
 var APP_ROUTES = /* @__PURE__ */ new Set(["home", "notes", "shortcuts", "notebooks", "tags", "trash", "account"]);
 function routeFromHash() {
   const value = location.hash.replace(/^#\/?/, "").split("/")[0].toLowerCase();
@@ -19023,6 +19041,7 @@ function closeMobileSidebar() {
   if (sidebarScrim) sidebarScrim.hidden = true;
 }
 function setViewChrome(view) {
+  hideAiSummary();
   currentView = APP_ROUTES.has(view) ? view : "home";
   const showHome = currentView === "home" || currentView === "account";
   const showShortcuts = currentView === "shortcuts";
@@ -19517,6 +19536,10 @@ function updateEditorForSelection(note) {
   const isTrashed = !!(note && note.isTrashed);
   const hasSelection2 = !!note;
   const readOnly = offlineReadOnly;
+  hideAiSummary();
+  if (note && (currentView === "notes" || currentView === "trash")) {
+    renderAiSummary(note, "Saved summary \u2014 regenerate after edits.");
+  }
   updateEditorDisabled(!hasSelection2 || isTrashed || readOnly);
   if (nbSelect) {
     nbSelect.disabled = !hasSelection2 || isTrashed || readOnly;
@@ -19528,6 +19551,7 @@ function updateEditorForSelection(note) {
     button.disabled = readOnly;
   });
   if (shareBtn) shareBtn.hidden = !hasSelection2 || isTrashed || readOnly;
+  if (summarizeBtn) summarizeBtn.hidden = !hasSelection2 || isTrashed || readOnly;
   if (sharePanel) {
     if (!hasSelection2 || isTrashed || readOnly) sharePanel.hidden = true;
     else if (sharedNoteId === note.id && shareLinkInput?.value) sharePanel.hidden = false;
@@ -19632,6 +19656,41 @@ if (shareBtn) shareBtn.addEventListener("click", async () => {
     shareBtn.disabled = false;
   }
 });
+if (summarizeBtn) summarizeBtn.addEventListener("click", async () => {
+  if (!selectedId) return;
+  const noteId = selectedId;
+  summarizeBtn.disabled = true;
+  summarizeBtn.textContent = "Summarizing\u2026";
+  try {
+    const res = await fetchWithAuth(`${API_BASE2}/api/notes/${noteId}/summarize`, { method: "POST" });
+    const payload = await res.json().catch(() => ({}));
+    if (res.status === 200) {
+      const { summary, provider } = payload;
+      const note = notes.find((n) => n.id === noteId);
+      if (note) note.summary = summary;
+      if (selectedId === noteId) {
+        if (aiSummaryText) aiSummaryText.textContent = summary;
+        if (aiSummaryMeta) aiSummaryMeta.textContent = provider === "mock" ? "Demo summary (no AI key configured)" : "Generated just now";
+        if (aiSummaryCard) aiSummaryCard.hidden = false;
+      }
+      setError("");
+      return;
+    }
+    if (res.status === 400) {
+      setError(payload.message || "Could not summarize this note");
+    } else if (res.status === 429) {
+      setError("AI rate limit reached \u2014 try again in a few minutes.");
+    } else {
+      setError("AI is busy right now \u2014 try again in a moment.");
+    }
+  } catch {
+    setError("AI is busy right now \u2014 try again in a moment.");
+  } finally {
+    summarizeBtn.disabled = false;
+    summarizeBtn.textContent = "\u2728 Summarize";
+  }
+});
+if (aiSummaryDismiss) aiSummaryDismiss.addEventListener("click", () => hideAiSummary());
 if (copyShareBtn) copyShareBtn.addEventListener("click", async () => {
   const value = shareLinkInput?.value || "";
   if (!value) return;

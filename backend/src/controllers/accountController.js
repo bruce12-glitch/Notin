@@ -27,7 +27,7 @@ export async function exportAccount(req, res) {
 
     const [noteResult, notebookResult, tagResult, noteTagResult, attachmentResult] = await Promise.all([
       db.query(
-        `SELECT n.id, n.title, n."contentText", n."contentJson", n.description, n."notebookId",
+        `SELECT n.id, n.title, n."contentText", n."contentJson", n.description, n.summary, n."notebookId",
                 n."isPinned", n."isTrashed", n."createdAt", n."updatedAt", nb.name AS "notebookName"
          FROM "Note" n LEFT JOIN "Notebook" nb ON nb.id = n."notebookId"
          WHERE n."userId" = $1 ORDER BY n."createdAt" ASC`,
@@ -70,6 +70,7 @@ export async function exportAccount(req, res) {
         contentText: note.contentText || '',
         contentJson: parseContentJson(note.contentJson),
         description: note.description || '',
+        summary: note.summary || null,
         notebookId: note.notebookId || null,
         notebookName: note.notebookName || null,
         isPinned: isTrue(note.isPinned),

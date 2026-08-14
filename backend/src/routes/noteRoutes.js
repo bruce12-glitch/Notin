@@ -1,4 +1,5 @@
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import {
   createNote,
   getNotes,
@@ -9,6 +10,7 @@ import {
 } from '../controllers/noteController.js';
 import auth from '../middleware/auth.js';
 import { createShare, revokeShare } from '../controllers/shareController.js';
+import { summarizeNote } from '../controllers/aiController.js';
 
 const router = express.Router();
 
@@ -23,6 +25,8 @@ router.patch('/:id', updateNote);
 // Trash / Restore dedicated endpoints
 router.post('/:id/trash', trashNote);
 router.post('/:id/restore', restoreNote);
+const aiLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false });
+router.post('/:id/summarize', aiLimit, summarizeNote);
 // Read-only secret share links (owner only; POST rotates, DELETE revokes)
 router.post('/:id/share', createShare);
 router.delete('/:id/share', revokeShare);
