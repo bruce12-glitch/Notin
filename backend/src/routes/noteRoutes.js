@@ -10,7 +10,7 @@ import {
 } from '../controllers/noteController.js';
 import auth from '../middleware/auth.js';
 import { createShare, revokeShare } from '../controllers/shareController.js';
-import { summarizeNote } from '../controllers/aiController.js';
+import { summarizeNote, suggestNoteTitle } from '../controllers/aiController.js';
 
 const router = express.Router();
 
@@ -27,6 +27,9 @@ router.post('/:id/trash', trashNote);
 router.post('/:id/restore', restoreNote);
 const aiLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false });
 router.post('/:id/summarize', aiLimit, summarizeNote);
+// WP-AI-002 — AI title suggestion (server suggests; client applies via autosave)
+const titleLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false });
+router.post('/:id/suggest-title', titleLimit, suggestNoteTitle);
 // Read-only secret share links (owner only; POST rotates, DELETE revokes)
 router.post('/:id/share', createShare);
 router.delete('/:id/share', revokeShare);

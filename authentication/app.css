@@ -633,3 +633,14 @@ body.sidebar-collapsed .app-btn-logout::before{content:"⏻";font-size:15px}
   .tiptap-editor{padding:20px 18px 70px}
   .app-note-book{max-width:40%}
 }
+
+/* WP-AI-002 — AI title suggestion bar */
+.app-ai-title{display:flex;align-items:center;gap:8px;margin:0 18px 10px;padding:9px 12px;border:1px solid #3a4632;border-radius:10px;background:#1f261a;color:#d9e7cf;font-size:12.5px}
+.app-ai-title-label{color:var(--env-green);font-weight:700;flex:none}
+.app-ai-title-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app-ai-title-actions{display:flex;gap:6px;flex:none}
+.app-ai-title-actions button{border:1px solid #3f4a3a;border-radius:7px;background:#242c20;color:#c9d9b8;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.app-ai-title-actions button:hover{border-color:var(--env-green);color:var(--env-green)}
+.app-ai-title-actions #aiTitleDismiss{background:transparent;border-color:#3a3a3a;color:#9a9a9a}
+.app-ai-title-actions #aiTitleDismiss:hover{border-color:#666;color:#ddd}
+@media (max-width:560px){.app-ai-title{flex-wrap:wrap}}

@@ -26,7 +26,7 @@
 | **Backend** | Node 22 + Express 4.21 ESM, unified on **port 5000** (`backend/src/server.js`) |
 | **Database** | PostgreSQL (`pg`) prod · `node:sqlite` dev fallback · migrations `backend/src/db/migrate.js` (WP-* steps, both dialects) |
 | **Auth** | Custom JWT (jose): 15-min access in memory + rotating httpOnly refresh cookie · bcrypt passwords · email OTP (demo `123456` when no SMTP) · Google OAuth stub |
-| **AI Layer** | ✅ **WP-AI-001 shipped** (`6cb4441`): `POST /api/notes/:id/summarize` — Groq REST (llama-3.1-8b-instant, 20s timeout, no SDK) with deterministic mock when `GROQ_API_KEY` blank · `Note.summary` column · editor ✨ Summarize button + summary card · rate limit 5/15min · **CTO-verified live 2026-08-14**. Next: WP-AI-002 (title + tags) |
+| **AI Layer** | ✅ **Phase 2 = 2/7.** WP-AI-001 shipped (`6cb4441`): `POST /api/notes/:id/summarize` + `Note.summary` + editor summary card. **WP-AI-002 shipped on `arena/019fecbf-notin`**: `POST /api/notes/:id/suggest-title` — server suggests (Groq/mock), NEVER writes the title; client applies via existing autosave; suggestion bar with Use/Dismiss; once-per-session guard; its own E2E (`ai-title-smoke`). Both CTO-verified live 2026-08-14. Next: WP-AI-002b (smart tags) |
 | **Storage** | Local disk `backend/uploads/` (PNG/JPEG/WebP/GIF ≤5 MB × 10/note) |
 | **Search** | LIKE/ILIKE substring (`GET /api/notes?q=`), escaped wildcards, 100-row cap |
 | **E2E** | Playwright `backend/tests/e2e/mvp-smoke.spec.js` (3 scenarios incl. full UI journey) + API-level account test |
@@ -47,10 +47,11 @@
 
 ## IN PROGRESS
 
-- → **WP-AI-001 verified ✅ but not yet merged** — branch `arena/019ffe5a-notin` @ `6cb4441`, no PR open yet. Open the PR and merge.
-- → ⚠️ **Merge note:** that branch committed a 5-line stub `PROJECT_BIBLE.md` (agent didn't see this comprehensive one — it was never committed to main). On merge conflict, **this comprehensive Bible wins**; keep WP-AI-001 marked complete inside it.
-- → Queued: **WP-UI-NOTES-3D-001** (`CODING_AGENT_MASTER_PROMPT_WP-UI-NOTES-3D.md`) — agent must work on top of WP-AI-001's app.js/app.html (summarize button sits in the same action bar the 3D pass touches).
-- → Session branch `arena/019fecbf-notin` carries the unmerged WP-UI-NOTES-001 refresh (note rows + editor polish) — lands alongside/after WP-AI-001; expect a union merge on app.js/app.css/sw.js (both streams bumped cache to v5).
+- → **PR #12 OPEN — review & merge it** (`arena/019fecbf-notin` @ d1b57d1): WP-AI-001 (commit 6cb4441) + WP-UI-NOTES-001 notes refresh + CTO docs, union-merged and re-verified live as one build (bundle rebuilt, SW cache v6). Supersedes a separate WP-AI-001 PR.
+- → After merge: run **WP-AI-002** (`CODING_AGENT_MASTER_PROMPT_WP-AI-002.md`) on the new main.
+- → Then **WP-UI-NOTES-3D-001** (`CODING_AGENT_MASTER_PROMPT_WP-UI-NOTES-3D.md`) on the post-AI-002 tree.
+- → Then **WP-AI-002b — smart tag suggestions** (`CODING_AGENT_MASTER_PROMPT_WP-AI-002B.md`): server suggests 3–5 tags, user applies chips via the existing tag write path.
+- → Then: **WP-FUNNEL-001** wire landing CTAs (`CODING_AGENT_MASTER_PROMPT_WP-FUNNEL-001.md`) → WP-AI-003 (chat with note) → schema sync + deploy gates.
 
 ## ARCHITECTURE DECISIONS LOCKED
 

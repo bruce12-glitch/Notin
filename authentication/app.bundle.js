@@ -18682,6 +18682,12 @@ var aiSummaryCard = document.getElementById("aiSummaryCard");
 var aiSummaryText = document.getElementById("aiSummaryText");
 var aiSummaryMeta = document.getElementById("aiSummaryMeta");
 var aiSummaryDismiss = document.getElementById("aiSummaryDismiss");
+var aiTitleBar = document.getElementById("aiTitleBar");
+var aiTitleText = document.getElementById("aiTitleText");
+var aiTitleApply = document.getElementById("aiTitleApply");
+var aiTitleDismiss = document.getElementById("aiTitleDismiss");
+var aiTitleNoteId = null;
+var titleSuggestedFor = /* @__PURE__ */ new Set();
 var sharedNoteId = null;
 var attachmentRow = document.getElementById("attachmentRow");
 var attachImageBtn = document.getElementById("attachImageBtn");
@@ -19024,6 +19030,36 @@ function renderAiSummary(note, meta) {
   if (aiSummaryMeta) aiSummaryMeta.textContent = meta || "Saved summary \u2014 regenerate after edits.";
   aiSummaryCard.hidden = false;
 }
+function hideAiTitle() {
+  if (aiTitleBar) aiTitleBar.hidden = true;
+  aiTitleNoteId = null;
+}
+async function maybeSuggestTitle(note) {
+  hideAiTitle();
+  if (!note || note.isTrashed || offlineReadOnly) return;
+  if (currentView !== "notes") return;
+  if (titleSuggestedFor.has(note.id)) return;
+  const title = typeof note.title === "string" ? note.title.trim() : "";
+  if (title && title.toLowerCase() !== "untitled") return;
+  const text = (note.contentText || note.description || "").trim();
+  if (text.length < 40) return;
+  titleSuggestedFor.add(note.id);
+  try {
+    const res = await fetchWithAuth(`${API_BASE2}/api/notes/${note.id}/suggest-title`, { method: "POST" });
+    if (res.status !== 200) return;
+    const payload = await res.json().catch(() => ({}));
+    const suggested = typeof payload.title === "string" ? payload.title.trim() : "";
+    if (!suggested) return;
+    if (selectedId !== note.id) return;
+    const cur = notes.find((n) => n.id === note.id);
+    const curTitle = cur && typeof cur.title === "string" ? cur.title.trim() : "";
+    if (curTitle && curTitle.toLowerCase() !== "untitled") return;
+    if (aiTitleText) aiTitleText.textContent = suggested;
+    aiTitleNoteId = note.id;
+    if (aiTitleBar) aiTitleBar.hidden = false;
+  } catch {
+  }
+}
 var APP_ROUTES = /* @__PURE__ */ new Set(["home", "notes", "shortcuts", "notebooks", "tags", "trash", "account"]);
 function routeFromHash() {
   const value = location.hash.replace(/^#\/?/, "").split("/")[0].toLowerCase();
@@ -19042,6 +19078,7 @@ function closeMobileSidebar() {
 }
 function setViewChrome(view) {
   hideAiSummary();
+  hideAiTitle();
   currentView = APP_ROUTES.has(view) ? view : "home";
   const showHome = currentView === "home" || currentView === "account";
   const showShortcuts = currentView === "shortcuts";
@@ -19559,9 +19596,11 @@ function updateEditorForSelection(note) {
   const hasSelection2 = !!note;
   const readOnly = offlineReadOnly;
   hideAiSummary();
+  hideAiTitle();
   if (note && (currentView === "notes" || currentView === "trash")) {
     renderAiSummary(note, "Saved summary \u2014 regenerate after edits.");
   }
+  if (note && currentView === "notes") maybeSuggestTitle(note);
   updateEditorDisabled(!hasSelection2 || isTrashed || readOnly);
   if (nbSelect) {
     nbSelect.disabled = !hasSelection2 || isTrashed || readOnly;
@@ -19714,6 +19753,16 @@ if (summarizeBtn) summarizeBtn.addEventListener("click", async () => {
   }
 });
 if (aiSummaryDismiss) aiSummaryDismiss.addEventListener("click", () => hideAiSummary());
+if (aiTitleApply) aiTitleApply.addEventListener("click", () => {
+  if (!aiTitleNoteId || aiTitleNoteId !== selectedId || !titleInput) return;
+  const suggested = aiTitleText ? aiTitleText.textContent.trim() : "";
+  if (!suggested) return;
+  titleInput.value = suggested;
+  onEdit();
+  hideAiTitle();
+  titleInput.focus();
+});
+if (aiTitleDismiss) aiTitleDismiss.addEventListener("click", () => hideAiTitle());
 if (copyShareBtn) copyShareBtn.addEventListener("click", async () => {
   const value = shareLinkInput?.value || "";
   if (!value) return;

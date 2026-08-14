@@ -254,6 +254,15 @@
         <p id="aiSummaryText"></p>
         <small id="aiSummaryMeta"></small>
       </div>
+      <!-- WP-AI-002 — AI title suggestion (accept/reject; server never auto-writes titles) -->
+      <div class="app-ai-title" id="aiTitleBar" hidden>
+        <span class="app-ai-title-label">✨ Suggested title:</span>
+        <span class="app-ai-title-text" id="aiTitleText"></span>
+        <span class="app-ai-title-actions">
+          <button type="button" id="aiTitleApply">Use</button>
+          <button type="button" id="aiTitleDismiss">Dismiss</button>
+        </span>
+      </div>
       <!-- WP-APP-006 — note tags row (chips + add-tag picker) -->
       <div class="app-tag-row" id="tagRow" hidden>
         <div class="app-tag-chips" id="tagChips"></div>

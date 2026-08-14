@@ -83,6 +83,13 @@ const aiSummaryCard = document.getElementById('aiSummaryCard');
 const aiSummaryText = document.getElementById('aiSummaryText');
 const aiSummaryMeta = document.getElementById('aiSummaryMeta');
 const aiSummaryDismiss = document.getElementById('aiSummaryDismiss');
+// WP-AI-002 — AI title suggestion (server suggests; user accepts via autosave)
+const aiTitleBar = document.getElementById('aiTitleBar');
+const aiTitleText = document.getElementById('aiTitleText');
+const aiTitleApply = document.getElementById('aiTitleApply');
+const aiTitleDismiss = document.getElementById('aiTitleDismiss');
+let aiTitleNoteId = null;
+const titleSuggestedFor = new Set(); // session-only: suggested-or-dismissed note ids
 let sharedNoteId = null;
 // WP-APP-008 — image attachments
 const attachmentRow = document.getElementById('attachmentRow');
@@ -417,6 +424,36 @@ function renderAiSummary(note, meta){
   if(aiSummaryMeta) aiSummaryMeta.textContent = meta || 'Saved summary — regenerate after edits.';
   aiSummaryCard.hidden = false;
 }
+// WP-AI-002 — title suggestion bar lifecycle
+function hideAiTitle(){
+  if(aiTitleBar) aiTitleBar.hidden = true;
+  aiTitleNoteId = null;
+}
+async function maybeSuggestTitle(note){
+  hideAiTitle();
+  if(!note || note.isTrashed || offlineReadOnly) return;
+  if(currentView !== 'notes') return;
+  if(titleSuggestedFor.has(note.id)) return;
+  const title = typeof note.title === 'string' ? note.title.trim() : '';
+  if(title && title.toLowerCase() !== 'untitled') return;
+  const text = (note.contentText || note.description || '').trim();
+  if(text.length < 40) return;
+  titleSuggestedFor.add(note.id); // before fetch — prevents double-fire
+  try{
+    const res = await fetchWithAuth(`${API_BASE}/api/notes/${note.id}/suggest-title`, { method: 'POST' });
+    if(res.status !== 200) return; // silent degrade for background suggestions
+    const payload = await res.json().catch(()=>({}));
+    const suggested = typeof payload.title === 'string' ? payload.title.trim() : '';
+    if(!suggested) return;
+    if(selectedId !== note.id) return; // user moved on
+    const cur = notes.find(n=>n.id===note.id);
+    const curTitle = (cur && typeof cur.title === 'string') ? cur.title.trim() : '';
+    if(curTitle && curTitle.toLowerCase() !== 'untitled') return;
+    if(aiTitleText) aiTitleText.textContent = suggested;
+    aiTitleNoteId = note.id;
+    if(aiTitleBar) aiTitleBar.hidden = false;
+  }catch{ /* silent: background suggestion failures never surface */ }
+}
 
 // ── WP-UI-HOME-001 — authenticated view router + Home dashboard ──
 const APP_ROUTES = new Set(['home','notes','shortcuts','notebooks','tags','trash','account']);
@@ -437,6 +474,7 @@ function closeMobileSidebar(){
 }
 function setViewChrome(view){
   hideAiSummary();
+  hideAiTitle(); // WP-AI-002
   currentView = APP_ROUTES.has(view) ? view : 'home';
   const showHome = currentView==='home' || currentView==='account';
   const showShortcuts = currentView==='shortcuts';
@@ -899,9 +937,11 @@ function updateEditorForSelection(note){
   const hasSelection = !!note;
   const readOnly = offlineReadOnly;
   hideAiSummary();
+  hideAiTitle(); // WP-AI-002 — reset on every selection change
   if(note && (currentView === 'notes' || currentView === 'trash')) {
     renderAiSummary(note, 'Saved summary — regenerate after edits.');
   }
+  if(note && currentView === 'notes') maybeSuggestTitle(note); // WP-AI-002
   // Title and editor
   updateEditorDisabled(!hasSelection || isTrashed || readOnly);
   // WP-APP-005 — notebook picker reflects selection; disabled for trashed/empty/offline
@@ -1057,6 +1097,19 @@ if(summarizeBtn) summarizeBtn.addEventListener('click', async ()=>{
   }
 });
 if(aiSummaryDismiss) aiSummaryDismiss.addEventListener('click', ()=> hideAiSummary());
+// WP-AI-002 — apply/dismiss the suggested title. Applying goes through the
+// normal edit path (title input + onEdit → 900ms autosave), so the server's
+// suggestion only ever persists with explicit user consent.
+if(aiTitleApply) aiTitleApply.addEventListener('click', ()=>{
+  if(!aiTitleNoteId || aiTitleNoteId !== selectedId || !titleInput) return;
+  const suggested = aiTitleText ? aiTitleText.textContent.trim() : '';
+  if(!suggested) return;
+  titleInput.value = suggested;
+  onEdit(); // marks dirty + schedules autosave
+  hideAiTitle();
+  titleInput.focus();
+});
+if(aiTitleDismiss) aiTitleDismiss.addEventListener('click', ()=> hideAiTitle());
 if(copyShareBtn) copyShareBtn.addEventListener('click', async ()=>{
   const value = shareLinkInput?.value || '';
   if(!value) return;
