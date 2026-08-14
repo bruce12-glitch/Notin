@@ -225,6 +225,7 @@
           <select class="app-nb-select" id="noteNotebookSelect" title="Notebook" disabled aria-label="Notebook">
             <option value="">None</option>
           </select>
+          <button type="button" class="app-ai-btn" id="summarizeBtn" hidden>✨ Summarize</button>
           <button type="button" class="app-share-btn" id="shareBtn" hidden>Share</button>
           <span class="app-save-status" id="saveStatus"></span>
           <button class="app-save" id="saveBtn" disabled>Save</button>
@@ -247,6 +248,11 @@
         <button type="button" id="copyShareBtn">Copy</button>
         <button type="button" id="revokeShareBtn">Revoke</button>
         <span id="shareStatus" aria-live="polite"></span>
+      </div>
+      <div class="app-ai-summary" id="aiSummaryCard" hidden>
+        <div class="app-ai-summary-head"><span>✨ AI summary</span><button type="button" id="aiSummaryDismiss" aria-label="Dismiss summary">×</button></div>
+        <p id="aiSummaryText"></p>
+        <small id="aiSummaryMeta"></small>
       </div>
       <!-- WP-APP-006 — note tags row (chips + add-tag picker) -->
       <div class="app-tag-row" id="tagRow" hidden>

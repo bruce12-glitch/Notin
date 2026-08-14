@@ -354,7 +354,7 @@ const db = {
       const { rows } = await query(
         `INSERT INTO "Note" (id, title, description, "contentJson", "contentText", "isTrashed", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt")
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-         RETURNING id, title, description, "contentJson", "contentText", "isTrashed", "isPinned", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt"`,
+         RETURNING id, title, description, "contentJson", "contentText", summary, "isTrashed", "isPinned", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt"`,
         [id, title || 'Untitled', desc, jsonStr, textStr, 0, null, notebookId || null, userId, now, now]
       );
       const row = rows[0];
@@ -371,7 +371,7 @@ const db = {
       // returned (active, trash, search, notebook, tag); date keeps the requested direction.
       const dir = orderBy?.createdAt === 'asc' ? 'ASC' : 'DESC';
       const order = `"isPinned" DESC, "createdAt" ${dir}`;
-      let sql = `SELECT id, title, description, "contentJson", "contentText", "isTrashed", "isPinned", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt" FROM "Note" WHERE "userId" = $1`;
+      let sql = `SELECT id, title, description, "contentJson", "contentText", summary, "isTrashed", "isPinned", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt" FROM "Note" WHERE "userId" = $1`;
       const params = [userId];
       let idx = 2;
       if(isTrashed !== undefined){
@@ -434,7 +434,7 @@ const db = {
     },
     async findFirst({ where: { id, userId } }) {
       const { rows } = await query(
-        `SELECT id, title, description, "contentJson", "contentText", "isTrashed", "isPinned", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt" FROM "Note" WHERE id = $1 AND "userId" = $2 LIMIT 1`,
+        `SELECT id, title, description, "contentJson", "contentText", summary, "isTrashed", "isPinned", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt" FROM "Note" WHERE id = $1 AND "userId" = $2 LIMIT 1`,
         [id, userId]
       );
       const row = rows[0] || null;
@@ -459,6 +459,7 @@ const db = {
         sets.push(`"contentJson" = $${idx++}`); params.push(jsonStr);
       }
       if(data.contentText !== undefined){ sets.push(`"contentText" = $${idx++}`); params.push(String(data.contentText)); }
+      if(data.summary !== undefined){ sets.push(`summary = $${idx++}`); params.push(data.summary); }
       if(data.isTrashed !== undefined){
         if(usePostgres){ sets.push(`"isTrashed" = $${idx++}`); params.push(!!data.isTrashed); }
         else { sets.push(`"isTrashed" = $${idx++}`); params.push(data.isTrashed ? 1 : 0); }
@@ -483,7 +484,7 @@ const db = {
       params.push(id);
       const setClause = sets.join(', ');
       const { rows } = await query(
-        `UPDATE "Note" SET ${setClause} WHERE id = $${idx} RETURNING id, title, description, "contentJson", "contentText", "isTrashed", "isPinned", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt"`,
+        `UPDATE "Note" SET ${setClause} WHERE id = $${idx} RETURNING id, title, description, "contentJson", "contentText", summary, "isTrashed", "isPinned", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt"`,
         params
       );
       // WP-APP-006 — replace tag set when tagIds provided (ownership validated in controller)

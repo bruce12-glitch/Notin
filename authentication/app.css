@@ -355,6 +355,14 @@ body.sidebar-collapsed .app-btn-logout::before{content:"⏻";font-size:15px}
 .app-nb-select:disabled{opacity:.45;cursor:not-allowed}
 .app-nb-select:focus{outline:none;border-color:var(--env-green)}
 .app-share-btn:hover{border-color:#5d7a3f;color:var(--env-green)}
+.app-ai-btn{border-color:#3f4a3a !important;color:#c9d9b8 !important;background:#242c20 !important}
+.app-ai-btn:hover{border-color:var(--env-green) !important;color:var(--env-green) !important}
+.app-ai-summary{margin:0 18px 10px;padding:11px 13px;border:1px solid #3a4632;border-radius:10px;background:#22291d;color:#d9e7cf;font-size:12.5px}
+.app-ai-summary-head{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--env-green);font-size:12px;font-weight:700}
+.app-ai-summary-head button{border:0;background:transparent;color:#9bad91;font-size:20px;line-height:1;cursor:pointer;padding:0 2px}
+.app-ai-summary-head button:hover{color:#fff}
+.app-ai-summary p{margin:7px 0 5px;line-height:1.55;white-space:pre-wrap}
+#aiSummaryMeta{color:#8d9b85;font-size:10.5px}
 .app-save-status{font-size:11.5px;color:#8a8a8a;white-space:nowrap}
 .app-save-status.is-saved{color:#a7d96a}
 .app-save-status.is-error{color:#ef9a9a}
