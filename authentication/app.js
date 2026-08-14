@@ -83,6 +83,13 @@ const aiSummaryCard = document.getElementById('aiSummaryCard');
 const aiSummaryText = document.getElementById('aiSummaryText');
 const aiSummaryMeta = document.getElementById('aiSummaryMeta');
 const aiSummaryDismiss = document.getElementById('aiSummaryDismiss');
+// WP-AI-002 — AI title suggestion (server suggests; user accepts via autosave)
+const aiTitleBar = document.getElementById('aiTitleBar');
+const aiTitleText = document.getElementById('aiTitleText');
+const aiTitleApply = document.getElementById('aiTitleApply');
+const aiTitleDismiss = document.getElementById('aiTitleDismiss');
+let aiTitleNoteId = null;
+const titleSuggestedFor = new Set(); // session-only: suggested-or-dismissed note ids
 let sharedNoteId = null;
 // WP-APP-008 — image attachments
 const attachmentRow = document.getElementById('attachmentRow');
@@ -417,6 +424,36 @@ function renderAiSummary(note, meta){
   if(aiSummaryMeta) aiSummaryMeta.textContent = meta || 'Saved summary — regenerate after edits.';
   aiSummaryCard.hidden = false;
 }
+// WP-AI-002 — title suggestion bar lifecycle
+function hideAiTitle(){
+  if(aiTitleBar) aiTitleBar.hidden = true;
+  aiTitleNoteId = null;
+}
+async function maybeSuggestTitle(note){
+  hideAiTitle();
+  if(!note || note.isTrashed || offlineReadOnly) return;
+  if(currentView !== 'notes') return;
+  if(titleSuggestedFor.has(note.id)) return;
+  const title = typeof note.title === 'string' ? note.title.trim() : '';
+  if(title && title.toLowerCase() !== 'untitled') return;
+  const text = (note.contentText || note.description || '').trim();
+  if(text.length < 40) return;
+  titleSuggestedFor.add(note.id); // before fetch — prevents double-fire
+  try{
+    const res = await fetchWithAuth(`${API_BASE}/api/notes/${note.id}/suggest-title`, { method: 'POST' });
+    if(res.status !== 200) return; // silent degrade for background suggestions
+    const payload = await res.json().catch(()=>({}));
+    const suggested = typeof payload.title === 'string' ? payload.title.trim() : '';
+    if(!suggested) return;
+    if(selectedId !== note.id) return; // user moved on
+    const cur = notes.find(n=>n.id===note.id);
+    const curTitle = (cur && typeof cur.title === 'string') ? cur.title.trim() : '';
+    if(curTitle && curTitle.toLowerCase() !== 'untitled') return;
+    if(aiTitleText) aiTitleText.textContent = suggested;
+    aiTitleNoteId = note.id;
+    if(aiTitleBar) aiTitleBar.hidden = false;
+  }catch{ /* silent: background suggestion failures never surface */ }
+}
 
 // ── WP-UI-HOME-001 — authenticated view router + Home dashboard ──
 const APP_ROUTES = new Set(['home','notes','shortcuts','notebooks','tags','trash','account']);
@@ -437,6 +474,7 @@ function closeMobileSidebar(){
 }
 function setViewChrome(view){
   hideAiSummary();
+  hideAiTitle(); // WP-AI-002
   currentView = APP_ROUTES.has(view) ? view : 'home';
   const showHome = currentView==='home' || currentView==='account';
   const showShortcuts = currentView==='shortcuts';
@@ -841,6 +879,8 @@ function renderList(){
   notes.forEach(n=>{
     const snippet = plainFromNote(n);
     const pinned = !!n.isPinned;
+    // WP-UI-NOTES-001 — notebook label for the row meta line
+    const notebook = n.notebookId ? notebooks.find(item=>item.id===n.notebookId) : null;
     // WP-APP-007 — row is a focusable div (not <button>) so the pin toggle is valid nested markup
     const btn = document.createElement('div');
     btn.className = 'app-note-item' + (pinned?' is-pinned':'') + (n.id===selectedId?' is-active':'');
@@ -851,11 +891,16 @@ function renderList(){
     const pinCtl = isTrashView
       ? (pinned ? `<span class="app-note-pin app-note-pin--static is-on" title="Pinned" aria-hidden="true">${PIN_SVG}</span>` : '')
       : `<button type="button" class="app-note-pin${pinned?' is-on':''}" title="${pinned?'Unpin note':'Pin note'}" aria-label="${pinned?'Unpin':'Pin'}: ${escapeHtml(n.title || 'Untitled')}" aria-pressed="${pinned?'true':'false'}">${PIN_SVG}</button>`;
+    // WP-UI-NOTES-001 — richer row: 2-line snippet, tag chips, date + notebook meta
+    const rowTags = (n.tags && n.tags.length)
+      ? `<div class="app-note-tags">${n.tags.slice(0,3).map(t=>`<span class="app-note-tag">${escapeHtml(t.name)}</span>`).join('')}${n.tags.length>3?`<span class="app-note-tag app-note-tag-more">+${n.tags.length-3}</span>`:''}</div>`
+      : '';
     btn.innerHTML = `
       ${pinCtl}
       <div class="app-note-title">${escapeHtml(n.title || 'Untitled')}</div>
-      <div class="app-note-snippet">${escapeHtml(snippetFromText(snippet)) || '<span style="color:#9a9a9a">No additional text</span>'}</div>
-      <div class="app-note-meta">${formatDate(n.updatedAt || n.createdAt)}</div>
+      <div class="app-note-snippet">${escapeHtml(snippetFromText(snippet)) || '<span class="app-note-snippet-empty">No additional text</span>'}</div>
+      ${rowTags}
+      <div class="app-note-meta"><span>${formatDate(n.updatedAt || n.createdAt)}</span><span class="app-note-book">${escapeHtml(notebook ? notebook.name : 'Unfiled')}</span></div>
     `;
     btn.addEventListener('click', ()=> selectNote(n.id));
     btn.addEventListener('keydown', (e)=>{
@@ -869,14 +914,34 @@ function renderList(){
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+// WP-UI-NOTES-001 — editor meta strip (edited time + live word count) and
+// the "no note open" empty state. Pure presentation; never touches save flow.
+function updateEditorMeta(note){
+  const empty = document.getElementById('editorEmpty');
+  if(empty) empty.hidden = !!note;
+  const meta = document.getElementById('editorMeta');
+  if(!meta) return;
+  if(!note){ meta.hidden = true; return; }
+  meta.hidden = false;
+  const editedEl = document.getElementById('editorMetaEdited');
+  const wordsEl = document.getElementById('editorMetaWords');
+  if(editedEl) editedEl.textContent = `Edited ${formatDate(note.updatedAt || note.createdAt)}`;
+  if(wordsEl){
+    const text = (editor ? editor.getText() : (note.contentText || '')).trim();
+    const words = text ? text.split(/\s+/).length : 0;
+    wordsEl.textContent = `${words} ${words===1?'word':'words'}`;
+  }
+}
 function updateEditorForSelection(note){
   const isTrashed = !!(note && note.isTrashed);
   const hasSelection = !!note;
   const readOnly = offlineReadOnly;
   hideAiSummary();
+  hideAiTitle(); // WP-AI-002 — reset on every selection change
   if(note && (currentView === 'notes' || currentView === 'trash')) {
     renderAiSummary(note, 'Saved summary — regenerate after edits.');
   }
+  if(note && currentView === 'notes') maybeSuggestTitle(note); // WP-AI-002
   // Title and editor
   updateEditorDisabled(!hasSelection || isTrashed || readOnly);
   // WP-APP-005 — notebook picker reflects selection; disabled for trashed/empty/offline
@@ -931,6 +996,8 @@ function updateEditorForSelection(note){
   } else {
     setSaveStatus('', '');
   }
+  // WP-UI-NOTES-001 — meta strip + empty state follow the selection
+  updateEditorMeta(note);
 }
 function selectNote(id){
   if(sharedNoteId && sharedNoteId!==id) resetSharePanel();
@@ -1030,6 +1097,19 @@ if(summarizeBtn) summarizeBtn.addEventListener('click', async ()=>{
   }
 });
 if(aiSummaryDismiss) aiSummaryDismiss.addEventListener('click', ()=> hideAiSummary());
+// WP-AI-002 — apply/dismiss the suggested title. Applying goes through the
+// normal edit path (title input + onEdit → 900ms autosave), so the server's
+// suggestion only ever persists with explicit user consent.
+if(aiTitleApply) aiTitleApply.addEventListener('click', ()=>{
+  if(!aiTitleNoteId || aiTitleNoteId !== selectedId || !titleInput) return;
+  const suggested = aiTitleText ? aiTitleText.textContent.trim() : '';
+  if(!suggested) return;
+  titleInput.value = suggested;
+  onEdit(); // marks dirty + schedules autosave
+  hideAiTitle();
+  titleInput.focus();
+});
+if(aiTitleDismiss) aiTitleDismiss.addEventListener('click', ()=> hideAiTitle());
 if(copyShareBtn) copyShareBtn.addEventListener('click', async ()=>{
   const value = shareLinkInput?.value || '';
   if(!value) return;
@@ -1344,6 +1424,7 @@ function onEdit(){
   if(cur && cur.isTrashed) return;
   dirty = true;
   setSaveStatus('Unsaved', '');
+  updateEditorMeta(cur); // WP-UI-NOTES-001 — live word count while typing
   clearTimeout(saveTimer);
   saveTimer = setTimeout(()=>{
     if(dirty) saveNote().then(()=> dirty=false);
