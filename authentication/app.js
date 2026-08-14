@@ -821,6 +821,8 @@ function renderList(){
   notes.forEach(n=>{
     const snippet = plainFromNote(n);
     const pinned = !!n.isPinned;
+    // WP-UI-NOTES-001 — notebook label for the row meta line
+    const notebook = n.notebookId ? notebooks.find(item=>item.id===n.notebookId) : null;
     // WP-APP-007 — row is a focusable div (not <button>) so the pin toggle is valid nested markup
     const btn = document.createElement('div');
     btn.className = 'app-note-item' + (pinned?' is-pinned':'') + (n.id===selectedId?' is-active':'');
@@ -831,11 +833,16 @@ function renderList(){
     const pinCtl = isTrashView
       ? (pinned ? `<span class="app-note-pin app-note-pin--static is-on" title="Pinned" aria-hidden="true">${PIN_SVG}</span>` : '')
       : `<button type="button" class="app-note-pin${pinned?' is-on':''}" title="${pinned?'Unpin note':'Pin note'}" aria-label="${pinned?'Unpin':'Pin'}: ${escapeHtml(n.title || 'Untitled')}" aria-pressed="${pinned?'true':'false'}">${PIN_SVG}</button>`;
+    // WP-UI-NOTES-001 — richer row: 2-line snippet, tag chips, date + notebook meta
+    const rowTags = (n.tags && n.tags.length)
+      ? `<div class="app-note-tags">${n.tags.slice(0,3).map(t=>`<span class="app-note-tag">${escapeHtml(t.name)}</span>`).join('')}${n.tags.length>3?`<span class="app-note-tag app-note-tag-more">+${n.tags.length-3}</span>`:''}</div>`
+      : '';
     btn.innerHTML = `
       ${pinCtl}
       <div class="app-note-title">${escapeHtml(n.title || 'Untitled')}</div>
-      <div class="app-note-snippet">${escapeHtml(snippetFromText(snippet)) || '<span style="color:#9a9a9a">No additional text</span>'}</div>
-      <div class="app-note-meta">${formatDate(n.updatedAt || n.createdAt)}</div>
+      <div class="app-note-snippet">${escapeHtml(snippetFromText(snippet)) || '<span class="app-note-snippet-empty">No additional text</span>'}</div>
+      ${rowTags}
+      <div class="app-note-meta"><span>${formatDate(n.updatedAt || n.createdAt)}</span><span class="app-note-book">${escapeHtml(notebook ? notebook.name : 'Unfiled')}</span></div>
     `;
     btn.addEventListener('click', ()=> selectNote(n.id));
     btn.addEventListener('keydown', (e)=>{
@@ -848,6 +855,24 @@ function renderList(){
 }
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+// WP-UI-NOTES-001 — editor meta strip (edited time + live word count) and
+// the "no note open" empty state. Pure presentation; never touches save flow.
+function updateEditorMeta(note){
+  const empty = document.getElementById('editorEmpty');
+  if(empty) empty.hidden = !!note;
+  const meta = document.getElementById('editorMeta');
+  if(!meta) return;
+  if(!note){ meta.hidden = true; return; }
+  meta.hidden = false;
+  const editedEl = document.getElementById('editorMetaEdited');
+  const wordsEl = document.getElementById('editorMetaWords');
+  if(editedEl) editedEl.textContent = `Edited ${formatDate(note.updatedAt || note.createdAt)}`;
+  if(wordsEl){
+    const text = (editor ? editor.getText() : (note.contentText || '')).trim();
+    const words = text ? text.split(/\s+/).length : 0;
+    wordsEl.textContent = `${words} ${words===1?'word':'words'}`;
+  }
 }
 function updateEditorForSelection(note){
   const isTrashed = !!(note && note.isTrashed);
@@ -906,6 +931,8 @@ function updateEditorForSelection(note){
   } else {
     setSaveStatus('', '');
   }
+  // WP-UI-NOTES-001 — meta strip + empty state follow the selection
+  updateEditorMeta(note);
 }
 function selectNote(id){
   if(sharedNoteId && sharedNoteId!==id) resetSharePanel();
@@ -1281,6 +1308,7 @@ function onEdit(){
   if(cur && cur.isTrashed) return;
   dirty = true;
   setSaveStatus('Unsaved', '');
+  updateEditorMeta(cur); // WP-UI-NOTES-001 — live word count while typing
   clearTimeout(saveTimer);
   saveTimer = setTimeout(()=>{
     if(dirty) saveNote().then(()=> dirty=false);

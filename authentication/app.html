@@ -209,6 +209,12 @@
       <div class="app-editor-header">
         <div class="app-editor-title">
           <input id="editorTitle" type="text" placeholder="Title" autocomplete="off" disabled>
+          <!-- WP-UI-NOTES-001 — note meta strip (edited time + word count) -->
+          <div class="app-editor-meta" id="editorMeta" hidden>
+            <span id="editorMetaEdited"></span>
+            <span class="app-editor-meta-dot" aria-hidden="true">·</span>
+            <span id="editorMetaWords"></span>
+          </div>
         </div>
         <div class="app-editor-actions">
           <!-- WP-APP-007 — pin/unpin the open note -->
@@ -225,6 +231,14 @@
           <button class="app-btn-trash" id="trashBtn" hidden title="Move to Trash">Trash</button>
           <button class="app-btn-restore" id="restoreBtn" hidden>Restore</button>
           <button class="app-btn-delete" id="deleteBtn" hidden>Delete forever</button>
+        </div>
+      </div>
+      <!-- WP-UI-NOTES-001 — empty state shown when no note is open -->
+      <div class="app-editor-empty" id="editorEmpty">
+        <div class="app-editor-empty-card">
+          <span class="app-editor-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M13.5 3.8a1.7 1.7 0 012.4 2.4l-8.7 8.7-3.2.9.9-3.2 8.6-8.8z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M4 20h16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+          <strong>No note open</strong>
+          <p>Select a note from the list, or create a new one to start writing.</p>
         </div>
       </div>
       <!-- WP-APP-009 — owner-only read-only share controls -->
