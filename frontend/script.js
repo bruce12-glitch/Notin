@@ -105,17 +105,23 @@ if (navToggle && mobilePanel) {
   };
   buildMobile();
 
+  const setMobileMenu = (expanded) => {
+    mobilePanel.classList.toggle('hidden', !expanded);
+    navToggle.textContent = expanded ? '✕' : '☰';
+    navToggle.setAttribute('aria-expanded', String(expanded));
+  };
+  navToggle.setAttribute('aria-expanded', 'false');
+  navToggle.setAttribute('aria-controls', 'navLinksMobile');
   navToggle.addEventListener('click', () => {
-    const open = mobilePanel.classList.toggle('hidden');
-    navToggle.textContent = open ? '☰' : '✕';
+    setMobileMenu(mobilePanel.classList.contains('hidden'));
   });
   mobilePanel.addEventListener('click', (e) => {
-    if (e.target.tagName === 'A' && !e.target.closest('.mob-sub') === false) {
-      // close when tapping a plain top-level link (not accordion children)
-      if (!e.target.closest('.mob-sub')) {
-        mobilePanel.classList.add('hidden');
-        navToggle.textContent = '☰';
-      }
+    if (e.target.closest('a')) setMobileMenu(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !mobilePanel.classList.contains('hidden')) {
+      setMobileMenu(false);
+      navToggle.focus();
     }
   });
 }
@@ -255,7 +261,7 @@ if (track && prevBtn && nextBtn) {
     stopAuto();
     autoplayTimer = setInterval(() => {
       if (!document.hidden && !track.matches(':hover')) go(1);
-    }, 2600);
+    }, 4200);
   };
   const stopAuto = () => { if (autoplayTimer) { clearInterval(autoplayTimer); autoplayTimer = null; } };
   track.addEventListener('mouseenter', stopAuto);
@@ -340,219 +346,6 @@ const OS_META = NOTIN_PLATFORMS[OS] || NOTIN_PLATFORMS.web;
   if (!btn || !label) return;
   label.textContent = `Download for ${OS_META.label}`;
   btn.setAttribute('href', OS_META.href);
-})();
-
-
-
-// ============================================================
-// MOTION & 3D ENGINE — premium effects (both pages)
-// Every effect is guarded, GPU-friendly, and disabled for
-// users who prefer reduced motion.
-// ============================================================
-(function () {
-  const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  // ---------- Scroll progress bar ----------
-  const prog = document.getElementById('scrollProgress');
-  const setProg = () => {
-    if (!prog) return;
-    const h = document.documentElement;
-    const max = h.scrollHeight - h.clientHeight;
-    prog.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + '%';
-  };
-  window.addEventListener('scroll', setProg, { passive: true });
-  setProg();
-
-  // ---------- Back to top ----------
-  const backTop = document.getElementById('backTop');
-  if (backTop) {
-    const onScrollBT = () => backTop.classList.toggle('show', window.scrollY > 600);
-    window.addEventListener('scroll', onScrollBT, { passive: true });
-    onScrollBT();
-    backTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: REDUCED ? 'auto' : 'smooth' }));
-  }
-
-  // ---------- Navbar shrink ----------
-  const navEl = document.getElementById('nav');
-  if (navEl) {
-    const onNav = () => navEl.classList.toggle('nav-shrunk', window.scrollY > 260);
-    window.addEventListener('scroll', onNav, { passive: true });
-    onNav();
-  }
-
-  // ---------- Animated counters ----------
-  const animateCount = (el) => {
-    const target = parseFloat(el.dataset.count || '0');
-    const decimals = parseInt(el.dataset.decimals || '0', 10);
-    const prefix = el.dataset.prefix || '';
-    const suffix = el.dataset.suffix || '';
-    const dur = 1300;
-    const t0 = performance.now();
-    const tick = (now) => {
-      const p = Math.min((now - t0) / dur, 1);
-      const eased = 1 - Math.pow(1 - p, 3);
-      const val = target * eased;
-      el.textContent = prefix + val.toFixed(decimals) + suffix;
-      if (p < 1) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  };
-  if (!REDUCED) {
-    const counters = [...document.querySelectorAll('[data-count]')];
-    if ('IntersectionObserver' in window && counters.length) {
-      const cio = new IntersectionObserver((entries) => {
-        entries.forEach((e) => { if (e.isIntersecting) { animateCount(e.target); cio.unobserve(e.target); } });
-      }, { threshold: 0.6 });
-      counters.forEach((c) => cio.observe(c));
-    } else counters.forEach(animateCount);
-  }
-
-  // ---------- 3D tilt (hero mockup + feature cards) ----------
-  const applyTilt = (wrap, el, maxDeg) => {
-    if (REDUCED) return;
-    let raf = null, tx = 0, ty = 0, cx = 0, cy = 0;
-    const lerp = (a, b) => a + (b - a) * 0.12;
-    const loop = () => {
-      cx = lerp(cx, tx); cy = lerp(cy, ty);
-      el.style.transform = `perspective(1100px) rotateX(${-cy * maxDeg}deg) rotateY(${cx * maxDeg}deg)`;
-      if (Math.abs(cx - tx) > 0.01 || Math.abs(cy - ty) > 0.01) raf = requestAnimationFrame(loop);
-      else raf = null;
-    };
-    const onMove = (ev) => {
-      const r = wrap.getBoundingClientRect();
-      tx = ((ev.clientX - r.left) / r.width) * 2 - 1;
-      ty = ((ev.clientY - r.top) / r.height) * 2 - 1;
-      if (!raf) raf = requestAnimationFrame(loop);
-    };
-    const onLeave = () => {
-      tx = 0; ty = 0;
-      if (!raf) raf = requestAnimationFrame(loop);
-    };
-    wrap.addEventListener('mousemove', onMove);
-    wrap.addEventListener('mouseleave', onLeave);
-  };
-
-  const heroWrap = document.querySelector('.tilt-wrap');
-  const heroDemo = document.querySelector('.hero-demo');
-  if (heroWrap && heroDemo && !REDUCED) applyTilt(heroWrap, heroDemo, 7);
-
-  // feature cards: tilt + cursor glare
-  document.querySelectorAll('#built article').forEach((card) => {
-    if (REDUCED) return;
-    card.classList.add('tilt-card');
-    let raf = null, tx = 0, ty = 0, cx = 0, cy = 0;
-    const loop = () => {
-      cx = lerp(cx, tx); cy = lerp(cy, ty);
-      card.style.transform = `perspective(900px) rotateX(${-cy * 4}deg) rotateY(${cx * 4}deg) translateY(-4px)`;
-      if (Math.abs(cx - tx) > 0.01 || Math.abs(cy - ty) > 0.01) raf = requestAnimationFrame(loop);
-      else raf = null;
-    };
-    const lerp = (a, b) => a + (b - a) * 0.15;
-    card.addEventListener('mousemove', (ev) => {
-      const r = card.getBoundingClientRect();
-      tx = ((ev.clientX - r.left) / r.width) * 2 - 1;
-      ty = ((ev.clientY - r.top) / r.height) * 2 - 1;
-      card.style.setProperty('--gx', ((ev.clientX - r.left) / r.width * 100) + '%');
-      card.style.setProperty('--gy', ((ev.clientY - r.top) / r.height * 100) + '%');
-      if (!raf) raf = requestAnimationFrame(loop);
-    });
-    card.addEventListener('mouseleave', () => { tx = 0; ty = 0; if (!raf) raf = requestAnimationFrame(loop); });
-  });
-
-  // ---------- Magnetic buttons ----------
-  if (!REDUCED) {
-    document.querySelectorAll('.magnetic').forEach((btn) => {
-      btn.addEventListener('mousemove', (ev) => {
-        const r = btn.getBoundingClientRect();
-        const dx = (ev.clientX - r.left - r.width / 2) * 0.22;
-        const dy = (ev.clientY - r.top - r.height / 2) * 0.22;
-        btn.classList.add('mag-active');
-        if (btn.classList.contains('btn-3d')) {
-          btn.style.setProperty('--mx', dx.toFixed(1) + 'px');
-          btn.style.setProperty('--my', dy.toFixed(1) + 'px');
-        } else {
-          btn.style.transform = `translate(${dx}px, ${dy}px)`;
-        }
-      });
-      btn.addEventListener('mouseleave', () => {
-        btn.classList.remove('mag-active');
-        btn.style.transform = '';
-        btn.style.removeProperty('--mx');
-        btn.style.removeProperty('--my');
-      });
-    });
-  }
-
-  // ---------- Parallax layers ----------
-  if (!REDUCED) {
-    const layers = [...document.querySelectorAll('[data-parallax]')];
-    if (layers.length) {
-      let ticking = false;
-      const onParallax = () => {
-        if (ticking) return;
-        ticking = true;
-        requestAnimationFrame(() => {
-          const y = window.scrollY;
-          layers.forEach((el) => {
-            const speed = parseFloat(el.dataset.parallax || '0.2');
-            el.style.transform = `translate3d(0, ${y * speed * 0.06}px, 0)`;
-          });
-          ticking = false;
-        });
-      };
-      window.addEventListener('scroll', onParallax, { passive: true });
-      onParallax();
-    }
-  }
-
-  // ---------- Staggered reveals ----------
-  document.querySelectorAll('.feature-grid, .pricing-grid, #platformGrid, .testimonial-grid, .download-grid, #built .grid, #roadmap .grid').forEach((grid) => {
-    [...grid.children].forEach((child, i) => {
-      child.classList.add('stagger');
-      child.style.setProperty('--stagger', Math.min(i * 70, 420) + 'ms');
-    });
-  });
-
-  // ---------- Context page: animate bars into view ----------
-  const bars = [...document.querySelectorAll('.ctx-bar')];
-  if (bars.length && 'IntersectionObserver' in window && !REDUCED) {
-    const bio = new IntersectionObserver((entries) => {
-      entries.forEach((e) => {
-        if (e.isIntersecting) {
-          e.target.style.width = (e.target.dataset.width || 0) + '%';
-          bio.unobserve(e.target);
-        }
-      });
-    }, { threshold: 0.35 });
-    bars.forEach((b) => bio.observe(b));
-  } else if (bars.length && REDUCED) {
-    bars.forEach((b) => (b.style.width = (b.dataset.width || 0) + '%'));
-  }
-
-  // ---------- Price flip animation on billing toggle ----------
-  const amountsEls = [...document.querySelectorAll('.amount')];
-  if (amountsEls.length) {
-    const flip = (el, text) => {
-      el.style.transition = 'opacity .12s ease, transform .12s ease';
-      el.style.opacity = '0';
-      el.style.transform = 'translateY(-6px)';
-      setTimeout(() => {
-        el.textContent = text;
-        el.style.opacity = '1';
-        el.style.transform = '';
-      }, 120);
-    };
-    // hook into existing setBilling: patch after it runs
-    const origClick = (btn) => btn.addEventListener('click', () => {
-      setTimeout(() => {
-        const yearly = document.getElementById('yearlyBtn').classList.contains('active');
-        amountsEls.forEach((el) => flip(el, yearly ? el.dataset.yearly : el.dataset.monthly));
-      }, 0);
-    });
-    const y = document.getElementById('yearlyBtn'), m = document.getElementById('monthlyBtn');
-    if (y) origClick(y);
-    if (m) origClick(m);
-  }
 })();
 
 
@@ -1002,7 +795,7 @@ if (yearEl) yearEl.textContent = new Date().getFullYear();
     state.ctaStatus = 'success';
     okEl.hidden = false;
     errEl.hidden = true;
-    setTimeout(() => { okEl.hidden = true; state.ctaStatus = 'idle'; }, 2600);
+    setTimeout(() => { okEl.hidden = true; state.ctaStatus = 'idle'; }, 4200);
   };
 
   if (cta) {
@@ -1034,41 +827,6 @@ if (yearEl) yearEl.textContent = new Date().getFullYear();
   }
 })();
 
-// ============================================================
-// POINTER MOTION LAYER — additive only, disabled for touch/reduced motion
-// ============================================================
-(function () {
-  const fine = window.matchMedia('(pointer: fine)').matches;
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (!fine || reduced) return;
-
-  const orb = document.createElement('div'); orb.className = 'cursor-orb';
-  const trail = document.createElement('div'); trail.className = 'cursor-trail';
-  document.body.append(orb, trail);
-  let x = -100, y = -100, tx = x, ty = y, frame;
-  const move = (e) => { tx = e.clientX; ty = e.clientY; orb.classList.add('is-visible'); };
-  const render = () => {
-    x += (tx - x) * .22; y += (ty - y) * .22;
-    orb.style.transform = `translate3d(${tx}px,${ty}px,0) translate3d(-50%,-50%,0)`;
-    trail.style.opacity = '0.65'; trail.style.transform = `translate3d(${x}px,${y}px,0) translate3d(-50%,-50%,0)`;
-    frame = requestAnimationFrame(render);
-  };
-  window.addEventListener('pointermove', move, { passive: true });
-  render();
-  const targets = document.querySelectorAll('a, button, .hero-3d, #featuresTrack article, .platform-card, #pricing article, .carousel-slide');
-  targets.forEach((el) => {
-    el.classList.add('magnetic-3d');
-    el.addEventListener('pointermove', (e) => {
-      const r = el.getBoundingClientRect(); const px = (e.clientX-r.left)/r.width-.5; const py = (e.clientY-r.top)/r.height-.5;
-      el.style.setProperty('--glare-x', `${(px+.5)*100}%`); el.style.setProperty('--glare-y', `${(py+.5)*100}%`);
-      el.style.transform = `perspective(700px) translate3d(${px*5}px,${py*4}px,8px) rotateX(${py*-3}deg) rotateY(${px*3}deg)`;
-      el.classList.add('is-magnetic'); orb.classList.add('is-hovering');
-    });
-    el.addEventListener('pointerleave', () => { el.style.removeProperty('transform'); el.classList.remove('is-magnetic'); orb.classList.remove('is-hovering'); });
-  });
-  window.addEventListener('blur', () => { orb.classList.remove('is-visible'); trail.style.opacity = '0'; });
-})();
-
 // AUTH UI — connects the landing page to the separate JWT/Google OTP service
 (function () {
   // Same-origin default: the dev server proxies /auth + /api to the unified API.
@@ -1076,7 +834,12 @@ if (yearEl) yearEl.textContent = new Date().getFullYear();
   const api = window.NOTIN_AUTH_API || (location.protocol.startsWith('http') ? location.origin : 'http://localhost:8787');
   const modal = document.createElement('div'); modal.className='auth-modal'; modal.innerHTML=`<div class="auth-panel auth-3d" role="dialog" aria-modal="true" aria-labelledby="authTitle"><button class="auth-close" aria-label="Close">×</button><div class="auth-orbit"></div><p class="auth-kicker">SECURE ACCESS</p><h2 id="authTitle">Sign in to Notin</h2><p class="auth-copy">Continue with Google. We’ll send a one-time code to your verified Gmail.</p><button class="auth-google">Continue with Google</button><div class="auth-otp" hidden><label>Enter your 6-digit code<input inputmode="numeric" maxlength="6" autocomplete="one-time-code" class="auth-code"></label><button class="auth-verify">Verify code</button><button class="auth-resend">Resend code</button><p class="auth-status"></p></div></div>`; document.body.appendChild(modal);
   const open=()=>modal.classList.add('is-open'), close=()=>modal.classList.remove('is-open');
-  document.querySelectorAll('a').forEach(a=>{if(a.textContent.trim().toLowerCase()==='log in'){a.addEventListener('click',e=>{e.preventDefault();open();});}});
+  const authLabels = new Set(['log in', 'start for free', 'get notin free', 'try it free', 'get started', 'try pro free for 14 days']);
+  document.querySelectorAll('a').forEach((a) => {
+    if (authLabels.has(a.textContent.trim().toLowerCase())) {
+      a.addEventListener('click', (e) => { e.preventDefault(); open(); });
+    }
+  });
   modal.querySelector('.auth-close').onclick=close; modal.addEventListener('click',e=>{if(e.target===modal)close();});
   const status=modal.querySelector('.auth-status'); const otp=modal.querySelector('.auth-otp');
   modal.querySelector('.auth-google').onclick=()=>{ window.location.href=`${api}/auth/google`; };

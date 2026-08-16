@@ -74,6 +74,7 @@ notin/
 │   ├── input-neon.css          ← Neon theme source
 │   ├── styles.css              ← compiled Green CSS (offline-ready)
 │   ├── styles-neon.css         ← compiled Neon CSS
+│   ├── polish.css              ← shared responsive visual refinement layer
 │   ├── script.js               ← interactions & motion engine (documented)
 │   ├── evernote-analysis.md    ← deep design analysis of the reference
 │   ├── evernote-match-score.md ← Notin ↔ Evernote match breakdown
@@ -106,7 +107,7 @@ notin/
 ### 🔤 Typography
 | Role | Font |
 |---|---|
-| Display / headings | **IBM Plex Sans** |
+| Display / headings | **Manrope** |
 | Body / UI | **Inter** |
 | Tags / metadata | **JetBrains Mono** |
 | System fallback | SF Pro stack |
