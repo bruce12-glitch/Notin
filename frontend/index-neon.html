@@ -27,7 +27,7 @@
 <link rel="apple-touch-icon" href="assets/notin-icon-favicon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
 
 <!-- ============================================================
      TAILWIND CSS v4 — PRE-COMPILED (no CDN, works offline)
@@ -36,6 +36,7 @@
      re-run the build command, done.
      ============================================================ -->
 <link rel="stylesheet" href="styles-neon.css" />
+<link rel="stylesheet" href="polish.css" />
 
 <!-- Structured data -->
 <script type="application/ld+json">
@@ -51,7 +52,7 @@
 </script>
 </head>
 
-<body class="bg-bg-primary font-sans text-text-primary antialiased">
+<body class="theme-neon bg-bg-primary font-sans text-text-primary antialiased">
 <div id="scrollProgress" class="scroll-progress" aria-hidden="true"></div>
 
 <!-- ============================================================
@@ -63,10 +64,10 @@
 <!-- ============ NAVBAR ============ -->
 <header id="nav" data-sentry-component="Navbar" data-sentry-source-file="components/Navbar.tsx"
   class="nav sticky top-0 z-50 border-b border-b-transparent bg-bg-primary/85 backdrop-blur-md">
-  <div class="mx-auto flex h-[72px] max-w-6xl items-center justify-between gap-6 px-6">
+  <div class="nav-inner mx-auto flex h-[72px] max-w-6xl items-center justify-between gap-6 px-6">
     <a href="#top" class="brand-logo flex items-center gap-2.5" aria-label="Notin — home">
       <img src="assets/notin-icon-nav.png" alt="" class="brand-icon-3d h-10 w-10" />
-      <span class="text-xl font-extrabold tracking-tight">Notin</span>
+      <span class="brand-name text-xl font-extrabold tracking-tight">Notin</span>
     </a>
         <!-- ============ MEGA-MENU NAVIGATION (Evernote-style) ============ -->
     <nav id="navLinks" aria-label="Main navigation" class="hidden items-center md:flex">
@@ -139,7 +140,7 @@
     </nav>
 
     <!-- CTA stack (Log in · Start for free · Theme) -->
-    <div class="hidden items-center gap-3 md:flex">
+    <div class="nav-actions hidden items-center gap-3 md:flex">
       <a href="#" class="whitespace-nowrap rounded-full px-4 py-2 text-[15px] font-semibold text-text-secondary transition hover:text-brand-600">Log in</a>
       <a href="#" class="btn-3d btn-3d-sm whitespace-nowrap text-[15px]">Start for free</a>
       <button id="themeToggle" class="theme-toggle flex cursor-pointer items-center gap-1.5 rounded-full border border-stroke-buttons bg-surface px-3.5 py-2 text-[13px] font-bold transition hover:border-brand-500 hover:text-brand-500" title="Switch theme" aria-label="Switch between Green and Neon theme">
@@ -148,40 +149,44 @@
       </button>
     </div>
 
-    <button id="navToggle" aria-label="Toggle menu" class="text-2xl md:hidden">☰</button>
+    <button id="navToggle" aria-label="Toggle menu" aria-controls="navLinksMobile" aria-expanded="false" class="text-2xl md:hidden">☰</button>
   </div>
   <div id="navLinksMobile" class="hidden flex-col gap-4 border-t border-stroke-cards bg-bg-primary px-6 py-5 md:hidden"></div>
 </header>
 
 <!-- ============ HERO (split: website copy left · our video right) ============ -->
 <section id="top" data-sentry-component="Hero" data-sentry-source-file="sections/Hero.tsx"
-  class="relative flex min-h-screen items-center overflow-hidden bg-bg-primary">
-  <div class="relative mx-auto grid w-full max-w-6xl -mt-[74px] items-center gap-12 px-6 py-10 md:py-12 lg:grid-cols-2">
+  class="hero-section relative flex min-h-screen items-center overflow-hidden bg-bg-primary">
+  <div class="hero-grid relative mx-auto grid w-full max-w-6xl -mt-[74px] items-center gap-12 px-6 py-10 md:py-12 lg:grid-cols-2">
     <!-- LEFT: website copy (headline, login, CTAs) -->
-    <div class="reveal flex flex-col items-start gap-6 text-left">
-      <span class="inline-flex items-center gap-2 rounded-full border border-brand-500/25 bg-brand-100 px-4 py-2 text-[15px] font-semibold text-brand-700"><svg class="h-4 w-4 text-brand-500" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3l1.9 5.8 5.8 1.9-5.8 1.9L12 18.4l-1.9-5.8-5.8-1.9 5.8-1.9z"/><path d="M18.6 13.5l.8 2.4 2.4.8-2.4.8-.8 2.4-.8-2.4-2.4-.8 2.4-.8z"/></svg> Neon Edition — AI-powered search is here</span>
-      <h1 class="text-[clamp(48px,6.5vw,76px)] font-extrabold leading-[1.05] tracking-[-0.03em]">
-        Your <span class="gradient-animate bg-gradient-to-r from-brand-600 via-brand-500 to-brand-600 bg-clip-text text-transparent">second brain</span>
+    <div class="hero-copy reveal flex flex-col items-start gap-6 text-left">
+      <span class="hero-eyebrow inline-flex items-center gap-2 rounded-full border border-brand-500/25 bg-brand-100 px-4 py-2 text-[15px] font-semibold text-brand-700"><svg class="h-4 w-4 text-brand-500" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3l1.9 5.8 5.8 1.9-5.8 1.9L12 18.4l-1.9-5.8-5.8-1.9 5.8-1.9z"/><path d="M18.6 13.5l.8 2.4 2.4.8-2.4.8-.8 2.4-.8-2.4-2.4-.8 2.4-.8z"/></svg> Neon Edition — AI-powered search is here</span>
+      <h1 class="hero-title text-[clamp(48px,6.5vw,76px)] font-extrabold leading-[1.05] tracking-[-0.03em]">
+        Your second brain, <span class="gradient-animate bg-gradient-to-r from-brand-600 via-brand-500 to-brand-600 bg-clip-text text-transparent">beautifully organized.</span>
       </h1>
       <p class="max-w-[560px] text-xl text-text-secondary">
         Remember everything and tackle any project — notes, tasks, and
         schedules, all in one place.
       </p>
-      <div class="flex flex-wrap items-center gap-4">
+      <div class="hero-actions flex flex-wrap items-center gap-4">
         <a href="#" class="btn-3d text-base">Get Notin free</a>
         <a id="heroSmartDownload" href="#download" class="btn-outline-evernote inline-flex items-center justify-center gap-2">
           <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           <span id="heroDownloadLabel">Download</span>
         </a>
       </div>
-      <a href="#" class="text-[16px] font-semibold text-text-secondary transition hover:text-brand-600">Already have an account? Log in <svg class="inline h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+      <a href="#" class="hero-login text-[16px] font-semibold text-text-secondary transition hover:text-brand-600">Already have an account? Log in <svg class="inline h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+      <div class="hero-reassurance" aria-label="Notin benefits">
+        <span>Free forever</span><span>No credit card</span><span>Syncs everywhere</span>
+      </div>
 
     </div>
 
             <!-- RIGHT: OUR VIDEO — guaranteed playback (native video, no JS required) -->
-    <div class="relative flex h-full min-h-[420px] items-center justify-center">
-      <div class="mx-auto w-full max-w-[640px]">
-        <div class="aspect-[8/5] w-full overflow-hidden rounded-2xl border border-stroke-cards bg-surface shadow-[0_30px_70px_rgba(26,20,16,0.18)]">
+    <div class="hero-visual relative flex h-full min-h-[420px] items-center justify-center">
+      <div class="hero-frame-wrap mx-auto w-full max-w-[640px]">
+        <div class="hero-frame-label"><span></span> Live workspace</div>
+        <div class="hero-product-frame aspect-[8/5] w-full overflow-hidden rounded-2xl border border-stroke-cards bg-surface shadow-[0_30px_70px_rgba(26,20,16,0.18)]">
           <video id="heroDemoVideo" class="hero-video" src="assets/hero-demo-full.mp4"
                  poster="assets/hero-demo-poster.jpg"
                  autoplay muted loop playsinline preload="auto"
@@ -195,7 +200,8 @@
 <!-- ============ CARDS SHOWCASE (Evernote-style peek carousel — infinite loop) ============ -->
 <section id="features" data-sentry-component="CardsShowcase" data-sentry-source-file="sections/CardsShowcase.tsx" class="relative overflow-hidden px-6 py-20 md:py-28 md:pb-[200px]">
   <div class="mx-auto max-w-6xl">
-    <div class="reveal mx-auto mb-12 max-w-[1000px] text-center md:mb-16">
+    <div class="features-heading reveal mx-auto mb-12 max-w-[1000px] text-center md:mb-16">
+      <span class="section-kicker">Built for momentum</span>
       <h2 class="text-[clamp(28px,3.8vw,44px)] font-extrabold leading-[1.15] tracking-[-0.02em]">
         Make the most of your ideas—and <span class="bg-gradient-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent">your time</span>
       </h2>
@@ -737,7 +743,7 @@
         </span>
         <h3 class="text-[26px] font-extrabold leading-tight tracking-[-0.02em]">Get the build <span id="osName" class="bg-gradient-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent">for your device</span></h3>
         <p class="max-w-[480px] text-[15.5px] text-text-secondary">One click and Notin is installed — your notes appear instantly, synced from every device you already use.</p>
-        <div class="flex flex-wrap items-center gap-4">
+        <div class="download-actions flex flex-wrap items-center gap-4">
           <a id="smartDownload" href="#" class="btn-3d px-8 py-3.5 text-base">Download Notin</a>
           <span class="text-[13px] text-text-tertiary">Latest version · Free download</span>
         </div>
@@ -746,7 +752,7 @@
 
     <!-- platform grid -->
     <div id="platformGrid" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <article class="platform-card reveal flex flex-col gap-2.5 rounded-2xl border border-stroke-cards bg-surface p-6 transition hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(44,45,42,0.10)]" data-os="web">
+      <article class="platform-card reveal flex flex-col gap-2.5 rounded-2xl border border-stroke-cards bg-surface p-6 transition hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(44,45,42,0.10)]" id="web" data-os="web">
         <span class="rec-badge">Recommended</span>
         <div class="flex items-center gap-3.5">
           <span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-600">
@@ -760,7 +766,7 @@
         <a href="#" class="download-link mt-1 inline-flex items-center justify-center rounded-full border border-stroke-buttons bg-surface py-2 text-[13.5px] font-semibold transition hover:border-brand-500 hover:text-brand-600">Open notin.app</a>
       </article>
 
-      <article class="platform-card reveal flex flex-col gap-2.5 rounded-2xl border border-stroke-cards bg-surface p-6 transition hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(44,45,42,0.10)]" data-os="windows">
+      <article class="platform-card reveal flex flex-col gap-2.5 rounded-2xl border border-stroke-cards bg-surface p-6 transition hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(44,45,42,0.10)]" id="windows" data-os="windows">
         <span class="rec-badge">Recommended</span>
         <div class="flex items-center gap-3.5">
           <span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-600">
@@ -774,7 +780,7 @@
         <a href="#" class="download-link mt-1 inline-flex items-center justify-center rounded-full border border-stroke-buttons bg-surface py-2 text-[13.5px] font-semibold transition hover:border-brand-500 hover:text-brand-600">Download .exe</a>
       </article>
 
-      <article class="platform-card reveal flex flex-col gap-2.5 rounded-2xl border border-stroke-cards bg-surface p-6 transition hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(44,45,42,0.10)]" data-os="macos">
+      <article class="platform-card reveal flex flex-col gap-2.5 rounded-2xl border border-stroke-cards bg-surface p-6 transition hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(44,45,42,0.10)]" id="macos" data-os="macos">
         <span class="rec-badge">Recommended</span>
         <div class="flex items-center gap-3.5">
           <span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-600">
@@ -788,7 +794,7 @@
         <a href="#" class="download-link mt-1 inline-flex items-center justify-center rounded-full border border-stroke-buttons bg-surface py-2 text-[13.5px] font-semibold transition hover:border-brand-500 hover:text-brand-600">Download .dmg</a>
       </article>
 
-      <article class="platform-card reveal flex flex-col gap-2.5 rounded-2xl border border-stroke-cards bg-surface p-6 transition hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(44,45,42,0.10)]" data-os="linux">
+      <article class="platform-card reveal flex flex-col gap-2.5 rounded-2xl border border-stroke-cards bg-surface p-6 transition hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(44,45,42,0.10)]" id="linux" data-os="linux">
         <span class="rec-badge">Recommended</span>
         <div class="flex items-center gap-3.5">
           <span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-600">
@@ -802,7 +808,7 @@
         <a href="#" class="download-link mt-1 inline-flex items-center justify-center rounded-full border border-stroke-buttons bg-surface py-2 text-[13.5px] font-semibold transition hover:border-brand-500 hover:text-brand-600">Download AppImage</a>
       </article>
 
-      <article class="platform-card reveal flex flex-col gap-2.5 rounded-2xl border border-stroke-cards bg-surface p-6 transition hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(44,45,42,0.10)]" data-os="ios">
+      <article class="platform-card reveal flex flex-col gap-2.5 rounded-2xl border border-stroke-cards bg-surface p-6 transition hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(44,45,42,0.10)]" id="ios" data-os="ios">
         <span class="rec-badge">Recommended</span>
         <div class="flex items-center gap-3.5">
           <span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-600">
@@ -816,7 +822,7 @@
         <a href="#" class="download-link mt-1 inline-flex items-center justify-center rounded-full border border-stroke-buttons bg-surface py-2 text-[13.5px] font-semibold transition hover:border-brand-500 hover:text-brand-600">App Store</a>
       </article>
 
-      <article class="platform-card reveal flex flex-col gap-2.5 rounded-2xl border border-stroke-cards bg-surface p-6 transition hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(44,45,42,0.10)]" data-os="android">
+      <article class="platform-card reveal flex flex-col gap-2.5 rounded-2xl border border-stroke-cards bg-surface p-6 transition hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(44,45,42,0.10)]" id="android" data-os="android">
         <span class="rec-badge">Recommended</span>
         <div class="flex items-center gap-3.5">
           <span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-100 text-brand-600">
