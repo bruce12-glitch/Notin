@@ -96,6 +96,12 @@ const aiTitleApply = document.getElementById('aiTitleApply');
 const aiTitleDismiss = document.getElementById('aiTitleDismiss');
 let aiTitleNoteId = null;
 const titleSuggestedFor = new Set(); // session-only: suggested-or-dismissed note ids
+// WP-AI-002b — smart tag suggestions (server suggests; user applies)
+const aiTagBar = document.getElementById('aiTagBar');
+const aiTagChips = document.getElementById('aiTagChips');
+const aiTagDismiss = document.getElementById('aiTagDismiss');
+let aiTagNoteId = null;
+const tagsSuggestedFor = new Set(); // session-only: never re-suggest after fetch/dismiss
 let sharedNoteId = null;
 // WP-APP-008 — image attachments
 const attachmentRow = document.getElementById('attachmentRow');
@@ -437,6 +443,7 @@ function hideAiTitle(){
 }
 async function maybeSuggestTitle(note){
   hideAiTitle();
+  hideAiTags();
   if(!note || note.isTrashed || offlineReadOnly) return;
   if(currentView !== 'notes') return;
   if(titleSuggestedFor.has(note.id)) return;
@@ -461,6 +468,112 @@ async function maybeSuggestTitle(note){
   }catch{ /* silent: background suggestion failures never surface */ }
 }
 
+// WP-AI-002b — smart tag suggestion bar lifecycle
+function hideAiTags(){
+  if(aiTagBar){
+    aiTagBar.hidden = true;
+    aiTagBar.suggestions = new Map();
+  }
+  if(aiTagChips) aiTagChips.innerHTML = '';
+  aiTagNoteId = null;
+}
+async function maybeSuggestTags(note){
+  hideAiTags();
+  if(!note || note.isTrashed || offlineReadOnly) return;
+  if(currentView !== 'notes' || tagsSuggestedFor.has(note.id)) return;
+  const text = (note.contentText || note.description || '').trim();
+  if(text.length < 100 || (note.tags || []).length >= 3) return;
+  tagsSuggestedFor.add(note.id); // before fetch — prevents double-fire
+  try{
+    const res = await fetchWithAuth(`${API_BASE}/api/notes/${note.id}/suggest-tags`, { method:'POST' });
+    if(res.status !== 200) return; // silent degrade for background suggestions
+    const payload = await res.json().catch(()=>({}));
+    if(selectedId !== note.id || !Array.isArray(payload.tags)) return;
+    const suggestions = new Map();
+    if(aiTagChips) aiTagChips.innerHTML = '';
+    for(const item of payload.tags){
+      const name = typeof item?.name === 'string' ? item.name.trim() : '';
+      if(!name || suggestions.has(name)) continue;
+      const suggestion = { name, existing: typeof item.existing === 'string' ? item.existing : null };
+      suggestions.set(name, suggestion);
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'app-ai-tag-chip';
+      chip.dataset.tagName = name;
+      chip.dataset.existing = suggestion.existing || '';
+      chip.textContent = name;
+      aiTagChips?.appendChild(chip);
+    }
+    if(!suggestions.size || selectedId !== note.id) return;
+    if(aiTagBar){
+      aiTagBar.suggestions = suggestions;
+      aiTagBar.hidden = false;
+    }
+    aiTagNoteId = note.id;
+  }catch{ /* silent: background suggestion failures never surface */ }
+}
+
+if(aiTagChips) aiTagChips.addEventListener('click', async (event)=>{
+  const chip = event.target.closest('.app-ai-tag-chip');
+  if(!chip || !aiTagChips.contains(chip) || !aiTagNoteId) return;
+  const suggestion = aiTagBar?.suggestions instanceof Map
+    ? aiTagBar.suggestions.get(chip.dataset.tagName)
+    : null;
+  const noteId = aiTagNoteId;
+  const note = notes.find(item=>item.id===noteId);
+  if(!suggestion || !note || selectedId !== noteId || note.isTrashed || offlineReadOnly) return;
+
+  const label = suggestion.name;
+  chip.disabled = true;
+  chip.textContent = 'Adding…';
+  setError('');
+  try{
+    let tagId = suggestion.existing;
+    if(!tagId){
+      const createRes = await fetchWithAuth(`${API_BASE}/api/tags`, {
+        method:'POST',
+        body:JSON.stringify({ name:label }),
+      });
+      if(createRes.status === 201){
+        const created = await createRes.json();
+        tagId = created.id;
+      }else if(createRes.status === 409){
+        const tagsRes = await fetchWithAuth(`${API_BASE}/api/tags`, { method:'GET' });
+        const latestTags = await tagsRes.json().catch(()=>[]);
+        if(!tagsRes.ok) throw new Error(tagsRes.status === 429 ? 'AI rate limit reached — try again in a few minutes.' : 'Could not refresh tags');
+        tagId = latestTags.find(tag=>String(tag.name).toLowerCase()===label.toLowerCase())?.id || null;
+        if(!tagId) throw new Error('Could not find that tag');
+      }else{
+        const payload = await createRes.json().catch(()=>({}));
+        throw new Error(createRes.status === 429 ? 'AI rate limit reached — try again in a few minutes.' : (payload.message || 'Could not create tag'));
+      }
+    }
+
+    const currentIds = (note.tags || []).map(tag=>tag.id);
+    const newIds = [...new Set([...currentIds, tagId])];
+    const applyRes = await fetchWithAuth(`${API_BASE}/api/notes/${noteId}`, {
+      method:'PUT',
+      body:JSON.stringify({ tagIds:newIds }),
+    });
+    const updated = await applyRes.json().catch(()=>({}));
+    if(!applyRes.ok){
+      throw new Error(applyRes.status === 429 ? 'AI rate limit reached — try again in a few minutes.' : (updated.message || 'Could not add tag'));
+    }
+    const index = notes.findIndex(item=>item.id===noteId);
+    if(index >= 0) notes[index] = updated;
+    renderTagChips(updated);
+    chip.remove();
+    aiTagBar?.suggestions?.delete(label);
+    if(!aiTagChips.querySelector('.app-ai-tag-chip')) hideAiTags();
+    setSaveStatus('Saved', 'is-saved');
+    await loadTags();
+  }catch(error){
+    setError(error.message || 'Could not add suggested tag');
+    if(chip.isConnected){ chip.disabled = false; chip.textContent = label; }
+  }
+});
+if(aiTagDismiss) aiTagDismiss.addEventListener('click', hideAiTags);
+
 // ── WP-UI-HOME-001 — authenticated view router + Home dashboard ──
 const APP_ROUTES = new Set(['home','notes','shortcuts','notebooks','tags','trash','account']);
 function routeFromHash(){
@@ -481,6 +594,7 @@ function closeMobileSidebar(){
 function setViewChrome(view){
   hideAiSummary();
   hideAiTitle(); // WP-AI-002
+  hideAiTags(); // WP-AI-002b
   const previousView = currentView;
   currentView = APP_ROUTES.has(view) ? view : 'home';
   if(previousView !== currentView) listAnimateNext = true; // WP-UI-NOTES-3D-001
@@ -963,10 +1077,12 @@ function updateEditorForSelection(note){
   const readOnly = offlineReadOnly;
   hideAiSummary();
   hideAiTitle(); // WP-AI-002 — reset on every selection change
+  hideAiTags(); // WP-AI-002b — reset on every selection change
   if(note && (currentView === 'notes' || currentView === 'trash')) {
     renderAiSummary(note, 'Saved summary — regenerate after edits.');
   }
   if(note && currentView === 'notes') maybeSuggestTitle(note); // WP-AI-002
+  if(note && currentView === 'notes') maybeSuggestTags(note); // WP-AI-002b
   // Title and editor
   updateEditorDisabled(!hasSelection || isTrashed || readOnly);
   // WP-APP-005 — notebook picker reflects selection; disabled for trashed/empty/offline
@@ -1142,9 +1258,10 @@ if(aiTitleApply) aiTitleApply.addEventListener('click', ()=>{
   titleInput.value = suggested;
   onEdit(); // marks dirty + schedules autosave
   hideAiTitle();
+  hideAiTags();
   titleInput.focus();
 });
-if(aiTitleDismiss) aiTitleDismiss.addEventListener('click', ()=> hideAiTitle());
+if(aiTitleDismiss) aiTitleDismiss.addEventListener('click', ()=>{ hideAiTitle(); hideAiTags(); });
 if(copyShareBtn) copyShareBtn.addEventListener('click', async ()=>{
   const value = shareLinkInput?.value || '';
   if(!value) return;
