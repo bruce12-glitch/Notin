@@ -10,8 +10,8 @@
 
 | Field | Value |
 |---|---|
-| **Last Updated** | 2026-08-14 (post WP-AI-001 verification) |
-| **Current Phase** | Phase 2 (AI Layer) — **1/7 shipped**: WP-AI-001 ✅ verified |
+| **Last Updated** | 2026-08-17 (WP-UI-NOTES-3D-001 implementation) |
+| **Current Phase** | Phase 2 (AI Layer) — WP-AI-001 + WP-AI-002 shipped; notes 3D polish complete on this branch |
 | **MVP Completion** | ~75% |
 | **Production readiness** | ~40% (deploy gates listed below) |
 
@@ -42,16 +42,15 @@
 - → Account export + typed-confirm delete with full cascade ✅
 - → **WP-UI-HOME-PIXEL-001 (PR #11, 2026-08-10):** post-auth Evernote-dark Home — exact 13-item sidebar IA, notes grid + scratch pad band, capture band, FAB, sidebar collapse, reload rehydration via refresh cookie — **E2E-locked** ✅
 - → **WP-UI-NOTES-001 (2026-08-13):** notes list + editor UX refresh — 2-line clamped snippets, tag chips + notebook pill in every row, hover-revealed pin control, green active-accent bar, larger 28px title, meta strip (edited time + live word count), floating toolbar pill, upgraded TipTap typography (code blocks, task-list strikethrough, blockquote, selection color), proper "no note open" empty state, styled scrollbars/sort control. SW cache bumped v4→v5 (also fixed the stale-PWA bug from PR #11). Landing/auth untouched ✅
-- → PWA: manifest + shell-only service worker (`notin-shell-v4`) + icons ✅
+- → **WP-UI-NOTES-3D-001 (2026-08-17):** notes-app depth and motion polish — shared depth tokens, ≤300ms view/note transitions, context-only row stagger, delegated hover-only card tilt, button press physics, smooth scrolling, and CSS/JS reduced-motion guards. Bundle rebuilt; shell cache v7→v8. Landing/auth/backend untouched ✅
+- → PWA: manifest + shell-only service worker (`notin-shell-v8`) + icons ✅
 - → Marketing: Green/Neon editions, video/Lottie hero, responsive ✅
 
 ## IN PROGRESS
 
-- → **PR #12 OPEN — review & merge it** (`arena/019fecbf-notin` @ d1b57d1): WP-AI-001 (commit 6cb4441) + WP-UI-NOTES-001 notes refresh + CTO docs, union-merged and re-verified live as one build (bundle rebuilt, SW cache v6). Supersedes a separate WP-AI-001 PR.
-- → After merge: run **WP-AI-002** (`CODING_AGENT_MASTER_PROMPT_WP-AI-002.md`) on the new main.
-- → Then **WP-UI-NOTES-3D-001** (`CODING_AGENT_MASTER_PROMPT_WP-UI-NOTES-3D.md`) on the post-AI-002 tree.
-- → Then **WP-AI-002b — smart tag suggestions** (`CODING_AGENT_MASTER_PROMPT_WP-AI-002B.md`): server suggests 3–5 tags, user applies chips via the existing tag write path.
-- → Then: **WP-FUNNEL-001** wire landing CTAs (`CODING_AGENT_MASTER_PROMPT_WP-FUNNEL-001.md`) → WP-AI-003 (chat with note) → schema sync + deploy gates.
+- → **WP-UI-NOTES-3D-001** is implemented on `arena/01a01085-notin`; verification and PR handoff are the current task.
+- → Next, only after this WP merges: **WP-AI-002b — smart tag suggestions** (`CODING_AGENT_MASTER_PROMPT_WP-AI-002B.md`).
+- → Locked queue after WP-AI-002b: **WP-FUNNEL-001** → **WP-AI-003** → **WP-SCHEMA-001** → **WP-DEPLOY-001**.
 
 ## ARCHITECTURE DECISIONS LOCKED
 
@@ -64,7 +63,7 @@
 
 ## KNOWN TECHNICAL DEBT (priority order)
 
-- → ~~SW cache staleness BUG~~ **FIXED 2026-08-13** by WP-UI-NOTES-001 (cache bumped to `notin-shell-v5`). Rule going forward: ANY change to a shell asset (bundle, CSS, HTML) must bump `CACHE_NAME` in `authentication/sw.js`. **Resolved**
+- → ~~SW cache staleness BUG~~ **FIXED 2026-08-13** by WP-UI-NOTES-001; latest shell cache is `notin-shell-v8` after WP-UI-NOTES-3D-001. Rule going forward: ANY change to a shell asset (bundle, CSS, HTML) must bump `CACHE_NAME` in `authentication/sw.js`. **Resolved**
 - → **Landing CTAs dead:** 26 × `href="#"` per edition (Log in / Start for free / Get started / pricing). Next instruction after WP-AI-001 (WP-FUNNEL-001). **High**
 - → `prisma/schema.prisma` drifts from migrate.js (missing Notebook/Tag/NoteTag/password_reset_tokens models; Note lacks isPinned/notebookId). Quick sync task. **Medium**
 - → Dev fallback JWT secrets (boot warning) + permissive non-prod CORS → **deploy-gate: fail closed** (see DEPLOY GATES). **Medium now / High at deploy**
@@ -111,6 +110,6 @@
 
 ## NEXT 3 PRIORITIES
 
-1. **Merge WP-AI-001** — open the PR for `arena/019ffe5a-notin` @ `6cb4441` (verified ✅, not yet merged). Resolve the PROJECT_BIBLE.md conflict in favor of this comprehensive Bible.
-2. **WP-AI-002 — AI title generation** (`CODING_AGENT_MASTER_PROMPT_WP-AI-002.md`): second AI feature on proven plumbing; server suggests, user accepts via existing autosave; includes its own E2E spec.
-3. **WP-UI-NOTES-3D-001** (`CODING_AGENT_MASTER_PROMPT_WP-UI-NOTES-3D.md`): run on the post-AI-002 tree. Queue behind it: WP-AI-002b (smart tags) → WP-FUNNEL-001 (dead landing CTAs) → WP-AI-003 (chat with note) → schema sync + deploy gates.
+1. **Merge WP-UI-NOTES-3D-001** from `arena/01a01085-notin` after its verification gates pass.
+2. **WP-AI-002b — smart tag suggestions** (`CODING_AGENT_MASTER_PROMPT_WP-AI-002B.md`): complete the note-level AI trio without changing the existing tag persistence path.
+3. **WP-FUNNEL-001** (`CODING_AGENT_MASTER_PROMPT_WP-FUNNEL-001.md`): wire the Green/Neon landing CTAs to the real auth/app journey, then proceed to WP-AI-003.
