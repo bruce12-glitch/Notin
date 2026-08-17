@@ -23,6 +23,12 @@ let currentNotebookId = null; // WP-APP-005 — null = All notes (no notebook fi
 let tags = []; // WP-APP-006 — user's tags
 let currentTagId = null; // WP-APP-006 — null = no tag filter
 let currentSort = 'updated'; // WP-APP-007 — list sort control ('updated' | 'created' | 'title'); pins always win
+// WP-UI-NOTES-3D-001 — motion state shared by list entrances, note-open
+// transitions, and the delegated pointer-tilt engine.
+const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+const finePointerQuery = window.matchMedia('(pointer: fine)');
+let listAnimateNext = false;
+let listAnimationTimer = null;
 // WP-UI-HOME-001 — tiny hash router for authenticated app views.
 let currentView = 'home'; // home | notes | shortcuts | notebooks | tags | trash | account
 let routeReady = false;
@@ -475,7 +481,9 @@ function closeMobileSidebar(){
 function setViewChrome(view){
   hideAiSummary();
   hideAiTitle(); // WP-AI-002
+  const previousView = currentView;
   currentView = APP_ROUTES.has(view) ? view : 'home';
+  if(previousView !== currentView) listAnimateNext = true; // WP-UI-NOTES-3D-001
   const showHome = currentView==='home' || currentView==='account';
   const showShortcuts = currentView==='shortcuts';
   const showOrganize = currentView==='notebooks' || currentView==='tags';
@@ -510,7 +518,7 @@ function renderHome(){
   homeNoteGrid.innerHTML = '';
   const create = document.createElement('button');
   create.type = 'button';
-  create.className = 'home-note-card home-create-card';
+  create.className = 'home-note-card home-create-card tilt-3d';
   create.id = 'homeCreateNote';
   create.disabled = offlineReadOnly;
   create.innerHTML = '<span class="home-create-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></span><strong>Create new note</strong>';
@@ -529,7 +537,7 @@ function renderHome(){
     const notebook = note.notebookId ? notebooks.find(item=>item.id===note.notebookId) : null;
     const card = document.createElement('button');
     card.type = 'button';
-    card.className = 'home-note-card';
+    card.className = 'home-note-card tilt-3d';
     card.dataset.noteId = note.id;
     card.innerHTML = `<span class="home-card-book">${escapeHtml(notebook?.name || 'Unfiled note')}</span><h3>${escapeHtml(note.title || 'Untitled')}</h3><span class="home-card-date">Edited ${formatDate(note.updatedAt || note.createdAt)}</span>${note.isPinned?'<span class="home-card-pin" title="Pinned">●</span>':''}`;
     card.addEventListener('click', ()=> openNoteFromHome(note.id));
@@ -554,7 +562,7 @@ function renderShortcuts(){
     const notebook=note.notebookId ? notebooks.find(item=>item.id===note.notebookId) : null;
     const card=document.createElement('button');
     card.type='button';
-    card.className='shortcut-card';
+    card.className='shortcut-card tilt-3d';
     card.dataset.noteId=note.id;
     card.innerHTML=`<span class="shortcut-card-book">${escapeHtml(notebook?.name || 'Unfiled note')}</span><h3>${escapeHtml(note.title || 'Untitled')}</h3><p>${escapeHtml(snippetFromText(plainFromNote(note))) || 'No additional text'}</p><span class="shortcut-card-date">Edited ${formatDate(note.updatedAt || note.createdAt)}</span><span class="shortcut-pin" title="Pinned">●</span>`;
     card.addEventListener('click',()=>openNoteFromHome(note.id));
@@ -590,7 +598,7 @@ function renderOrganizeView(){
   items.forEach(item=>{
     const card = document.createElement('button');
     card.type = 'button';
-    card.className = 'organize-card';
+    card.className = 'organize-card tilt-3d';
     card.dataset.id = item.id;
     card.innerHTML = `<span class="organize-card-icon" aria-hidden="true">${isTags?'#':'▥'}</span><span class="organize-card-copy"><strong>${escapeHtml(item.name)}</strong><span>${Number(item.noteCount)||0} ${(Number(item.noteCount)||0)===1?'note':'notes'}</span></span><span class="organize-card-arrow" aria-hidden="true">→</span>`;
     card.addEventListener('click', ()=> openOrganizeFilter(isTags ? 'tag' : 'notebook', item.id));
@@ -598,6 +606,7 @@ function renderOrganizeView(){
   });
 }
 async function openOrganizeFilter(type,id){
+  listAnimateNext = true; // WP-UI-NOTES-3D-001 — notebook/tag card filter
   currentFilter='active';
   if(type==='tag') currentTagId=id;
   else currentNotebookId=id;
@@ -661,6 +670,7 @@ async function applyRoute(view=routeFromHash(), {focusSearch=false}={}){
   if(focusSearch) setTimeout(()=>searchInput?.focus(), 0);
 }
 function goToView(view, options={}){
+  listAnimateNext = true; // WP-UI-NOTES-3D-001 — route changes repaint the list context
   if(!setRouteHash(view)) applyRoute(view, options);
   else if(options.focusSearch) setTimeout(()=>searchInput?.focus(), 80);
 }
@@ -853,6 +863,20 @@ async function loadNotes(){
 function renderList(){
   if(!listEl) return;
   listEl.innerHTML = '';
+  // WP-UI-NOTES-3D-001 — stagger only after a list-context change. A stored
+  // timer keeps repeated paints in the same load cycle coherent, then removes
+  // the hook before autosave-driven renders can replay it.
+  if(listAnimateNext){
+    clearTimeout(listAnimationTimer);
+    listEl.classList.remove('is-animating');
+    if(!reducedMotionQuery.matches){
+      void listEl.offsetWidth;
+      listEl.classList.add('is-animating');
+      listAnimationTimer = setTimeout(()=> listEl.classList.remove('is-animating'), 700);
+    }
+    listAnimateNext = false;
+  }
+  const animateRows = listEl.classList.contains('is-animating');
   if(countEl) countEl.textContent = `${notes.length} ${notes.length===1?'note':'notes'}`;
   if(currentView==='home') renderHome();
   const isTrashView = currentFilter==='trash';
@@ -876,7 +900,7 @@ function renderList(){
   if(emptyEl) emptyEl.hidden = true;
   if(emptyTrashEl) emptyTrashEl.hidden = true;
   if(emptySearchEl) emptySearchEl.hidden = true;
-  notes.forEach(n=>{
+  notes.forEach((n,index)=>{
     const snippet = plainFromNote(n);
     const pinned = !!n.isPinned;
     // WP-UI-NOTES-001 — notebook label for the row meta line
@@ -886,6 +910,7 @@ function renderList(){
     btn.className = 'app-note-item' + (pinned?' is-pinned':'') + (n.id===selectedId?' is-active':'');
     btn.dataset.id = n.id;
     btn.tabIndex = 0;
+    if(animateRows) btn.style.setProperty('--i', String(Math.min(index, 14)));
     // Pin control: interactive in normal views; static indicator in Trash (pinned state is
     // preserved while trashed but no writes are allowed on a trashed note).
     const pinCtl = isTrashView
@@ -1011,6 +1036,16 @@ function selectNote(id){
     const doc = docFromNote(n);
     editor.commands.setContent(doc, false);
     setTimeout(()=> updateToolbar(), 30);
+  }
+  // WP-UI-NOTES-3D-001 — note-open glide (restart-safe). Avoid the forced
+  // reflow entirely when the user requests reduced motion.
+  if(!reducedMotionQuery.matches){
+    const editorPane = document.querySelector('.app-editor');
+    if(editorPane){
+      editorPane.classList.remove('note-open');
+      void editorPane.offsetWidth;
+      editorPane.classList.add('note-open');
+    }
   }
   updateEditorForSelection(n);
   loadAttachments(n);
@@ -1548,6 +1583,7 @@ function renderNotebooks(){
 }
 async function selectNotebook(id){
   if(currentNotebookId===id && currentFilter==='active') return;
+  listAnimateNext = true; // WP-UI-NOTES-3D-001 — notebook filter context
   currentNotebookId = id;
   if(currentFilter!=='active') currentFilter='active'; // notebooks organize non-trashed notes
   setViewChrome('notes');
@@ -1687,6 +1723,7 @@ function renderTags(){
 }
 async function selectTag(id){
   // Clicking the active tag again clears the filter (toggle)
+  listAnimateNext = true; // WP-UI-NOTES-3D-001 — tag filter context
   currentTagId = (currentTagId===id) ? null : id;
   setViewChrome('notes');
   setRouteHash('notes', true);
@@ -1835,6 +1872,7 @@ async function togglePin(id){
 }
 if(pinBtn) pinBtn.addEventListener('click', ()=> togglePin(selectedId));
 if(sortSelect) sortSelect.addEventListener('change', ()=>{
+  listAnimateNext = true; // WP-UI-NOTES-3D-001 — sort changes the visible list context
   currentSort = sortSelect.value || 'updated';
   sortNotes(notes);
   renderList();
@@ -1842,6 +1880,7 @@ if(sortSelect) sortSelect.addEventListener('change', ()=>{
 
 // ── WP-APP-004 — search wiring (debounced 300ms, no page reload) ──
 function applySearch(value){
+  listAnimateNext = true; // WP-UI-NOTES-3D-001 — debounced search context
   currentQuery = String(value ?? '');
   if(globalSearchInput) globalSearchInput.value=currentQuery;
   if(globalSearchClear) globalSearchClear.hidden=!currentQuery;
@@ -1853,9 +1892,11 @@ function applySearch(value){
   }, 300);
 }
 function clearSearchNow(reload=true){
+  const hadQuery = !!(currentQuery || searchInput?.value || globalSearchInput?.value);
   if(searchInput) searchInput.value = '';
   if(globalSearchInput) globalSearchInput.value = '';
   currentQuery = '';
+  if(hadQuery) listAnimateNext = true; // WP-UI-NOTES-3D-001 — cleared search context
   clearTimeout(searchDebounce);
   if(searchClear) searchClear.hidden = true;
   if(globalSearchClear) globalSearchClear.hidden = true;
@@ -2056,3 +2097,59 @@ try{
   const has = Object.keys(localStorage).some(k=> /token/i.test(k) && localStorage.getItem(k)?.startsWith('eyJ'));
   if(has) console.warn('localStorage contains token — should be memory only');
 }catch{}
+
+// WP-UI-NOTES-3D-001 — pointer tilt engine
+(()=>{
+  if(!finePointerQuery.matches || reducedMotionQuery.matches) return;
+
+  let activeElement = null;
+  let pointerX = 0;
+  let pointerY = 0;
+  let frameId = 0;
+
+  function resetTilt(){
+    if(frameId){ cancelAnimationFrame(frameId); frameId = 0; }
+    if(!activeElement) return;
+    activeElement.classList.remove('is-tilting');
+    activeElement.style.transform = '';
+    activeElement = null;
+  }
+
+  function applyTilt(){
+    frameId = 0;
+    if(!activeElement) return;
+    const rect = activeElement.getBoundingClientRect();
+    if(!rect.width || !rect.height) return;
+    const px = (pointerX - rect.left) / rect.width - 0.5;
+    const py = (pointerY - rect.top) / rect.height - 0.5;
+    activeElement.style.transform = `perspective(700px) rotateX(${(-py*5).toFixed(2)}deg) rotateY(${(px*5).toFixed(2)}deg) translateY(-2px)`;
+  }
+
+  function onPointerMove(event){
+    if(reducedMotionQuery.matches){ resetTilt(); return; }
+    const next = event.target?.closest?.('.tilt-3d') || null;
+    if(!next) return;
+    if(next !== activeElement){
+      resetTilt();
+      activeElement = next;
+      activeElement.classList.add('is-tilting');
+    }
+    pointerX = event.clientX;
+    pointerY = event.clientY;
+    if(frameId) cancelAnimationFrame(frameId);
+    frameId = requestAnimationFrame(applyTilt);
+  }
+
+  function onPointerOut(event){
+    const leaving = event.target?.closest?.('.tilt-3d') || null;
+    const stillInside = event.relatedTarget instanceof Node && leaving?.contains(event.relatedTarget);
+    if(!leaving || leaving !== activeElement || stillInside) return;
+    resetTilt();
+  }
+
+  document.addEventListener('pointermove', onPointerMove);
+  document.addEventListener('pointerout', onPointerOut);
+  document.addEventListener('pointercancel', resetTilt);
+  window.addEventListener('blur', resetTilt);
+  reducedMotionQuery.addEventListener('change', resetTilt);
+})();

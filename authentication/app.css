@@ -38,6 +38,12 @@
   --app-green:#8fe333;
   --app-green-deep:#00a82d;
   --app-yellow:#f5c518;
+  /* WP-UI-NOTES-3D-001 — shared depth + motion curves */
+  --depth-1:0 1px 2px rgba(0,0,0,.32),0 2px 8px rgba(0,0,0,.22);
+  --depth-2:0 4px 12px rgba(0,0,0,.34),0 10px 28px rgba(0,0,0,.28);
+  --depth-3:0 8px 20px rgba(0,0,0,.40),0 18px 44px rgba(0,0,0,.34);
+  --ease-out-soft:cubic-bezier(.2,.8,.2,1);
+  --ease-spring:cubic-bezier(.34,1.4,.4,1);
 }
 
 html,body{height:100%;background:var(--env-bg);color:var(--env-text);overflow:hidden}
@@ -644,3 +650,49 @@ body.sidebar-collapsed .app-btn-logout::before{content:"⏻";font-size:15px}
 .app-ai-title-actions #aiTitleDismiss{background:transparent;border-color:#3a3a3a;color:#9a9a9a}
 .app-ai-title-actions #aiTitleDismiss:hover{border-color:#666;color:#ddd}
 @media (max-width:560px){.app-ai-title{flex-wrap:wrap}}
+
+/* ============================================================
+   WP-UI-NOTES-3D-001 — smooth, restrained depth + motion
+   ============================================================ */
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes viewIn{from{opacity:0;transform:translateY(8px) scale(.995)}to{opacity:1;transform:none}}
+@keyframes noteOpen{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes fabIn{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+
+.home-view,.shortcuts-view,.organize-view{animation:viewIn .28s var(--ease-out-soft)}
+.editor-workspace{animation:viewIn .24s var(--ease-out-soft)}
+.app-fab{animation:fabIn .3s var(--ease-spring)}
+
+.home-note-card,.shortcut-card,.organize-card{box-shadow:var(--depth-1);transform-style:preserve-3d}
+.home-note-card:hover,.shortcut-card:hover,.organize-card:hover{box-shadow:var(--depth-2)}
+.app-note-item{box-shadow:var(--depth-1);transition:border-color .14s,background .14s,box-shadow .2s var(--ease-out-soft)}
+.app-note-item:hover,.app-note-item.is-active{box-shadow:var(--depth-2)}
+.editor-workspace,.home-view,.shortcuts-view,.organize-view{box-shadow:var(--depth-3),inset 0 1px 0 rgba(255,255,255,.045)}
+.app-toolbar{box-shadow:var(--depth-2),inset 0 1px 0 rgba(255,255,255,.05)}
+
+.tilt-3d{transition:transform .35s var(--ease-out-soft),box-shadow .25s var(--ease-out-soft)}
+.tilt-3d.is-tilting{transition:box-shadow .25s var(--ease-out-soft)}
+
+.app-list-items.is-animating .app-note-item{animation:rise .3s var(--ease-out-soft) both;animation-delay:calc(var(--i)*18ms)}
+.app-editor.note-open .app-editor-header{animation:noteOpen .22s var(--ease-out-soft)}
+.app-editor.note-open .app-toolbar{animation:noteOpen .26s var(--ease-out-soft)}
+.app-editor.note-open .app-editor-body{animation:noteOpen .3s var(--ease-out-soft)}
+
+.btn-new,.app-create-note,.app-save,.home-pen,.app-attach-btn{transition:transform .12s var(--ease-out-soft),box-shadow .2s var(--ease-out-soft),background .14s}
+.btn-new:active,.app-create-note:active,.app-save:active,.home-pen:active{transform:translateY(1px) scale(.98)}
+.tb-btn{transition:background .13s,color .13s,transform .1s var(--ease-out-soft)}
+.tb-btn:active{transform:scale(.92)}
+.app-note-pin{transition:opacity .14s,background .14s,color .14s,transform .14s var(--ease-spring)}
+.app-note-pin:active{transform:scale(.85)}
+.app-pin-toggle{transition:border-color .14s,color .14s,background .14s,transform .12s}
+.app-pin-toggle:active{transform:scale(.95)}
+.app-save-status{transition:color .18s,background .18s,border-color .18s}
+.app-fab{transition:transform .16s var(--ease-spring),background .14s,box-shadow .2s}
+.app-fab:hover{box-shadow:var(--depth-3)}
+
+.app-list-items,.app-editor-body,.home-view,.shortcuts-view,.organize-view,.app-nav{scroll-behavior:smooth}
+
+/* Master motion kill-switch: this must remain the final rule in app.css. */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;scroll-behavior:auto !important}
+}

@@ -1174,7 +1174,7 @@ var NodeRange = class {
   }
 };
 var emptyAttrs = /* @__PURE__ */ Object.create(null);
-var Node = class _Node {
+var Node2 = class _Node {
   /**
   @internal
   */
@@ -1576,8 +1576,8 @@ var Node = class _Node {
     return node;
   }
 };
-Node.prototype.text = void 0;
-var TextNode = class _TextNode extends Node {
+Node2.prototype.text = void 0;
+var TextNode = class _TextNode extends Node2 {
   /**
   @internal
   */
@@ -2163,7 +2163,7 @@ var NodeType = class _NodeType {
   create(attrs = null, content, marks) {
     if (this.isText)
       throw new Error("NodeType.create can't construct text nodes");
-    return new Node(this, this.computeAttrs(attrs), Fragment.from(content), Mark.setFrom(marks));
+    return new Node2(this, this.computeAttrs(attrs), Fragment.from(content), Mark.setFrom(marks));
   }
   /**
   Like [`create`](https://prosemirror.net/docs/ref/#model.NodeType.create), but check the given content
@@ -2173,7 +2173,7 @@ var NodeType = class _NodeType {
   createChecked(attrs = null, content, marks) {
     content = Fragment.from(content);
     this.checkContent(content);
-    return new Node(this, this.computeAttrs(attrs), content, Mark.setFrom(marks));
+    return new Node2(this, this.computeAttrs(attrs), content, Mark.setFrom(marks));
   }
   /**
   Like [`create`](https://prosemirror.net/docs/ref/#model.NodeType.create), but see if it is
@@ -2196,7 +2196,7 @@ var NodeType = class _NodeType {
     let after = matched && matched.fillBefore(Fragment.empty, true);
     if (!after)
       return null;
-    return new Node(this, attrs, content.append(after), Mark.setFrom(marks));
+    return new Node2(this, attrs, content.append(after), Mark.setFrom(marks));
   }
   /**
   Returns true if the given fragment is valid content for this node
@@ -2392,7 +2392,7 @@ var Schema = class {
       let type = this.marks[prop], excl = type.spec.excludes;
       type.excluded = excl == null ? [type] : excl == "" ? [] : gatherMarks(this, excl.split(" "));
     }
-    this.nodeFromJSON = (json) => Node.fromJSON(this, json);
+    this.nodeFromJSON = (json) => Node2.fromJSON(this, json);
     this.markFromJSON = (json) => Mark.fromJSON(this, json);
     this.topNodeType = this.nodes[this.spec.topNode || "doc"];
     this.cached.wrappings = /* @__PURE__ */ Object.create(null);
@@ -6050,7 +6050,7 @@ var EditorState = class _EditorState {
     let instance = new _EditorState($config);
     $config.fields.forEach((field) => {
       if (field.name == "doc") {
-        instance.doc = Node.fromJSON(config.schema, json.doc);
+        instance.doc = Node2.fromJSON(config.schema, json.doc);
       } else if (field.name == "selection") {
         instance.selection = Selection.fromJSON(instance.doc, json.selection);
       } else if (field.name == "storedMarks") {
@@ -13946,7 +13946,7 @@ function elementFromString(value) {
   return removeWhitespaces(html);
 }
 function createNodeFromContent(content, schema, options) {
-  if (content instanceof Node || content instanceof Fragment) {
+  if (content instanceof Node2 || content instanceof Fragment) {
     return content;
   }
   options = {
@@ -16236,7 +16236,7 @@ function wrappingInputRule(config) {
     }
   });
 }
-var Node2 = class _Node {
+var Node3 = class _Node {
   constructor(config = {}) {
     this.type = "node";
     this.name = "node";
@@ -16356,7 +16356,7 @@ function canInsertNode(state, nodeType) {
 
 // node_modules/@tiptap/extension-blockquote/dist/index.js
 var inputRegex = /^\s*>\s$/;
-var Blockquote = Node2.create({
+var Blockquote = Node3.create({
   name: "blockquote",
   addOptions() {
     return {
@@ -16485,7 +16485,7 @@ var Bold = Mark2.create({
 var ListItemName = "listItem";
 var TextStyleName = "textStyle";
 var inputRegex2 = /^\s*([-+*])\s$/;
-var BulletList = Node2.create({
+var BulletList = Node3.create({
   name: "bulletList",
   addOptions() {
     return {
@@ -16605,7 +16605,7 @@ var Code = Mark2.create({
 // node_modules/@tiptap/extension-code-block/dist/index.js
 var backtickInputRegex = /^```([a-z]+)?[\s\n]$/;
 var tildeInputRegex = /^~~~([a-z]+)?[\s\n]$/;
-var CodeBlock = Node2.create({
+var CodeBlock = Node3.create({
   name: "codeBlock",
   addOptions() {
     return {
@@ -16793,7 +16793,7 @@ var CodeBlock = Node2.create({
 });
 
 // node_modules/@tiptap/extension-document/dist/index.js
-var Document = Node2.create({
+var Document = Node3.create({
   name: "doc",
   topNode: true,
   content: "block+"
@@ -17198,7 +17198,7 @@ var Gapcursor = Extension.create({
 });
 
 // node_modules/@tiptap/extension-hard-break/dist/index.js
-var HardBreak = Node2.create({
+var HardBreak = Node3.create({
   name: "hardBreak",
   addOptions() {
     return {
@@ -17255,7 +17255,7 @@ var HardBreak = Node2.create({
 });
 
 // node_modules/@tiptap/extension-heading/dist/index.js
-var Heading = Node2.create({
+var Heading = Node3.create({
   name: "heading",
   addOptions() {
     return {
@@ -17895,7 +17895,7 @@ var History = Extension.create({
 });
 
 // node_modules/@tiptap/extension-horizontal-rule/dist/index.js
-var HorizontalRule = Node2.create({
+var HorizontalRule = Node3.create({
   name: "horizontalRule",
   addOptions() {
     return {
@@ -18048,7 +18048,7 @@ var Italic = Mark2.create({
 });
 
 // node_modules/@tiptap/extension-list-item/dist/index.js
-var ListItem = Node2.create({
+var ListItem = Node3.create({
   name: "listItem",
   addOptions() {
     return {
@@ -18082,7 +18082,7 @@ var ListItem = Node2.create({
 var ListItemName2 = "listItem";
 var TextStyleName2 = "textStyle";
 var inputRegex4 = /^(\d+)\.\s$/;
-var OrderedList = Node2.create({
+var OrderedList = Node3.create({
   name: "orderedList",
   addOptions() {
     return {
@@ -18161,7 +18161,7 @@ var OrderedList = Node2.create({
 });
 
 // node_modules/@tiptap/extension-paragraph/dist/index.js
-var Paragraph = Node2.create({
+var Paragraph = Node3.create({
   name: "paragraph",
   priority: 1e3,
   addOptions() {
@@ -18261,7 +18261,7 @@ var Strike = Mark2.create({
 });
 
 // node_modules/@tiptap/extension-text/dist/index.js
-var Text = Node2.create({
+var Text = Node3.create({
   name: "text",
   group: "inline"
 });
@@ -18374,7 +18374,7 @@ var Underline = Mark2.create({
 });
 
 // node_modules/@tiptap/extension-task-list/dist/index.js
-var TaskList = Node2.create({
+var TaskList = Node3.create({
   name: "taskList",
   addOptions() {
     return {
@@ -18413,7 +18413,7 @@ var TaskList = Node2.create({
 
 // node_modules/@tiptap/extension-task-item/dist/index.js
 var inputRegex6 = /^\s*(\[([( |x])?\])\s$/;
-var TaskItem = Node2.create({
+var TaskItem = Node3.create({
   name: "taskItem",
   addOptions() {
     return {
@@ -18633,6 +18633,10 @@ var currentNotebookId = null;
 var tags = [];
 var currentTagId = null;
 var currentSort = "updated";
+var reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+var finePointerQuery = window.matchMedia("(pointer: fine)");
+var listAnimateNext = false;
+var listAnimationTimer = null;
 var currentView = "home";
 var routeReady = false;
 var soonToastTimer = null;
@@ -19079,7 +19083,9 @@ function closeMobileSidebar() {
 function setViewChrome(view) {
   hideAiSummary();
   hideAiTitle();
+  const previousView = currentView;
   currentView = APP_ROUTES.has(view) ? view : "home";
+  if (previousView !== currentView) listAnimateNext = true;
   const showHome = currentView === "home" || currentView === "account";
   const showShortcuts = currentView === "shortcuts";
   const showOrganize = currentView === "notebooks" || currentView === "tags";
@@ -19110,7 +19116,7 @@ function renderHome() {
   homeNoteGrid.innerHTML = "";
   const create = document.createElement("button");
   create.type = "button";
-  create.className = "home-note-card home-create-card";
+  create.className = "home-note-card home-create-card tilt-3d";
   create.id = "homeCreateNote";
   create.disabled = offlineReadOnly;
   create.innerHTML = '<span class="home-create-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></span><strong>Create new note</strong>';
@@ -19129,7 +19135,7 @@ function renderHome() {
     const notebook = note.notebookId ? notebooks.find((item) => item.id === note.notebookId) : null;
     const card = document.createElement("button");
     card.type = "button";
-    card.className = "home-note-card";
+    card.className = "home-note-card tilt-3d";
     card.dataset.noteId = note.id;
     card.innerHTML = `<span class="home-card-book">${escapeHtml(notebook?.name || "Unfiled note")}</span><h3>${escapeHtml(note.title || "Untitled")}</h3><span class="home-card-date">Edited ${formatDate(note.updatedAt || note.createdAt)}</span>${note.isPinned ? '<span class="home-card-pin" title="Pinned">\u25CF</span>' : ""}`;
     card.addEventListener("click", () => openNoteFromHome(note.id));
@@ -19154,7 +19160,7 @@ function renderShortcuts() {
     const notebook = note.notebookId ? notebooks.find((item) => item.id === note.notebookId) : null;
     const card = document.createElement("button");
     card.type = "button";
-    card.className = "shortcut-card";
+    card.className = "shortcut-card tilt-3d";
     card.dataset.noteId = note.id;
     card.innerHTML = `<span class="shortcut-card-book">${escapeHtml(notebook?.name || "Unfiled note")}</span><h3>${escapeHtml(note.title || "Untitled")}</h3><p>${escapeHtml(snippetFromText(plainFromNote(note))) || "No additional text"}</p><span class="shortcut-card-date">Edited ${formatDate(note.updatedAt || note.createdAt)}</span><span class="shortcut-pin" title="Pinned">\u25CF</span>`;
     card.addEventListener("click", () => openNoteFromHome(note.id));
@@ -19188,7 +19194,7 @@ function renderOrganizeView() {
   items.forEach((item) => {
     const card = document.createElement("button");
     card.type = "button";
-    card.className = "organize-card";
+    card.className = "organize-card tilt-3d";
     card.dataset.id = item.id;
     card.innerHTML = `<span class="organize-card-icon" aria-hidden="true">${isTags ? "#" : "\u25A5"}</span><span class="organize-card-copy"><strong>${escapeHtml(item.name)}</strong><span>${Number(item.noteCount) || 0} ${(Number(item.noteCount) || 0) === 1 ? "note" : "notes"}</span></span><span class="organize-card-arrow" aria-hidden="true">\u2192</span>`;
     card.addEventListener("click", () => openOrganizeFilter(isTags ? "tag" : "notebook", item.id));
@@ -19196,6 +19202,7 @@ function renderOrganizeView() {
   });
 }
 async function openOrganizeFilter(type, id) {
+  listAnimateNext = true;
   currentFilter = "active";
   if (type === "tag") currentTagId = id;
   else currentNotebookId = id;
@@ -19281,6 +19288,7 @@ async function applyRoute(view = routeFromHash(), { focusSearch = false } = {}) 
   if (focusSearch) setTimeout(() => searchInput?.focus(), 0);
 }
 function goToView(view, options = {}) {
+  listAnimateNext = true;
   if (!setRouteHash(view)) applyRoute(view, options);
   else if (options.focusSearch) setTimeout(() => searchInput?.focus(), 80);
 }
@@ -19515,6 +19523,17 @@ async function loadNotes() {
 function renderList() {
   if (!listEl) return;
   listEl.innerHTML = "";
+  if (listAnimateNext) {
+    clearTimeout(listAnimationTimer);
+    listEl.classList.remove("is-animating");
+    if (!reducedMotionQuery.matches) {
+      void listEl.offsetWidth;
+      listEl.classList.add("is-animating");
+      listAnimationTimer = setTimeout(() => listEl.classList.remove("is-animating"), 700);
+    }
+    listAnimateNext = false;
+  }
+  const animateRows = listEl.classList.contains("is-animating");
   if (countEl) countEl.textContent = `${notes.length} ${notes.length === 1 ? "note" : "notes"}`;
   if (currentView === "home") renderHome();
   const isTrashView = currentFilter === "trash";
@@ -19537,7 +19556,7 @@ function renderList() {
   if (emptyEl) emptyEl.hidden = true;
   if (emptyTrashEl) emptyTrashEl.hidden = true;
   if (emptySearchEl) emptySearchEl.hidden = true;
-  notes.forEach((n) => {
+  notes.forEach((n, index) => {
     const snippet = plainFromNote(n);
     const pinned = !!n.isPinned;
     const notebook = n.notebookId ? notebooks.find((item) => item.id === n.notebookId) : null;
@@ -19545,6 +19564,7 @@ function renderList() {
     btn.className = "app-note-item" + (pinned ? " is-pinned" : "") + (n.id === selectedId ? " is-active" : "");
     btn.dataset.id = n.id;
     btn.tabIndex = 0;
+    if (animateRows) btn.style.setProperty("--i", String(Math.min(index, 14)));
     const pinCtl = isTrashView ? pinned ? `<span class="app-note-pin app-note-pin--static is-on" title="Pinned" aria-hidden="true">${PIN_SVG}</span>` : "" : `<button type="button" class="app-note-pin${pinned ? " is-on" : ""}" title="${pinned ? "Unpin note" : "Pin note"}" aria-label="${pinned ? "Unpin" : "Pin"}: ${escapeHtml(n.title || "Untitled")}" aria-pressed="${pinned ? "true" : "false"}">${PIN_SVG}</button>`;
     const rowTags = n.tags && n.tags.length ? `<div class="app-note-tags">${n.tags.slice(0, 3).map((t) => `<span class="app-note-tag">${escapeHtml(t.name)}</span>`).join("")}${n.tags.length > 3 ? `<span class="app-note-tag app-note-tag-more">+${n.tags.length - 3}</span>` : ""}</div>` : "";
     btn.innerHTML = `
@@ -19667,6 +19687,14 @@ function selectNote(id) {
     const doc3 = docFromNote(n);
     editor.commands.setContent(doc3, false);
     setTimeout(() => updateToolbar(), 30);
+  }
+  if (!reducedMotionQuery.matches) {
+    const editorPane = document.querySelector(".app-editor");
+    if (editorPane) {
+      editorPane.classList.remove("note-open");
+      void editorPane.offsetWidth;
+      editorPane.classList.add("note-open");
+    }
   }
   updateEditorForSelection(n);
   loadAttachments(n);
@@ -20226,6 +20254,7 @@ function renderNotebooks() {
 }
 async function selectNotebook(id) {
   if (currentNotebookId === id && currentFilter === "active") return;
+  listAnimateNext = true;
   currentNotebookId = id;
   if (currentFilter !== "active") currentFilter = "active";
   setViewChrome("notes");
@@ -20383,6 +20412,7 @@ function renderTags() {
   });
 }
 async function selectTag(id) {
+  listAnimateNext = true;
   currentTagId = currentTagId === id ? null : id;
   setViewChrome("notes");
   setRouteHash("notes", true);
@@ -20550,11 +20580,13 @@ async function togglePin(id) {
 }
 if (pinBtn) pinBtn.addEventListener("click", () => togglePin(selectedId));
 if (sortSelect) sortSelect.addEventListener("change", () => {
+  listAnimateNext = true;
   currentSort = sortSelect.value || "updated";
   sortNotes(notes);
   renderList();
 });
 function applySearch(value) {
+  listAnimateNext = true;
   currentQuery = String(value ?? "");
   if (globalSearchInput) globalSearchInput.value = currentQuery;
   if (globalSearchClear) globalSearchClear.hidden = !currentQuery;
@@ -20566,9 +20598,11 @@ function applySearch(value) {
   }, 300);
 }
 function clearSearchNow(reload = true) {
+  const hadQuery = !!(currentQuery || searchInput?.value || globalSearchInput?.value);
   if (searchInput) searchInput.value = "";
   if (globalSearchInput) globalSearchInput.value = "";
   currentQuery = "";
+  if (hadQuery) listAnimateNext = true;
   clearTimeout(searchDebounce);
   if (searchClear) searchClear.hidden = true;
   if (globalSearchClear) globalSearchClear.hidden = true;
@@ -20810,3 +20844,57 @@ try {
   if (has) console.warn("localStorage contains token \u2014 should be memory only");
 } catch {
 }
+(() => {
+  if (!finePointerQuery.matches || reducedMotionQuery.matches) return;
+  let activeElement = null;
+  let pointerX = 0;
+  let pointerY = 0;
+  let frameId = 0;
+  function resetTilt() {
+    if (frameId) {
+      cancelAnimationFrame(frameId);
+      frameId = 0;
+    }
+    if (!activeElement) return;
+    activeElement.classList.remove("is-tilting");
+    activeElement.style.transform = "";
+    activeElement = null;
+  }
+  function applyTilt() {
+    frameId = 0;
+    if (!activeElement) return;
+    const rect = activeElement.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const px = (pointerX - rect.left) / rect.width - 0.5;
+    const py = (pointerY - rect.top) / rect.height - 0.5;
+    activeElement.style.transform = `perspective(700px) rotateX(${(-py * 5).toFixed(2)}deg) rotateY(${(px * 5).toFixed(2)}deg) translateY(-2px)`;
+  }
+  function onPointerMove(event) {
+    if (reducedMotionQuery.matches) {
+      resetTilt();
+      return;
+    }
+    const next = event.target?.closest?.(".tilt-3d") || null;
+    if (!next) return;
+    if (next !== activeElement) {
+      resetTilt();
+      activeElement = next;
+      activeElement.classList.add("is-tilting");
+    }
+    pointerX = event.clientX;
+    pointerY = event.clientY;
+    if (frameId) cancelAnimationFrame(frameId);
+    frameId = requestAnimationFrame(applyTilt);
+  }
+  function onPointerOut(event) {
+    const leaving = event.target?.closest?.(".tilt-3d") || null;
+    const stillInside = event.relatedTarget instanceof Node && leaving?.contains(event.relatedTarget);
+    if (!leaving || leaving !== activeElement || stillInside) return;
+    resetTilt();
+  }
+  document.addEventListener("pointermove", onPointerMove);
+  document.addEventListener("pointerout", onPointerOut);
+  document.addEventListener("pointercancel", resetTilt);
+  window.addEventListener("blur", resetTilt);
+  reducedMotionQuery.addEventListener("change", resetTilt);
+})();
