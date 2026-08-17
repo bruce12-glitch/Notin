@@ -561,11 +561,15 @@ if(aiTagChips) aiTagChips.addEventListener('click', async (event)=>{
     }
     const index = notes.findIndex(item=>item.id===noteId);
     if(index >= 0) notes[index] = updated;
-    renderTagChips(updated);
-    chip.remove();
-    aiTagBar?.suggestions?.delete(label);
-    if(!aiTagChips.querySelector('.app-ai-tag-chip')) hideAiTags();
-    setSaveStatus('Saved', 'is-saved');
+    // The user may switch notes while the writes are in flight. Preserve the
+    // accepted update in memory, but never repaint or hide the new note's UI.
+    if(selectedId === noteId && aiTagNoteId === noteId){
+      renderTagChips(updated);
+      chip.remove();
+      aiTagBar?.suggestions?.delete(label);
+      if(!aiTagChips.querySelector('.app-ai-tag-chip')) hideAiTags();
+      setSaveStatus('Saved', 'is-saved');
+    }
     await loadTags();
   }catch(error){
     setError(error.message || 'Could not add suggested tag');
