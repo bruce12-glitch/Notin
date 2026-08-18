@@ -358,6 +358,160 @@ export async function chatWithNote(noteText, question, history = []) {
   return { answer, provider };
 }
 
+// ── WP-AI-003b — streaming chat (SSE deltas; the JSON endpoint above is untouched) ─
+const MOCK_STREAM_CHUNK_WORDS = 6;
+
+function chunkAnswerForStream(answer) {
+  // Deterministic ~6-word groups split on word boundaries. Deltas after the
+  // first carry a leading space so plain concatenation of all deltas
+  // reproduces `answer` byte-for-byte — that is the keyless stream/JSON
+  // parity lock.
+  const words = String(answer).split(' ');
+  const chunks = [];
+  for (let i = 0; i < words.length; i += MOCK_STREAM_CHUNK_WORDS) {
+    const group = words.slice(i, i + MOCK_STREAM_CHUNK_WORDS).join(' ');
+    if (i === 0) {
+      if (group) chunks.push(group);
+    } else {
+      chunks.push(` ${group}`);
+    }
+  }
+  return chunks;
+}
+
+async function* mockChatDeltas(answer) {
+  // No timers, no randomness: just a macrotask handoff between yields so the
+  // controller can flush frames without blocking the event loop.
+  const chunks = chunkAnswerForStream(answer);
+  for (let i = 0; i < chunks.length; i += 1) {
+    if (i > 0) await new Promise((resolve) => setImmediate(resolve));
+    yield chunks[i];
+  }
+}
+
+async function* groqChatDeltas(note, question, history, apiKey) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let reader = null;
+  try {
+    const response = await fetch(GROQ_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        temperature: 0.2,
+        max_tokens: 400,
+        stream: true,
+        messages: [
+          { role: 'system', content: CHAT_SYSTEM },
+          ...history,
+          { role: 'user', content: chatUserPrompt(note, question) },
+        ],
+      }),
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error('AI_PROVIDER_ERROR');
+    if (!response.body) throw new Error('AI_PROVIDER_ERROR');
+    reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let finished = false;
+    while (!finished) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let newlineAt;
+      while ((newlineAt = buffer.indexOf('\n')) !== -1) {
+        const line = buffer.slice(0, newlineAt).replace(/\r$/, '');
+        buffer = buffer.slice(newlineAt + 1);
+        if (!line.startsWith('data:')) continue; // comments / event fields
+        const payload = line.slice(5).trim();
+        if (payload === '[DONE]') {
+          finished = true;
+          break;
+        }
+        let delta;
+        try {
+          delta = JSON.parse(payload)?.choices?.[0]?.delta?.content;
+        } catch {
+          continue; // malformed upstream frame — skip it, never abort the stream
+        }
+        if (typeof delta === 'string' && delta) yield delta;
+      }
+    }
+    // Flush a final upstream line that arrived without a trailing newline.
+    const tail = `${buffer}${decoder.decode()}`.replace(/\r$/, '');
+    if (!finished && tail.startsWith('data:')) {
+      const payload = tail.slice(5).trim();
+      if (payload !== '[DONE]') {
+        try {
+          const delta = JSON.parse(payload)?.choices?.[0]?.delta?.content;
+          if (typeof delta === 'string' && delta) yield delta;
+        } catch {
+          // Malformed tail frame — skip.
+        }
+      }
+    }
+  } catch (error) {
+    if (error?.message === 'AI_PROVIDER_ERROR') throw error;
+    throw new Error('AI_PROVIDER_ERROR');
+  } finally {
+    clearTimeout(timeout);
+    if (reader) {
+      try {
+        await reader.cancel();
+      } catch {
+        // Already released — nothing to do.
+      }
+    }
+  }
+}
+
+export async function chatWithNoteStream(noteText, question, history = []) {
+  // Normalization mirrors chatWithNote exactly: same slices, same history
+  // sanitization, same mock computation — only the delivery differs.
+  const note = String(noteText ?? '').trim().slice(0, MAX_CHAT_NOTE_CHARS);
+  const q = String(question ?? '').trim().slice(0, MAX_CHAT_QUESTION_CHARS);
+  const turns = sanitizeChatHistory(history);
+  let provider;
+  let deltas;
+
+  if (process.env.GROQ_API_KEY) {
+    provider = 'groq';
+    deltas = groqChatDeltas(note, q, turns, process.env.GROQ_API_KEY);
+  } else {
+    provider = 'mock';
+    deltas = mockChatDeltas(mockChatAnswer(note, q).slice(0, MAX_CHAT_ANSWER_CHARS));
+  }
+
+  // One line per streamed request, at stream start — never per delta, and
+  // never any prompt/question/answer content.
+  console.log(`[AI] chat-stream via ${provider}`);
+
+  async function* boundedStream() {
+    let sent = 0;
+    try {
+      for await (const delta of deltas) {
+        if (sent >= MAX_CHAT_ANSWER_CHARS) break;
+        const room = MAX_CHAT_ANSWER_CHARS - sent;
+        const piece = delta.length > room ? delta.slice(0, room) : delta;
+        if (!piece) continue;
+        sent += piece.length;
+        yield piece;
+      }
+    } finally {
+      // Early consumer exit (client disconnect) must still cancel upstream:
+      // returning the inner generator runs its own finally (reader.cancel).
+      await deltas.return(undefined);
+    }
+  }
+
+  return { stream: boundedStream(), provider };
+}
+
 // ── WP-AI-004 — writing assistant (suggestion only; never writes the note) ──
 function assistSentences(input) {
   const sentences = (String(input).match(/[^.!?]+[.!?]+/g) || [])

@@ -1,5 +1,12 @@
 import db from '../config/db.js';
-import { summarizeText, suggestTitle, suggestTags, chatWithNote, assistWrite } from '../lib/ai/provider.js';
+import {
+  summarizeText,
+  suggestTitle,
+  suggestTags,
+  chatWithNote,
+  chatWithNoteStream,
+  assistWrite,
+} from '../lib/ai/provider.js';
 import {
   MAX_CHAT_QUESTION_CHARS,
   ASSIST_ACTIONS,
@@ -161,6 +168,81 @@ export async function chatWithNoteController(req, res) {
     }
     console.error(error);
     return res.status(500).json({ message: 'Could not answer that question' });
+  }
+}
+
+// ── WP-AI-003b — streaming chat (SSE deltas; still zero persistence) ─────────
+export async function chatWithNoteStreamController(req, res) {
+  // Client-disconnect signal for the write loop. Deliberately `res` 'close',
+  // not `req` 'close': on Node ≥16 the request stream's 'close' fires as soon
+  // as the request body has been consumed, which would cut every stream
+  // immediately. The response's 'close' fires when the connection actually
+  // goes away (and once more after a normal end, when we are already done).
+  let clientGone = false;
+  res.on('close', () => {
+    clientGone = true;
+  });
+
+  try {
+    // Guard block duplicated from chatWithNoteController on purpose so the
+    // JSON endpoint's outward behavior stays byte-identical — same order,
+    // same messages, same statuses. All of these answers are plain JSON:
+    // guards run before the SSE upgrade.
+    const { rows } = await db.query(
+      `SELECT id, title, "contentText", description, "isTrashed" FROM "Note" WHERE id = $1 AND "userId" = $2 LIMIT 1`,
+      [req.params.id, req.userId],
+    );
+    const note = rows[0];
+    if (!note) return res.status(404).json({ message: 'Note not found' });
+    if (isTrashed(note.isTrashed)) return res.status(400).json({ message: 'Restore the note before chatting' });
+
+    const rawQuestion = typeof req.body?.question === 'string' ? req.body.question.trim() : '';
+    if (!rawQuestion || rawQuestion.length > MAX_CHAT_QUESTION_CHARS) {
+      return res.status(400).json({ message: 'Ask a question (1–500 characters)' });
+    }
+
+    const contentText = typeof note.contentText === 'string' ? note.contentText : '';
+    const description = typeof note.description === 'string' ? note.description : '';
+    const sourceText = (contentText.trim() ? contentText : description).trim();
+    if (sourceText.length < 40) {
+      return res.status(400).json({ message: 'Note is too short to chat about (needs at least 40 characters)' });
+    }
+
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    });
+
+    // Deliberate: nothing is written anywhere — no note UPDATE, no transcript
+    // rows. Deltas go straight to the wire; history stays client-side only.
+    const { stream } = await chatWithNoteStream(sourceText, rawQuestion, req.body?.history);
+    for await (const delta of stream) {
+      if (clientGone) break; // abandoned client — stop before writing again
+      res.write(`data: ${JSON.stringify({ delta })}\n\n`);
+    }
+    if (!clientGone) res.write('data: [DONE]\n\n');
+    res.end();
+  } catch (error) {
+    if (!res.headersSent) {
+      // Failure before the upgrade: the exact JSON error family the
+      // non-streaming endpoint uses.
+      if (error?.message === 'AI_PROVIDER_ERROR') {
+        return res.status(503).json({ message: 'AI is busy right now — try again in a moment' });
+      }
+      console.error(error);
+      return res.status(500).json({ message: 'Could not answer that question' });
+    }
+    // Failure mid-stream: in-band error frame + [DONE], never res.status()
+    // after headers. Expected provider failures stay silent; anything else
+    // gets one console.error. No content is ever logged.
+    if (error?.message !== 'AI_PROVIDER_ERROR') console.error(error);
+    if (!clientGone) {
+      res.write(`data: ${JSON.stringify({ error: 'AI is busy right now — try again in a moment' })}\n\n`);
+      res.write('data: [DONE]\n\n');
+    }
+    res.end();
   }
 }
 
