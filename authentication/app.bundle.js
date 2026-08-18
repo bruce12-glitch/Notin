@@ -19131,7 +19131,7 @@ function clearAiChat() {
   hideAiChat();
 }
 function appendChatBubble(role, text) {
-  if (!aiChatLog) return;
+  if (!aiChatLog) return null;
   const hint = aiChatLog.querySelector(".app-ai-chat-hint");
   if (hint) hint.remove();
   const bubble = document.createElement("p");
@@ -19139,6 +19139,7 @@ function appendChatBubble(role, text) {
   bubble.textContent = text;
   aiChatLog.appendChild(bubble);
   aiChatLog.scrollTop = aiChatLog.scrollHeight;
+  return bubble;
 }
 function syncAiChatForSelection(noteId) {
   if (noteId === chatNoteId) return;
@@ -19997,27 +19998,112 @@ if (aiChatForm) aiChatForm.addEventListener("submit", async (event) => {
     aiChatSend.disabled = true;
     aiChatSend.textContent = "Thinking\u2026";
   }
+  const requestBody = JSON.stringify({ question, history: chatHistory.slice(-6) });
+  let assistantBubble = null;
+  let assembled = "";
   try {
-    const res = await fetchWithAuth(`${API_BASE2}/api/notes/${noteId}/chat`, {
-      method: "POST",
-      body: JSON.stringify({ question, history: chatHistory.slice(-6) })
-    });
-    const payload = await res.json().catch(() => ({}));
-    if (res.status === 200) {
-      const answer = typeof payload.answer === "string" ? payload.answer : "";
-      if (selectedId === noteId && answer) {
-        appendChatBubble("assistant", answer);
-        chatHistory.push({ role: "user", content: question });
-        chatHistory.push({ role: "assistant", content: answer });
-        if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12);
+    let streamedAnswer = false;
+    let cleanDone = false;
+    let frameError = null;
+    let useJsonFallback = false;
+    try {
+      const res = await fetchWithAuth(`${API_BASE2}/api/notes/${noteId}/chat/stream`, {
+        method: "POST",
+        body: requestBody
+      });
+      const contentType = res.headers.get("content-type") || "";
+      if (res.status !== 200 || !contentType.includes("text/event-stream") || !res.body) {
+        useJsonFallback = true;
+      } else {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let finished = false;
+        while (!finished) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let sep;
+          while ((sep = buffer.indexOf("\n\n")) !== -1) {
+            const frame = buffer.slice(0, sep);
+            buffer = buffer.slice(sep + 2);
+            const dataLine = frame.split("\n").find((line) => line.startsWith("data:"));
+            if (!dataLine) continue;
+            const payload = dataLine.slice(5).trim();
+            if (payload === "[DONE]") {
+              finished = true;
+              cleanDone = true;
+              break;
+            }
+            let parsed = null;
+            try {
+              parsed = JSON.parse(payload);
+            } catch {
+            }
+            if (!parsed) continue;
+            if (typeof parsed.delta === "string" && parsed.delta) {
+              streamedAnswer = true;
+              if (!assistantBubble) assistantBubble = appendChatBubble("assistant", "");
+              assistantBubble.textContent += parsed.delta;
+              if (aiChatLog) aiChatLog.scrollTop = aiChatLog.scrollHeight;
+              assembled += parsed.delta;
+            } else if (typeof parsed.error === "string") {
+              frameError = parsed.error;
+              finished = true;
+              break;
+            }
+          }
+        }
+        if (frameError) {
+          try {
+            reader.cancel();
+          } catch {
+          }
+          if (!streamedAnswer) {
+            if (assistantBubble) assistantBubble.remove();
+            setError(frameError);
+          } else {
+            setError("Answer may be incomplete.");
+          }
+        } else if (cleanDone && !streamedAnswer) {
+          if (assistantBubble) assistantBubble.remove();
+          setError("");
+        }
       }
+    } catch {
+      if (!streamedAnswer) {
+        useJsonFallback = true;
+        cleanDone = false;
+        frameError = null;
+      } else setError("AI is busy right now \u2014 try again in a moment.");
+    }
+    if (useJsonFallback) {
+      const res = await fetchWithAuth(`${API_BASE2}/api/notes/${noteId}/chat`, {
+        method: "POST",
+        body: requestBody
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (res.status === 200) {
+        const answer = typeof payload.answer === "string" ? payload.answer : "";
+        if (selectedId === noteId && answer) {
+          appendChatBubble("assistant", answer);
+          chatHistory.push({ role: "user", content: question });
+          chatHistory.push({ role: "assistant", content: answer });
+          if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12);
+        }
+        setError("");
+      } else if (res.status === 400) {
+        setError(payload.message || "Could not answer that question");
+      } else if (res.status === 429) {
+        setError("AI rate limit reached \u2014 try again in a few minutes.");
+      } else {
+        setError("AI is busy right now \u2014 try again in a moment.");
+      }
+    } else if (cleanDone && streamedAnswer && assembled && selectedId === noteId) {
+      chatHistory.push({ role: "user", content: question });
+      chatHistory.push({ role: "assistant", content: assembled });
+      if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12);
       setError("");
-    } else if (res.status === 400) {
-      setError(payload.message || "Could not answer that question");
-    } else if (res.status === 429) {
-      setError("AI rate limit reached \u2014 try again in a few minutes.");
-    } else {
-      setError("AI is busy right now \u2014 try again in a moment.");
     }
   } catch {
     setError("AI is busy right now \u2014 try again in a moment.");

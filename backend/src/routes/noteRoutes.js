@@ -15,6 +15,7 @@ import {
   suggestNoteTitle,
   suggestNoteTags,
   chatWithNoteController,
+  chatWithNoteStreamController,
   assistNoteController,
 } from '../controllers/aiController.js';
 
@@ -42,6 +43,10 @@ router.post('/:id/suggest-tags', tagsLimit, suggestNoteTags);
 // WP-AI-003 — chat with the open note (non-streaming; nothing is persisted)
 const chatLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false });
 router.post('/:id/chat', chatLimit, chatWithNoteController);
+// WP-AI-003b — streaming chat transport. Deliberately reuses the SAME chatLimit
+// instance: both transports draw from one 5-per-15-minute budget per IP, so
+// streaming is not a rate-limit escape hatch.
+router.post('/:id/chat/stream', chatLimit, chatWithNoteStreamController);
 // WP-AI-004 — writing assistant (suggestion only; client applies explicitly)
 const assistLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false });
 router.post('/:id/assist', assistLimit, assistNoteController);

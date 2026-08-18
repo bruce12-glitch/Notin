@@ -535,7 +535,7 @@ function clearAiChat(){
   hideAiChat();
 }
 function appendChatBubble(role, text){
-  if(!aiChatLog) return;
+  if(!aiChatLog) return null;
   const hint = aiChatLog.querySelector('.app-ai-chat-hint');
   if(hint) hint.remove();
   const bubble = document.createElement('p');
@@ -543,6 +543,7 @@ function appendChatBubble(role, text){
   bubble.textContent = text; // never innerHTML — answers/questions are plain text
   aiChatLog.appendChild(bubble);
   aiChatLog.scrollTop = aiChatLog.scrollHeight;
+  return bubble;
 }
 // Selection changed → the previous note's transcript is dropped entirely.
 function syncAiChatForSelection(noteId){
@@ -1338,8 +1339,12 @@ if(summarizeBtn) summarizeBtn.addEventListener('click', async ()=>{
   }
 });
 if(aiSummaryDismiss) aiSummaryDismiss.addEventListener('click', ()=> hideAiSummary());
-// ── WP-AI-003 — chat with note. One JSON request per question (no streaming),
-// answers render through textContent, and nothing is written anywhere.
+// ── WP-AI-003/003b — chat with note. Stream-first transport: SSE deltas fill
+// an empty bubble via textContent += as they arrive, with the original one-JSON
+// request kept as the fallback transport when the stream endpoint answers
+// anything other than 200 + text/event-stream (guards, 4xx JSON bodies, older
+// deployments). Answers render through textContent only, and nothing is
+// written anywhere; the transcript stays session-only.
 if(askNoteBtn) askNoteBtn.addEventListener('click', ()=>{
   if(!selectedId) return;
   syncAiChatForSelection(selectedId);
@@ -1357,27 +1362,111 @@ if(aiChatForm) aiChatForm.addEventListener('submit', async (event)=>{
   chatInFlight = true;
   appendChatBubble('user', question);
   if(aiChatSend){ aiChatSend.disabled = true; aiChatSend.textContent = 'Thinking…'; }
+  const requestBody = JSON.stringify({ question, history: chatHistory.slice(-6) });
+  let assistantBubble = null;
+  let assembled = '';
   try{
-    const res = await fetchWithAuth(`${API_BASE}/api/notes/${noteId}/chat`, {
-      method: 'POST',
-      body: JSON.stringify({ question, history: chatHistory.slice(-6) })
-    });
-    const payload = await res.json().catch(()=>({}));
-    if(res.status === 200){
-      const answer = typeof payload.answer === 'string' ? payload.answer : '';
-      if(selectedId === noteId && answer){
-        appendChatBubble('assistant', answer);
-        chatHistory.push({ role:'user', content: question });
-        chatHistory.push({ role:'assistant', content: answer });
-        if(chatHistory.length > 12) chatHistory = chatHistory.slice(-12); // cap 6 turns
+    // Stream-first (WP-AI-003b): same JSON body to the SSE endpoint. An empty
+    // assistant bubble is created lazily on the first delta so a failed or
+    // non-SSE response never leaves a stray bubble behind.
+    let streamedAnswer = false;
+    let cleanDone = false;
+    let frameError = null;
+    let useJsonFallback = false;
+    try{
+      const res = await fetchWithAuth(`${API_BASE}/api/notes/${noteId}/chat/stream`, {
+        method: 'POST',
+        body: requestBody
+      });
+      const contentType = res.headers.get('content-type') || '';
+      if(res.status !== 200 || !contentType.includes('text/event-stream') || !res.body){
+        // Not a stream upgrade (guard 4xx JSON bodies land here too) and no
+        // delta has been applied yet → discard the (still empty) bubble and
+        // fall through to the JSON path below.
+        useJsonFallback = true;
+      }else{
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let finished = false;
+        while(!finished){
+          const { value, done } = await reader.read();
+          if(done) break;
+          buffer += decoder.decode(value, { stream: true });
+          let sep;
+          while((sep = buffer.indexOf('\n\n')) !== -1){
+            const frame = buffer.slice(0, sep);
+            buffer = buffer.slice(sep + 2);
+            const dataLine = frame.split('\n').find((line)=> line.startsWith('data:'));
+            if(!dataLine) continue; // malformed frame — skipped, never fatal
+            const payload = dataLine.slice(5).trim();
+            if(payload === '[DONE]'){ finished = true; cleanDone = true; break; }
+            let parsed = null;
+            try{ parsed = JSON.parse(payload); }catch{ /* malformed frame — skip */ }
+            if(!parsed) continue;
+            if(typeof parsed.delta === 'string' && parsed.delta){
+              streamedAnswer = true;
+              if(!assistantBubble) assistantBubble = appendChatBubble('assistant', '');
+              assistantBubble.textContent += parsed.delta;
+              if(aiChatLog) aiChatLog.scrollTop = aiChatLog.scrollHeight;
+              assembled += parsed.delta;
+            }else if(typeof parsed.error === 'string'){
+              frameError = parsed.error;
+              finished = true;
+              break;
+            }
+          }
+        }
+        if(frameError){
+          try{ reader.cancel(); }catch{ /* already closed */ }
+          if(!streamedAnswer){
+            if(assistantBubble) assistantBubble.remove();
+            setError(frameError);
+          }else{
+            setError('Answer may be incomplete.');
+          }
+        }else if(cleanDone && !streamedAnswer){
+          // Stream completed with no content: mirror the JSON path's empty
+          // answer — no bubble, no history entry, no error.
+          if(assistantBubble) assistantBubble.remove();
+          setError('');
+        }
       }
+    }catch{
+      // Mid-flight failure. Only fall back when nothing was rendered yet;
+      // once deltas are on screen a retry would duplicate the answer.
+      if(!streamedAnswer){ useJsonFallback = true; cleanDone = false; frameError = null; }
+      else setError('AI is busy right now — try again in a moment.');
+    }
+    if(useJsonFallback){
+      // Original JSON transport, unchanged.
+      const res = await fetchWithAuth(`${API_BASE}/api/notes/${noteId}/chat`, {
+        method: 'POST',
+        body: requestBody
+      });
+      const payload = await res.json().catch(()=>({}));
+      if(res.status === 200){
+        const answer = typeof payload.answer === 'string' ? payload.answer : '';
+        if(selectedId === noteId && answer){
+          appendChatBubble('assistant', answer);
+          chatHistory.push({ role:'user', content: question });
+          chatHistory.push({ role:'assistant', content: answer });
+          if(chatHistory.length > 12) chatHistory = chatHistory.slice(-12); // cap 6 turns
+        }
+        setError('');
+      }else if(res.status === 400){
+        setError(payload.message || 'Could not answer that question');
+      }else if(res.status === 429){
+        setError('AI rate limit reached — try again in a few minutes.');
+      }else{
+        setError('AI is busy right now — try again in a moment.');
+      }
+    }else if(cleanDone && streamedAnswer && assembled && selectedId === noteId){
+      // Clean [DONE]: record the turn, session-only, same 12-entry cap.
+      chatHistory.push({ role:'user', content: question });
+      chatHistory.push({ role:'assistant', content: assembled });
+      if(chatHistory.length > 12) chatHistory = chatHistory.slice(-12); // cap 6 turns
       setError('');
-    }else if(res.status === 400){
-      setError(payload.message || 'Could not answer that question');
-    }else if(res.status === 429){
-      setError('AI rate limit reached — try again in a few minutes.');
-    }else{
-      setError('AI is busy right now — try again in a moment.');
     }
   }catch{
     setError('AI is busy right now — try again in a moment.');
