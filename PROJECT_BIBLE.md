@@ -10,9 +10,9 @@
 
 | Field | Value |
 |---|---|
-| **Last Updated** | 2026-08-18 (WP-AI-003b streaming chat) |
-| **Current Phase** | Phase 2 (AI Layer) — **WP-AI-001/002/002b/003/003b/004 complete**; WP-SCHEMA-001 mirror, WP-DEPLOY-001 gates, WP-FUNNEL-001, and **WP-LEFTOVERS-001** complete |
-| **MVP Completion** | ~79% |
+| **Last Updated** | 2026-08-18 (WP-AI-004b expand + selection bubble) |
+| **Current Phase** | Phase 2 (AI Layer) **complete — WP-AI-001/002/002b/003/003b/004/004b**; WP-SCHEMA-001 mirror, WP-DEPLOY-001 gates, WP-FUNNEL-001, and **WP-LEFTOVERS-001** complete |
+| **MVP Completion** | ~81% |
 | **Production readiness** | ~85% — fail-closed boot, CORS lock, CI + Chromium, and a rehearsed backup/restore drill all landed (WP-DEPLOY-001). Remaining: a human runs `RUNBOOK.md` against real infrastructure with real secrets. |
 
 ---
@@ -26,7 +26,7 @@
 | **Backend** | Node 22 + Express 4.21 ESM, unified on **port 5000** (`backend/src/server.js`) |
 | **Database** | PostgreSQL (`pg`) prod · `node:sqlite` dev fallback · migrations `backend/src/db/migrate.js` (WP-* steps, both dialects) |
 | **Auth** | Custom JWT (jose): 15-min access in memory + rotating httpOnly refresh cookie · bcrypt passwords · email OTP (demo `123456` when no SMTP) · Google OAuth stub |
-| **AI Layer** | ✅ **Phase 2 = 6/7.** WP-AI-001 summarizes notes; WP-AI-002 suggests titles; WP-AI-002b suggests smart tags; WP-AI-003 adds session-only note chat; **WP-AI-003b** streams that chat over SSE with the JSON endpoint intact as fallback (one shared rate budget); WP-AI-004 adds non-streaming continue/rephrase/shorten suggestions. The assist endpoint is read-only; only explicit Apply mutates TipTap and enters the existing autosave path. Dedicated request-only E2E coverage exists for all six features. |
+| **AI Layer** | ✅ **Phase 2 = 7/7 (complete).** WP-AI-001 summarizes notes; WP-AI-002 suggests titles; WP-AI-002b suggests smart tags; WP-AI-003 adds session-only note chat; **WP-AI-003b** streams that chat over SSE with the JSON endpoint intact as fallback (one shared rate budget); WP-AI-004 adds non-streaming continue/rephrase/shorten suggestions; **WP-AI-004b** widens the assistant to four actions with `expand` plus a zero-dependency selection bubble menu. The assist endpoint is read-only; only explicit Apply mutates TipTap and enters the existing autosave path. Dedicated request-only E2E coverage exists for every AI work package. |
 | **Storage** | Local disk `backend/uploads/` (PNG/JPEG/WebP/GIF ≤5 MB × 10/note) |
 | **Search** | LIKE/ILIKE substring (`GET /api/notes?q=`), escaped wildcards, 100-row cap |
 | **E2E** | Playwright `backend/tests/e2e/mvp-smoke.spec.js` (3 scenarios incl. full UI journey) + API-level account test |
@@ -48,16 +48,17 @@
 - → **WP-AI-004 (2026-08-18):** writing assistant — authenticated, owner-scoped `POST /api/notes/:id/assist` with dedicated 5-per-15-minute limiting and three non-streaming actions: continue from persisted note context, or rephrase/shorten an explicit selection. Deterministic keyless mock plus bounded Groq provider; server remains read-only. Pending suggestions stay in memory and render via `textContent`; explicit Apply replaces the captured selection or appends at the document end, calls `onEdit()`, and relies on the existing 900 ms autosave. Dedicated `ai-assist-smoke` E2E ✅
 - → **WP-SCHEMA-001 (2026-08-18):** `backend/prisma/schema.prisma` now mirrors `migrate.js` exactly — 10 models, 1:1 column parity (verified by script), all 16 non-unique indexes, `@default(cuid())` on User/Note/Notebook/Tag only, no invented unique constraints. Documentation-only: no migration, no dependency, no runtime change ✅
 - → **WP-DEPLOY-001 (2026-08-18):** production readiness — (1) fail-closed boot: missing/placeholder `JWT_ACCESS_SECRET`/`JWT_REFRESH_SECRET`/`OTP_PEPPER`/`APP_ORIGIN` and any non-`postgres://` `DATABASE_URL` print `FATAL:` lines and exit 1; SQLite fallback and unreachable-Postgres downgrade are both refused in production. (2) CORS locked to the `APP_ORIGIN` allowlist in production (preview/localhost echo is now dev-only). (3) GitHub Actions `E2E` workflow: Chromium, whole-suite Playwright, two fail-closed smokes and a `postgres:16-alpine` positive-boot rehearsal — **staged at `ci/e2e.yml`; a human must `git mv` it to `.github/workflows/` because the agent's GitHub App token lacks the `workflows` permission (see `ci/README.md`)**. (4) `RUNBOOK.md` backup/restore drill, executed once. Dev/preview behavior byte-identical ✅
-- → PWA: manifest + shell-only service worker (`notin-shell-v12`) + icons ✅
+- → PWA: manifest + shell-only service worker (`notin-shell-v13`) + icons ✅
 - → **WP-FUNNEL-001 (2026-08-18):** Green/Neon landing CTAs resolve at runtime via `notinAppOrigin()` — login → `/login.html`, signup → `/`, app → `/app.html`, contact → `mailto:hello@notin.app`. Mobile menu destinations set at creation. Auth-modal text-label click hijack removed; `?auth=otp` auto-open preserved. `data-cta` `href="#"` no-JS fallbacks kept by design ✅
 - → **WP-LEFTOVERS-001 (2026-08-18):** zero placeholder landing CTAs. Enterprise nav → `mailto:hello@notin.app?subject=Enterprise%20demo`. Eight binary/store/extension items per edition are disabled spans (`role="link"`, `aria-disabled`, “Coming soon — the web app is live today”). Changelog / Blog / Careers / Privacy / Terms / Security removed (Legal column dropped once empty). `docs/` GitHub Pages mirror re-synced byte-for-byte to `frontend/` (including `polish.css`) ✅
 - → **WP-AI-003b (2026-08-18):** streaming chat — authenticated, owner-scoped `POST /api/notes/:id/chat/stream` answers as SSE (`data: {"delta":…}` frames + terminal `data: [DONE]`), reusing the SAME 5-per-15-minute `chatLimit` as the JSON route so streaming is not a rate-limit escape hatch. Keyless mock splits the deterministic `mockChatAnswer` into ~6-word chunks via `setImmediate` (no timers, no randomness): assembled deltas equal the JSON answer byte-for-byte, asserted by the dedicated `ai-chat-stream-smoke` E2E alongside the full guard matrix (401/400/400/404/400, all JSON pre-upgrade). Groq path streams upstream frames with buffered line parsing, per-frame JSON-parse tolerance, the same 20 s whole-response abort budget, and a `finally` that cancels the reader when a client abandons mid-stream (disconnect detected via `res` 'close' — `req` 'close' fires at body-consumption on Node ≥16 and would cut every stream). Post-header failures become in-band `{"error":…}` + `[DONE]`; guards and setup errors keep the JSON endpoint's exact bodies. Client is stream-first with empty-bubble `textContent +=` fill and the original one-JSON request as fallback; transcript stays session-only. Still zero persistence. Shell cache v11→v12 ✅
+- → **WP-AI-004b (2026-08-18):** assistant finished — (1) fourth action `expand`: selection-based like rephrase/shorten, landed through the data-driven `ASSIST_ACTIONS` allowlist with **zero controller/route edits**; locked deterministic mock string asserted byte-exact by the extended `ai-assist-smoke` E2E; groq prompt added to `ASSIST_SYSTEM` and picked up automatically (`assistWithGroq` untouched). Same `assistLimit` 5/15 min budget, same locked messages. (2) Zero-dependency floating selection bubble (Rephrase/Shorten/Expand) hand-rolled on `editor.view.coordsAtPos()` from bundled `@tiptap/core` — no BubbleMenu extension, no floating-ui; hidden on blur/Escape/editor-column scroll and every existing view-change reset (`hideAiAssist`); viewport-right clamped. Dropdown and bubble funnel into ONE shared `runAssist()` and the SAME Apply bar; consent still only via Apply → `insertContentAt` → `onEdit()` → 900 ms autosave; server never writes the note. New dropdown entry `Expand selection`. Shell cache v12→v13 ✅
 
 - → Marketing: Green/Neon editions, video/Lottie hero, responsive ✅
 
 ## IN PROGRESS
 
-- → None. WP-AI-003b is complete. Next in queue: WP-AI-004b (expand action + selection bubble menu) or hosting (`RUNBOOK.md` with real secrets). Neither has started.
+- → None code-wise. WP-AI-004b is complete and committed on top of WP-AI-003b (branch `arena/01a015f7-notin`); its PR opens after PR #22 (WP-AI-003b) merges. Next in queue: hosting (`RUNBOOK.md` with real secrets) once the owner merges the stack.
 
 ## ARCHITECTURE DECISIONS LOCKED
 
@@ -70,7 +71,7 @@
 
 ## KNOWN TECHNICAL DEBT (priority order)
 
-- → ~~SW cache staleness BUG~~ **FIXED 2026-08-13** by WP-UI-NOTES-001; latest shell cache is `notin-shell-v12` after WP-AI-003b. Rule going forward: ANY change to a shell asset (bundle, CSS, HTML) must bump `CACHE_NAME` in `authentication/sw.js`. **Resolved**
+- → ~~SW cache staleness BUG~~ **FIXED 2026-08-13** by WP-UI-NOTES-001; latest shell cache is `notin-shell-v13` after WP-AI-004b. Rule going forward: ANY change to a shell asset (bundle, CSS, HTML) must bump `CACHE_NAME` in `authentication/sw.js`. **Resolved**
 - → ~~Landing leftover `href="#"` CTAs~~ **FIXED 2026-08-18** by WP-FUNNEL-001 + WP-LEFTOVERS-001: remaining `href="#"` are only the 11 data-cta / `#smartDownload` no-JS fallbacks. **Resolved**
 - → ~~Dev fallback JWT secrets + permissive CORS~~ **FIXED 2026-08-18** by WP-DEPLOY-001: production boot refuses missing/placeholder secrets and non-postgres URLs; CORS echoes only `APP_ORIGIN` allowlist entries. Dev keeps the permissive behavior deliberately. **Resolved**
 - → ~~Postgres→SQLite silent failover in `db.js`~~ **FIXED 2026-08-18** by WP-DEPLOY-001: refused in production at import, at `$connect()`, and mid-flight in `query()`. Still available in dev. **Resolved**
@@ -90,7 +91,7 @@
 ## API ENDPOINTS BUILT
 
 - → Notes: `GET/POST /api/notes` · `GET/PUT/PATCH/DELETE /api/notes/:id` · `POST :id/trash` · `POST :id/restore` · `POST/DELETE :id/share` ✅
-- → AI: `POST /api/notes/:id/summarize` · `POST :id/suggest-title` · `POST :id/suggest-tags` · `POST :id/chat` · `POST :id/chat/stream` (SSE) · `POST :id/assist` ✅
+- → AI: `POST /api/notes/:id/summarize` · `POST :id/suggest-title` · `POST :id/suggest-tags` · `POST :id/chat` · `POST :id/chat/stream` (SSE) · `POST :id/assist` (continue/rephrase/shorten/expand) ✅
 - → Public: `GET /api/public/share/:token(+/files/:id)` ✅
 - → `GET/POST/PATCH/DELETE /api/notebooks(/:id)` · `GET/POST/DELETE /api/tags(/:id)` ✅
 - → Attachments: `GET/POST /api/notes/:id/attachments` · `GET /api/attachments/:id/file` · `DELETE /api/attachments/:id` ✅
@@ -118,6 +119,6 @@
 
 ## NEXT 3 PRIORITIES
 
-1. **WP-AI-004b** — `expand` assist action + selection bubble menu (prompt pending). Do not start without its prompt.
-2. **Hosting** — human follows `RUNBOOK.md` with real secrets.
+1. **Hosting** — human follows `RUNBOOK.md` with real secrets (Phase 2 AI layer is now complete).
+2. **CI activation** — `git mv ci/e2e.yml .github/workflows/e2e.yml` by the owner (agent tokens cannot push workflow files); until then no run is enforced on PRs.
 3. **PR #2 follow-up** — repo owner opens the security-follow-ups issue (salvage list recorded in the PR #2 closing comment).

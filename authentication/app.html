@@ -241,6 +241,7 @@
           <button type="button" data-action="continue">Continue writing</button>
           <button type="button" data-action="rephrase">Rephrase selection</button>
           <button type="button" data-action="shorten">Shorten selection</button>
+          <button type="button" data-action="expand">Expand selection</button>
         </div>
       </div>
       <!-- WP-UI-NOTES-001 — empty state shown when no note is open -->
@@ -300,6 +301,12 @@
           </span>
         </div>
         <p id="aiAssistText"></p>
+      </div>
+      <!-- WP-AI-004b — zero-dependency floating selection menu; same runner, same Apply bar -->
+      <div class="app-ai-assist-bubble" id="aiBubbleMenu" role="menu" hidden>
+        <button type="button" role="menuitem" data-action="rephrase">Rephrase</button>
+        <button type="button" role="menuitem" data-action="shorten">Shorten</button>
+        <button type="button" role="menuitem" data-action="expand">Expand</button>
       </div>
       <!-- WP-APP-006 — note tags row (chips + add-tag picker) -->
       <div class="app-tag-row" id="tagRow" hidden>

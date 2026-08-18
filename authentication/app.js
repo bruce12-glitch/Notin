@@ -121,6 +121,8 @@ const aiAssistLabel = document.getElementById('aiAssistLabel');
 const aiAssistText = document.getElementById('aiAssistText');
 const aiAssistApply = document.getElementById('aiAssistApply');
 const aiAssistDismiss = document.getElementById('aiAssistDismiss');
+// WP-AI-004b — floating selection bubble (same runner + Apply bar as the dropdown)
+const aiBubbleMenu = document.getElementById('aiBubbleMenu');
 let assistAction = null;
 let assistRange = null;
 let assistInFlight = false;
@@ -507,11 +509,34 @@ function hideAiTags(){
 function hideAiAssist(){
   if(aiAssistBar) aiAssistBar.hidden = true;
   if(assistMenu) assistMenu.hidden = true;
+  if(aiBubbleMenu) aiBubbleMenu.hidden = true; // WP-AI-004b — every reset kills the bubble
   if(aiAssistText) aiAssistText.textContent = '';
   assistAction = null;
   assistRange = null;
   assistSuggestion = '';
   assistNoteId = null;
+}
+// WP-AI-004b — selection bubble visibility. Hand-rolled positioning via
+// editor.view.coordsAtPos() from the already-bundled @tiptap/core — no
+// BubbleMenu extension, no floating-ui, zero new dependencies.
+function syncAssistBubble(){
+  if(!aiBubbleMenu || !editor) return;
+  const note = notes.find(item=>item.id===selectedId);
+  const selection = editor.state.selection;
+  const selText = selection.empty ? '' : editor.state.doc.textBetween(selection.from, selection.to, ' ').trim();
+  if(assistInFlight || currentView !== 'notes' || !note || note.isTrashed || offlineReadOnly || !selText){
+    aiBubbleMenu.hidden = true;
+    return;
+  }
+  const rect = editor.view.coordsAtPos(selection.to); // @tiptap/core — no new deps
+  aiBubbleMenu.style.top = `${Math.max(8, rect.bottom + 8)}px`;
+  aiBubbleMenu.style.left = `${Math.max(8, rect.left)}px`;
+  aiBubbleMenu.hidden = false;
+  // clamp off-viewport right edge after layout
+  const w = aiBubbleMenu.offsetWidth;
+  if(w && rect.left + w > window.innerWidth - 8){
+    aiBubbleMenu.style.left = `${Math.max(8, window.innerWidth - w - 8)}px`;
+  }
 }
 // WP-AI-003 — chat panel lifecycle. Hiding never persists or uploads anything;
 // the transcript only survives while the same note stays selected.
@@ -972,7 +997,8 @@ function initEditor(){
       onEditorUpdate();
     },
     onCreate: () => { updateToolbar(); },
-    onSelectionUpdate: () => updateToolbar(),
+    onSelectionUpdate: () => { updateToolbar(); syncAssistBubble(); }, // WP-AI-004b — bubble follows selection
+    onBlur: () => { if(aiBubbleMenu) aiBubbleMenu.hidden = true; }, // WP-AI-004b — mousedown-preventDefault keeps blur rare
   });
   const toolbar = document.getElementById('toolbar');
   if(toolbar){
@@ -1486,6 +1512,7 @@ function setAssistControlsPending(pending){
     assistBtn.textContent = pending ? 'Working…' : '✍ Assist';
   }
   assistMenu?.querySelectorAll('button').forEach(button=>{ button.disabled = pending; });
+  aiBubbleMenu?.querySelectorAll('button').forEach(button=>{ button.disabled = pending; }); // WP-AI-004b
   if(aiAssistApply) aiAssistApply.disabled = pending;
   if(aiAssistDismiss) aiAssistDismiss.disabled = pending;
 }
@@ -1493,11 +1520,13 @@ if(assistBtn) assistBtn.addEventListener('click', ()=>{
   if(assistInFlight || !selectedId || !assistMenu) return;
   assistMenu.hidden = !assistMenu.hidden;
 });
-if(assistMenu) assistMenu.addEventListener('click', async (event)=>{
-  const control = event.target.closest('button[data-action]');
-  if(!control || !assistMenu.contains(control) || assistInFlight || !editor || !selectedId) return;
-  const action = control.dataset.action;
-  if(!['continue','rephrase','shorten'].includes(action)) return;
+// WP-AI-004/004b — ONE shared action runner. The toolbar dropdown and the
+// floating selection bubble both funnel through runAssist() and end at the
+// SAME review/Apply bar; only explicit Apply mutates the editor.
+const ASSIST_LABELS = { continue:'✍ Continue suggestion', rephrase:'✍ Rephrase suggestion', shorten:'✍ Shorten suggestion', expand:'✍ Expand suggestion' };
+async function runAssist(action){
+  if(assistInFlight || !editor || !selectedId) return;
+  if(!['continue','rephrase','shorten','expand'].includes(action)) return;
   const noteId = selectedId;
   const note = notes.find(item=>item.id===noteId);
   if(!note || note.isTrashed || offlineReadOnly) return;
@@ -1506,7 +1535,7 @@ if(assistMenu) assistMenu.addEventListener('click', async (event)=>{
   const range = action === 'continue' ? null : { from:selection.from, to:selection.to };
   const selectedText = range ? editor.state.doc.textBetween(range.from, range.to, ' ').trim() : '';
   if(range && (!selectedText || range.from === range.to)){
-    assistMenu.hidden = true;
+    if(assistMenu) assistMenu.hidden = true;
     setError('Select some text to use this action.');
     return;
   }
@@ -1534,11 +1563,7 @@ if(assistMenu) assistMenu.addEventListener('click', async (event)=>{
       // A view/note change clears assistNoteId, preventing stale responses from resurfacing.
       if(selectedId !== noteId || assistNoteId !== noteId) return;
       assistSuggestion = suggestion;
-      if(aiAssistLabel) aiAssistLabel.textContent = action === 'continue'
-        ? '✍ Continue suggestion'
-        : action === 'rephrase'
-          ? '✍ Rephrase suggestion'
-          : '✍ Shorten suggestion';
+      if(aiAssistLabel) aiAssistLabel.textContent = ASSIST_LABELS[action] || '✍ AI suggestion';
       if(aiAssistText) aiAssistText.textContent = suggestion; // plain text, never innerHTML
       if(aiAssistBar) aiAssistBar.hidden = false;
       setError('');
@@ -1558,7 +1583,28 @@ if(assistMenu) assistMenu.addEventListener('click', async (event)=>{
   }finally{
     setAssistControlsPending(false);
   }
+}
+if(assistMenu) assistMenu.addEventListener('click', (event)=>{
+  const control = event.target.closest('button[data-action]');
+  if(!control || !assistMenu.contains(control)) return;
+  runAssist(control.dataset.action);
 });
+if(aiBubbleMenu) aiBubbleMenu.addEventListener('mousedown', (event)=>event.preventDefault()); // keep editor focus + selection
+if(aiBubbleMenu) aiBubbleMenu.addEventListener('click', (event)=>{
+  const control = event.target.closest('button[data-action]');
+  if(!control || assistInFlight) return;
+  aiBubbleMenu.hidden = true;
+  runAssist(control.dataset.action);
+});
+document.addEventListener('keydown', (event)=>{
+  if(event.key === 'Escape' && aiBubbleMenu && !aiBubbleMenu.hidden) aiBubbleMenu.hidden = true;
+});
+// Stale coordinates are worse than a re-select: hide the bubble when the
+// editor column scrolls. .app-editor-body is the element that scrolls #tiptapEditor.
+const assistEditorScroll = document.querySelector('.app-editor-body');
+if(assistEditorScroll) assistEditorScroll.addEventListener('scroll', ()=>{
+  if(aiBubbleMenu && !aiBubbleMenu.hidden) aiBubbleMenu.hidden = true;
+}, { passive: true });
 if(aiAssistApply) aiAssistApply.addEventListener('click', ()=>{
   if(!editor || !assistSuggestion || !assistAction || !assistNoteId) return;
   if(selectedId !== assistNoteId){ hideAiAssist(); return; }

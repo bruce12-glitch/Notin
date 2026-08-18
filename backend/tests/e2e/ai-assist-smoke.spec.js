@@ -69,9 +69,37 @@ test('Writing assistant validates all actions and guards while never writing the
       expect(shortenPayload.suggestion).toBe('The checklist is clear.');
     }
 
+    // WP-AI-004b — expand action (own limiter IP so the block above keeps its
+    // exact 5-of-5 budget on 198.51.100.11).
+    const expandPayload = await expectSuggestion(await ownerApi.post(`/api/notes/${note.id}/assist`, {
+      headers: withIp(ownerHeaders, '198.51.100.14'),
+      data: { action: 'expand', text: 'The checklist is clear. The rehearsal happens Friday.' },
+    }), 'expand');
+    if (expandPayload.provider === 'mock') {
+      expect(expandPayload.suggestion).toBe('The checklist is clear. Because it anchors the plan, restate it in your own words, add one concrete detail, and give it an owner and a date.');
+    }
+    const expandEmpty = await ownerApi.post(`/api/notes/${note.id}/assist`, {
+      headers: withIp(ownerHeaders, '198.51.100.14'),
+      data: { action: 'expand', text: '   ' },
+    });
+    expect(expandEmpty.status()).toBe(400);
+    await expect(expandEmpty.json()).resolves.toMatchObject({
+      message: 'Select some text first (1–2000 characters)',
+    });
+    const expandTooLong = await ownerApi.post(`/api/notes/${note.id}/assist`, {
+      headers: withIp(ownerHeaders, '198.51.100.14'),
+      data: { action: 'expand', text: 'x'.repeat(2001) },
+    });
+    expect(expandTooLong.status()).toBe(400);
+    await expect(expandTooLong.json()).resolves.toMatchObject({
+      message: 'Select some text first (1–2000 characters)',
+    });
+
+    // 'expand' became a real action in WP-AI-004b, so the unknown-action guard
+    // now uses a genuinely unsupported verb.
     const invalidAction = await ownerApi.post(`/api/notes/${note.id}/assist`, {
       headers: withIp(ownerHeaders, '198.51.100.11'),
-      data: { action: 'expand', text: 'Do not support queued actions.' },
+      data: { action: 'translate', text: 'Do not support queued actions.' },
     });
     expect(invalidAction.status()).toBe(400);
     await expect(invalidAction.json()).resolves.toMatchObject({ message: 'Unknown assist action' });

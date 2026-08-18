@@ -527,6 +527,10 @@ function mockAssist(action, input) {
     return `Next step: revisit "${tail}" and turn it into one concrete, dated action.`;
   }
   if (action === 'rephrase') return [...sentences].reverse().join(' ');
+  // WP-AI-004b — expand action (deterministic mock)
+  if (action === 'expand') {
+    return `${sentences[0]} Because it anchors the plan, restate it in your own words, add one concrete detail, and give it an owner and a date.`;
+  }
   const normalized = String(input).replace(/\s+/g, ' ').trim();
   const maxLength = Math.max(1, Math.floor(normalized.length / 2));
   return sentences[0].slice(0, maxLength).trim();
