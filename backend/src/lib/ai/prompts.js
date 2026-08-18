@@ -21,3 +21,13 @@ export function tagsUserPrompt(text, existingTags) {
 export const MAX_TAGS_INPUT_CHARS = 3000;
 export const MAX_TAGS_COUNT = 5;
 export const MAX_TAG_LEN = 25;
+
+// WP-AI-003 — chat with note (session-only Q&A, answers come only from the note)
+export const CHAT_SYSTEM = 'You answer questions about one note. Use ONLY the note content. If the answer is not in the note, say you cannot find it there. Plain prose. No markdown headings, no preamble, no invented facts.';
+export function chatUserPrompt(noteText, question) {
+  return `NOTE:\n${noteText}\n\nQUESTION:\n${question}`;
+}
+export const MAX_CHAT_NOTE_CHARS = 6000;
+export const MAX_CHAT_QUESTION_CHARS = 500;
+export const MAX_CHAT_ANSWER_CHARS = 800;
+export const MAX_CHAT_HISTORY = 6; // client+server: last N {role,content} turns

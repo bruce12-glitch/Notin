@@ -11,6 +11,15 @@ const __dirname = path.dirname(__filename);
 
 const DATABASE_URL = process.env.DATABASE_URL || '';
 const isPostgresUrl = DATABASE_URL.startsWith('postgresql://') || DATABASE_URL.startsWith('postgres://');
+
+// WP-DEPLOY-001 — never fall back to SQLite in production. This runs at import
+// time, before any SQLite file handle is opened below. Dev is unaffected.
+if (!isPostgresUrl && process.env.NODE_ENV === 'production') {
+  console.error('FATAL: DATABASE_URL must be a postgres:// URL in production — refusing to start on the SQLite fallback');
+  console.error('       (fix this first; remaining environment problems are reported together on the next boot)');
+  process.exit(1);
+}
+
 let usePostgres = isPostgresUrl;
 let pool = null;
 let sqliteDb = null;
@@ -47,6 +56,12 @@ async function query(text, params = []) {
       const msg = String(err.message || err.code || '');
       const isConnError = msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND') || msg.includes('connect') || err.code === 'ECONNREFUSED';
       if (isConnError) {
+        // WP-DEPLOY-001 — same rule mid-flight: production must never silently
+        // migrate live traffic onto an empty local SQLite file.
+        if (process.env.NODE_ENV === 'production') {
+          console.error(`FATAL: lost the PostgreSQL connection in production (${msg}) — refusing to fall back to SQLite`);
+          throw err;
+        }
         console.warn(`⚠️  Postgres query failed (${msg}), switching to SQLite fallback at ${sqlitePath}`);
         usePostgres = false;
         if (!sqliteDb) {
@@ -133,6 +148,14 @@ const db = {
         console.log('✅ Connected to PostgreSQL');
         return;
       } catch (e) {
+        // WP-DEPLOY-001 — in production the SQLite fallback is never acceptable.
+        // Without this the boot gate would be bypassable: a valid postgres:// URL
+        // that simply cannot be reached would silently downgrade the whole
+        // process to SQLite. Dev/preview keeps the forgiving fallback below.
+        if (process.env.NODE_ENV === 'production') {
+          console.error(`FATAL: could not connect to PostgreSQL in production (${e.message}) — refusing to fall back to SQLite`);
+          process.exit(1);
+        }
         console.warn(`⚠️  Postgres connect failed (${e.message}), using SQLite fallback`);
         usePostgres = false;
         if (!sqliteDb) {

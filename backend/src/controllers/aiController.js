@@ -1,5 +1,6 @@
 import db from '../config/db.js';
-import { summarizeText, suggestTitle, suggestTags } from '../lib/ai/provider.js';
+import { summarizeText, suggestTitle, suggestTags, chatWithNote } from '../lib/ai/provider.js';
+import { MAX_CHAT_QUESTION_CHARS } from '../lib/ai/prompts.js';
 
 function isTrashed(value) {
   return value === true || value === 1 || value === '1' || value === 't' || value === 'true';
@@ -116,5 +117,43 @@ export async function suggestNoteTags(req, res) {
     }
     console.error(error);
     return res.status(500).json({ message: 'Could not suggest tags' });
+  }
+}
+
+// ── WP-AI-003 — chat with note (read-only: no note UPDATE, no chat row) ─────
+export async function chatWithNoteController(req, res) {
+  try {
+    // Guard order mirrors the sibling AI handlers: ownership first, so a
+    // non-owner can never distinguish a bad request from a missing note.
+    const { rows } = await db.query(
+      `SELECT id, title, "contentText", description, "isTrashed" FROM "Note" WHERE id = $1 AND "userId" = $2 LIMIT 1`,
+      [req.params.id, req.userId],
+    );
+    const note = rows[0];
+    if (!note) return res.status(404).json({ message: 'Note not found' });
+    if (isTrashed(note.isTrashed)) return res.status(400).json({ message: 'Restore the note before chatting' });
+
+    const rawQuestion = typeof req.body?.question === 'string' ? req.body.question.trim() : '';
+    if (!rawQuestion || rawQuestion.length > MAX_CHAT_QUESTION_CHARS) {
+      return res.status(400).json({ message: 'Ask a question (1–500 characters)' });
+    }
+
+    const contentText = typeof note.contentText === 'string' ? note.contentText : '';
+    const description = typeof note.description === 'string' ? note.description : '';
+    const sourceText = (contentText.trim() ? contentText : description).trim();
+    if (sourceText.length < 40) {
+      return res.status(400).json({ message: 'Note is too short to chat about (needs at least 40 characters)' });
+    }
+
+    // Deliberate: nothing is written here. The transcript lives only in the
+    // caller's tab for the session — no note UPDATE, no chat table.
+    const { answer, provider } = await chatWithNote(sourceText, rawQuestion, req.body?.history);
+    return res.status(200).json({ answer, provider });
+  } catch (error) {
+    if (error?.message === 'AI_PROVIDER_ERROR') {
+      return res.status(503).json({ message: 'AI is busy right now — try again in a moment' });
+    }
+    console.error(error);
+    return res.status(500).json({ message: 'Could not answer that question' });
   }
 }

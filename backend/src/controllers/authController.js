@@ -135,8 +135,9 @@ export async function googleCallback(req, res) {
       const challenge = await issueOtp(user);
       res.redirect(`${origin}/?auth=otp&challenge=${encodeURIComponent(challenge)}&email=${encodeURIComponent(user.email)}`);
     } catch (otpErr) {
-      // If SMTP not configured, fallback to demo? But in prod should error
-      if (!mailer) {
+      // If SMTP not configured, fallback to demo — never in production.
+      // WP-DEPLOY-001: production without SMTP falls through to `throw otpErr`.
+      if (!mailer && !isProduction) {
         // Create demo challenge so flow can continue in dev
         const id = random(18);
         const demoCode = '123456';

@@ -118,3 +118,79 @@ curl -fsS http://127.0.0.1:5000/api/auth/health
 ```
 
 A healthy deployment returns HTTP 200. Check application logs for migration/database failures, SMTP delivery problems, unexpected SQLite fallback, and Sentry initialization warnings. Roll back application code and schema-compatible changes together; restore database/uploads from the same backup point when data recovery is required.
+
+## Backup & restore
+
+Back up the database and `UPLOAD_DIR` **at the same point in time** — attachment
+rows reference files on disk, so a database restored without its uploads (or the
+reverse) leaves broken images. Store both artifacts off-host and encrypted.
+
+### PostgreSQL (production)
+
+```bash
+# Backup — custom format, compressed and selectively restorable
+pg_dump -Fc -f notin-$(date +%F).dump "$DATABASE_URL"
+
+# Restore into an existing database
+pg_restore --clean --if-exists -d "$DATABASE_URL" notin-$(date +%F).dump
+
+# Always converge the schema afterwards (idempotent; safe to re-run)
+cd backend && npm run db:migrate
+```
+
+Run `npm run db:migrate` after a bare restore: it is idempotent and reconciles a
+dump taken before a later migration shipped. `backend/prisma/schema.prisma`
+documents the schema but never applies it — `migrate.js` is the only applicator.
+
+### Uploads (image bytes)
+
+```bash
+# Backup — archive the directory UPLOAD_DIR points at (default backend/uploads)
+tar czf notin-uploads-$(date +%F).tgz -C backend uploads
+
+# Restore
+tar xzf notin-uploads-$(date +%F).tgz -C backend
+```
+
+### SQLite (demo/dev only — NOT for production)
+
+Production refuses to boot on SQLite: a non-`postgres://` `DATABASE_URL`, or an
+unreachable Postgres, exits with a `FATAL:` line rather than silently falling
+back. For local/demo installations only:
+
+```bash
+# Stop the API first, then collapse the WAL so a single file is consistent
+sqlite3 backend/prisma/notin.sqlite 'PRAGMA wal_checkpoint(TRUNCATE);'
+cp backend/prisma/notin.sqlite notin-$(date +%F).sqlite   # plus -wal/-shm if present
+
+# Restore: stop the API, replace the file, then converge
+cp notin-$(date +%F).sqlite backend/prisma/notin.sqlite
+cd backend && npm run db:migrate
+```
+
+### Restore-verification checklist
+
+Run all five after every restore, before returning traffic:
+
+1. `curl -fsS http://127.0.0.1:5000/health` → `200`, and `database` reads
+   `"PostgreSQL"` in production (`"SQLite-fallback"` only in dev/demo).
+2. Sign in. In dev/demo use OTP `123456`; in production use a real mailed code
+   and confirm `/api/auth/health` reports `demoMode: false`.
+3. Open a pre-existing note and confirm its body renders.
+4. Open an image attachment on that note — proves DB rows and `UPLOAD_DIR`
+   came from the same backup point.
+5. `POST /api/notes/:id/summarize` → returns a summary (mock when
+   `GROQ_API_KEY` is unset), proving the AI path and write path still work.
+
+### Drill log
+
+- **2026-08-18 — executed once in the Arena sandbox.** SQLite-equivalent proof,
+  noted as such: no Postgres or Docker is available in the sandbox, so the
+  Postgres commands above are documented but were exercised only in CI (the
+  `Positive production boot (Postgres rehearsal)` job step boots against a real
+  `postgres:16-alpine` service and asserts `/health` reports PostgreSQL). The
+  drill performed locally was: seed a note → `PRAGMA wal_checkpoint(TRUNCATE)`
+  → copy the SQLite file → `tar czf` the uploads → delete the live database to
+  simulate loss → restore both → `npm run db:migrate` → confirm the seeded note
+  returned, then all five verification steps passed (health 200, OTP `123456`
+  login, note readable, summarize returned a mock summary).

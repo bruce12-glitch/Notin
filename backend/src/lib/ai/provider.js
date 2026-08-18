@@ -11,6 +11,12 @@ import {
   MAX_TAGS_INPUT_CHARS,
   MAX_TAGS_COUNT,
   MAX_TAG_LEN,
+  CHAT_SYSTEM,
+  chatUserPrompt,
+  MAX_CHAT_NOTE_CHARS,
+  MAX_CHAT_QUESTION_CHARS,
+  MAX_CHAT_ANSWER_CHARS,
+  MAX_CHAT_HISTORY,
 } from './prompts.js';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -257,4 +263,92 @@ export async function suggestTags(text, existingTags = []) {
 
   console.log(`[AI] tags via ${provider}`);
   return { tags, provider };
+}
+
+// ── WP-AI-003 — chat with note (non-streaming; server never persists anything) ─
+const CHAT_STOPWORDS = new Set([
+  'the', 'and', 'for', 'with', 'this', 'that', 'what', 'when', 'where', 'who',
+  'how', 'does', 'did', 'can', 'you',
+]);
+
+function sanitizeChatHistory(history) {
+  const messages = [];
+  for (const item of Array.isArray(history) ? history : []) {
+    if (!item || typeof item !== 'object') continue;
+    const role = item.role === 'user' || item.role === 'assistant' ? item.role : null;
+    const content = typeof item.content === 'string' ? item.content.trim().slice(0, 500) : '';
+    if (!role || !content) continue;
+    messages.push({ role, content });
+  }
+  return messages.slice(-MAX_CHAT_HISTORY);
+}
+
+function mockChatAnswer(noteText, question) {
+  const lowerQuestion = String(question).toLowerCase();
+  const keywords = (lowerQuestion.match(/[a-z][a-z0-9'-]{2,}/g) || [])
+    .filter((word) => !CHAT_STOPWORDS.has(word));
+  const sentences = (String(noteText).match(/[^.!?]+[.!?]+/g) || [])
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+  if (!sentences.length) return 'I cannot find that in this note.';
+  const match = sentences.find((sentence) => {
+    const lowerSentence = sentence.toLowerCase();
+    return keywords.some((word) => lowerSentence.includes(word));
+  });
+  const sentence = match || sentences[0];
+  return `Based on the note: ${sentence}`.slice(0, MAX_CHAT_ANSWER_CHARS);
+}
+
+async function chatWithGroq(noteText, question, history, apiKey) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(GROQ_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        temperature: 0.2,
+        max_tokens: 400,
+        messages: [
+          { role: 'system', content: CHAT_SYSTEM },
+          ...history,
+          { role: 'user', content: chatUserPrompt(noteText, question) },
+        ],
+      }),
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error('AI_PROVIDER_ERROR');
+    const payload = await response.json();
+    const answer = payload?.choices?.[0]?.message?.content?.trim();
+    if (!answer) throw new Error('AI_PROVIDER_ERROR');
+    return answer.slice(0, MAX_CHAT_ANSWER_CHARS);
+  } catch (error) {
+    if (error?.message === 'AI_PROVIDER_ERROR') throw error;
+    throw new Error('AI_PROVIDER_ERROR');
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function chatWithNote(noteText, question, history = []) {
+  const note = String(noteText ?? '').trim().slice(0, MAX_CHAT_NOTE_CHARS);
+  const q = String(question ?? '').trim().slice(0, MAX_CHAT_QUESTION_CHARS);
+  const turns = sanitizeChatHistory(history);
+  let provider;
+  let answer;
+
+  if (process.env.GROQ_API_KEY) {
+    provider = 'groq';
+    answer = await chatWithGroq(note, q, turns, process.env.GROQ_API_KEY);
+  } else {
+    provider = 'mock';
+    answer = mockChatAnswer(note, q).slice(0, MAX_CHAT_ANSWER_CHARS);
+  }
+
+  console.log(`[AI] chat via ${provider}`);
+  return { answer, provider };
 }
