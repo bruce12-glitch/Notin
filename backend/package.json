@@ -8,7 +8,7 @@
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "db:migrate": "node src/db/migrate.js",
-    "db:generate": "echo 'Schema is applied via npm run db:migrate (pg driver). prisma/schema.prisma is the source of truth for the data model.'",
+    "db:generate": "echo 'SQL is applied by npm run db:migrate (migrate.js). prisma/schema.prisma documents that schema; this repo does not run prisma generate.'",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },

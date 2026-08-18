@@ -1,3 +1,8 @@
+// Documentation mirror of the live schema.
+// SQL is applied by `npm run db:migrate` (src/db/migrate.js) on both Postgres
+// and the SQLite dev fallback. This file documents that schema; the repo does
+// not run `prisma generate` and does not depend on @prisma/client.
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -16,11 +21,14 @@ model User {
   createdAt DateTime @default(now()) @map("createdAt")
   updatedAt DateTime @updatedAt @map("updatedAt")
 
-  notes          Note[]
-  attachments    Attachment[]
-  noteShares     NoteShare[]
-  otpChallenges  OtpChallenge[]
-  refreshTokens  RefreshToken[]
+  notes               Note[]
+  notebooks           Notebook[]
+  tags                Tag[]
+  attachments         Attachment[]
+  noteShares          NoteShare[]
+  otpChallenges       OtpChallenge[]
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
 }
 
 model Note {
@@ -29,19 +37,67 @@ model Note {
   description String    @db.Text
   contentJson String?   @db.Text @map("contentJson")
   contentText String?   @db.Text @map("contentText")
+  summary     String?   @db.Text
   isTrashed   Boolean   @default(false) @map("isTrashed")
+  isPinned    Boolean   @default(false) @map("isPinned")
   trashedAt   DateTime? @map("trashedAt")
   userId      String    @map("userId")
+  notebookId  String?   @map("notebookId")
   createdAt   DateTime  @default(now()) @map("createdAt")
   updatedAt   DateTime  @updatedAt @map("updatedAt")
 
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notebook    Notebook?    @relation(fields: [notebookId], references: [id], onDelete: SetNull)
   attachments Attachment[]
+  noteTags    NoteTag[]
   share       NoteShare?
 
   @@index([userId])
   @@index([isTrashed])
+  @@index([isPinned])
+  @@index([notebookId])
   @@map("Note")
+}
+
+model Notebook {
+  id        String   @id @default(cuid())
+  userId    String   @map("userId")
+  name      String
+  createdAt DateTime @default(now()) @map("createdAt")
+  updatedAt DateTime @updatedAt @map("updatedAt")
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notes Note[]
+
+  @@index([userId])
+  @@map("Notebook")
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  userId    String   @map("userId")
+  name      String
+  createdAt DateTime @default(now()) @map("createdAt")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  noteTags NoteTag[]
+
+  @@index([userId])
+  @@map("Tag")
+}
+
+model NoteTag {
+  noteId    String   @map("noteId")
+  tagId     String   @map("tagId")
+  createdAt DateTime @default(now()) @map("createdAt")
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([noteId, tagId])
+  @@index([noteId])
+  @@index([tagId])
+  @@map("NoteTag")
 }
 
 model Attachment {
@@ -105,4 +161,19 @@ model RefreshToken {
 
   @@index([userId])
   @@map("refresh_tokens")
+}
+
+model PasswordResetToken {
+  id        String    @id
+  userId    String    @map("user_id")
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("password_reset_tokens")
 }
