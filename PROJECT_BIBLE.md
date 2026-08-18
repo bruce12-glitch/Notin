@@ -11,8 +11,8 @@
 | Field | Value |
 |---|---|
 | **Last Updated** | 2026-08-18 (WP-DEPLOY-001 production readiness gates) |
-| **Current Phase** | Phase 2 (AI Layer) — WP-AI-001/002/002b shipped; **WP-AI-003 chat with note complete on this branch** |
-| **MVP Completion** | ~75% |
+| **Current Phase** | Phase 2 (AI Layer) — WP-AI-001/002/002b + WP-FUNNEL-001 shipped; **WP-AI-003 chat, WP-SCHEMA-001 mirror, WP-DEPLOY-001 gates complete on this branch** |
+| **MVP Completion** | ~78% |
 | **Production readiness** | ~85% — fail-closed boot, CORS lock, CI + Chromium, and a rehearsed backup/restore drill all landed (WP-DEPLOY-001). Remaining: a human runs `RUNBOOK.md` against real infrastructure with real secrets. |
 
 ---
@@ -48,12 +48,15 @@
 - → **WP-SCHEMA-001 (2026-08-18):** `backend/prisma/schema.prisma` now mirrors `migrate.js` exactly — 10 models, 1:1 column parity (verified by script), all 16 non-unique indexes, `@default(cuid())` on User/Note/Notebook/Tag only, no invented unique constraints. Documentation-only: no migration, no dependency, no runtime change ✅
 - → **WP-DEPLOY-001 (2026-08-18):** production readiness — (1) fail-closed boot: missing/placeholder `JWT_ACCESS_SECRET`/`JWT_REFRESH_SECRET`/`OTP_PEPPER`/`APP_ORIGIN` and any non-`postgres://` `DATABASE_URL` print `FATAL:` lines and exit 1; SQLite fallback and unreachable-Postgres downgrade are both refused in production. (2) CORS locked to the `APP_ORIGIN` allowlist in production (preview/localhost echo is now dev-only). (3) GitHub Actions `E2E` workflow: Chromium, whole-suite Playwright, two fail-closed smokes and a `postgres:16-alpine` positive-boot rehearsal — **staged at `ci/e2e.yml`; a human must `git mv` it to `.github/workflows/` because the agent's GitHub App token lacks the `workflows` permission (see `ci/README.md`)**. (4) `RUNBOOK.md` backup/restore drill, executed once. Dev/preview behavior byte-identical ✅
 - → PWA: manifest + shell-only service worker (`notin-shell-v10`) + icons ✅
+- → **WP-FUNNEL-001 (2026-08-18):** Green/Neon landing CTAs resolve at runtime via `notinAppOrigin()` — login → `/login.html`, signup → `/`, app → `/app.html`, contact → `mailto:hello@notin.app`. Mobile menu destinations set at creation. Auth-modal text-label click hijack removed; `?auth=otp` auto-open preserved. Platform binaries / store / extension links left dead by design ✅
+
 - → Marketing: Green/Neon editions, video/Lottie hero, responsive ✅
 
 ## IN PROGRESS
 
-- → **WP-AI-003** is implemented on `arena/01a01262-notin`; verification and PR handoff are the current task.
-- → **WP-DEPLOY-001** is complete on `arena/01a01262-notin` (stacked on WP-AI-003 + WP-SCHEMA-001). Locked queue after merge: **WP-AI-004** (writing assistant) → landing leftovers.
+- → **WP-FUNNEL-001** merged to `main` via PR #17.
+- → **WP-AI-003 + WP-SCHEMA-001 + WP-DEPLOY-001** are complete and stacked on `arena/01a01262-notin`; PR review is the current task.
+- → Locked queue after merge: **WP-AI-004** (writing assistant) → landing leftovers.
 
 ## ARCHITECTURE DECISIONS LOCKED
 
