@@ -141,8 +141,8 @@
 
     <!-- CTA stack (Log in · Start for free · Theme) -->
     <div class="nav-actions hidden items-center gap-3 md:flex">
-      <a href="#" class="whitespace-nowrap rounded-full px-4 py-2 text-[15px] font-semibold text-text-secondary transition hover:text-brand-600">Log in</a>
-      <a href="#" class="btn-3d btn-3d-sm whitespace-nowrap text-[15px]">Start for free</a>
+      <a href="#" data-cta="login" class="whitespace-nowrap rounded-full px-4 py-2 text-[15px] font-semibold text-text-secondary transition hover:text-brand-600">Log in</a>
+      <a href="#" data-cta="signup" class="btn-3d btn-3d-sm whitespace-nowrap text-[15px]">Start for free</a>
       <button id="themeToggle" class="theme-toggle flex cursor-pointer items-center gap-1.5 rounded-full border border-stroke-buttons bg-surface px-3.5 py-2 text-[13px] font-bold transition hover:border-brand-500 hover:text-brand-500" title="Switch theme" aria-label="Switch between Green and Neon theme">
         <span class="theme-toggle-dot"></span>
         <span id="themeToggleLabel">Switch to Neon</span>
@@ -169,13 +169,13 @@
         schedules, all in one place.
       </p>
       <div class="hero-actions flex flex-wrap items-center gap-4">
-        <a href="#" class="btn-3d text-base">Get Notin free</a>
+        <a href="#" data-cta="signup" class="btn-3d text-base">Get Notin free</a>
         <a id="heroSmartDownload" href="#download" class="btn-outline-evernote inline-flex items-center justify-center gap-2">
           <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           <span id="heroDownloadLabel">Download</span>
         </a>
       </div>
-      <a href="#" class="hero-login text-[16px] font-semibold text-text-secondary transition hover:text-brand-600">Already have an account? Log in <svg class="inline h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
+      <a href="#" data-cta="login" class="hero-login text-[16px] font-semibold text-text-secondary transition hover:text-brand-600">Already have an account? Log in <svg class="inline h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a>
       <div class="hero-reassurance" aria-label="Notin benefits">
         <span>Free forever</span><span>No credit card</span><span>Syncs everywhere</span>
       </div>
@@ -496,7 +496,7 @@
         <li class="relative pl-7 text-[15px] text-text-secondary"><span class="absolute left-0 top-0 grid h-5 w-5 place-items-center rounded-full bg-brand-100 text-xs font-extrabold text-brand-700"><svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Attach images, links and files in one tap</li>
         <li class="relative pl-7 text-[15px] text-text-secondary"><span class="absolute left-0 top-0 grid h-5 w-5 place-items-center rounded-full bg-brand-100 text-xs font-extrabold text-brand-700"><svg class="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Voice notes for when typing isn't an option</li>
       </ul>
-      <a href="#" class="btn-3d mt-1 px-7 py-3 text-[15px]">Try it free</a>
+      <a href="#" data-cta="signup" class="btn-3d mt-1 px-7 py-3 text-[15px]">Try it free</a>
     </div>
     <div class="flex justify-center">
       <div class="w-full max-w-[420px] overflow-hidden rounded-2xl border border-stroke-cards bg-surface shadow-[0_8px_30px_rgba(44,45,42,0.08)]">
@@ -678,7 +678,7 @@
           <li class="relative pl-6 text-[14.5px] text-text-secondary"><span class="absolute left-0 font-extrabold text-brand-500"><svg class="inline h-3 w-3 -translate-y-px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Basic search</li>
           <li class="relative pl-6 text-[14.5px] text-text-secondary"><span class="absolute left-0 font-extrabold text-brand-500"><svg class="inline h-3 w-3 -translate-y-px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Community support</li>
         </ul>
-        <a href="#" class="block rounded-full border border-stroke-buttons bg-surface py-2.5 text-center text-[15px] font-semibold transition hover:border-brand-500 hover:text-brand-500">Get started</a>
+        <a href="#" data-cta="signup" class="block rounded-full border border-stroke-buttons bg-surface py-2.5 text-center text-[15px] font-semibold transition hover:border-brand-500 hover:text-brand-500">Get started</a>
       </article>
       <article class="reveal relative flex flex-col gap-3.5 rounded-3xl border-2 border-brand-500 bg-surface p-8 shadow-[0_24px_60px_rgba(0,185,60,0.18)] transition hover:-translate-y-1">
         <span class="absolute -top-3.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-to-r from-brand-500 to-brand-400 px-4 py-1 text-[12.5px] font-bold text-[#2c2d2a]">Most popular</span>
@@ -691,7 +691,7 @@
           <li class="relative pl-6 text-[14.5px] text-text-secondary"><span class="absolute left-0 font-extrabold text-brand-500"><svg class="inline h-3 w-3 -translate-y-px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>End-to-end encryption</li>
           <li class="relative pl-6 text-[14.5px] text-text-secondary"><span class="absolute left-0 font-extrabold text-brand-500"><svg class="inline h-3 w-3 -translate-y-px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Priority support</li>
         </ul>
-        <a href="#" class="btn-3d block py-2.5 text-center text-[15px]">Try Pro free for 14 days</a>
+        <a href="#" data-cta="signup" class="btn-3d block py-2.5 text-center text-[15px]">Try Pro free for 14 days</a>
       </article>
       <article class="reveal flex flex-col gap-3.5 rounded-3xl border border-stroke-cards bg-surface p-8 transition hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(23,21,31,0.08)]">
         <h3 class="text-lg font-bold">Team</h3>
@@ -702,7 +702,7 @@
           <li class="relative pl-6 text-[14.5px] text-text-secondary"><span class="absolute left-0 font-extrabold text-brand-500"><svg class="inline h-3 w-3 -translate-y-px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Admin controls &amp; audit logs</li>
           <li class="relative pl-6 text-[14.5px] text-text-secondary"><span class="absolute left-0 font-extrabold text-brand-500"><svg class="inline h-3 w-3 -translate-y-px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>Team analytics</li>
         </ul>
-        <a href="#" class="block rounded-full border border-stroke-buttons bg-surface py-2.5 text-center text-[15px] font-semibold transition hover:border-brand-500 hover:text-brand-500">Contact sales</a>
+        <a href="#" data-cta="contact" class="block rounded-full border border-stroke-buttons bg-surface py-2.5 text-center text-[15px] font-semibold transition hover:border-brand-500 hover:text-brand-500">Contact sales</a>
       </article>
     </div>
   </div>
@@ -763,7 +763,7 @@
             <p class="text-[12.5px] text-text-tertiary">Any browser · no install</p>
           </div>
         </div>
-        <a href="#" class="download-link mt-1 inline-flex items-center justify-center rounded-full border border-stroke-buttons bg-surface py-2 text-[13.5px] font-semibold transition hover:border-brand-500 hover:text-brand-600">Open notin.app</a>
+        <a href="#" data-cta="app" class="download-link mt-1 inline-flex items-center justify-center rounded-full border border-stroke-buttons bg-surface py-2 text-[13.5px] font-semibold transition hover:border-brand-500 hover:text-brand-600">Open notin.app</a>
       </article>
 
       <article class="platform-card reveal flex flex-col gap-2.5 rounded-2xl border border-stroke-cards bg-surface p-6 transition hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(44,45,42,0.10)]" id="windows" data-os="windows">
@@ -934,7 +934,7 @@
       <a href="context.html" class="text-[14.5px] text-[#b6b0c2] transition hover:text-white">About</a>
       <a href="#" class="text-[14.5px] text-[#b6b0c2] transition hover:text-white">Blog</a>
       <a href="#" class="text-[14.5px] text-[#b6b0c2] transition hover:text-white">Careers</a>
-      <a href="#" class="text-[14.5px] text-[#b6b0c2] transition hover:text-white">Contact</a>
+      <a href="#" data-cta="contact" class="text-[14.5px] text-[#b6b0c2] transition hover:text-white">Contact</a>
     </div>
     <div class="flex flex-col gap-2.5">
       <h4 class="mb-1.5 text-sm font-bold uppercase tracking-[0.08em] text-white">Legal</h4>

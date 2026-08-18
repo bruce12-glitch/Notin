@@ -10,9 +10,9 @@
 
 | Field | Value |
 |---|---|
-| **Last Updated** | 2026-08-18 (WP-AI-002b implementation) |
-| **Current Phase** | Phase 2 (AI Layer) — WP-AI-001 + WP-AI-002 shipped; WP-AI-002b smart tags complete on this branch |
-| **MVP Completion** | ~75% |
+| **Last Updated** | 2026-08-18 (WP-FUNNEL-001 complete) |
+| **Current Phase** | Phase 2 (AI Layer) — WP-AI-001 + WP-AI-002 + WP-AI-002b shipped; WP-FUNNEL-001 acquisition funnel wired |
+| **MVP Completion** | ~78% |
 | **Production readiness** | ~40% (deploy gates listed below) |
 
 ---
@@ -26,7 +26,7 @@
 | **Backend** | Node 22 + Express 4.21 ESM, unified on **port 5000** (`backend/src/server.js`) |
 | **Database** | PostgreSQL (`pg`) prod · `node:sqlite` dev fallback · migrations `backend/src/db/migrate.js` (WP-* steps, both dialects) |
 | **Auth** | Custom JWT (jose): 15-min access in memory + rotating httpOnly refresh cookie · bcrypt passwords · email OTP (demo `123456` when no SMTP) · Google OAuth stub |
-| **AI Layer** | ✅ **Phase 2 = 3/7.** WP-AI-001 summarizes notes; WP-AI-002 suggests titles; **WP-AI-002b** suggests 3–5 smart tags through Groq/mock while the server remains read-only and the client applies each accepted tag through the existing tag write paths. Dedicated request-only E2E coverage exists for all three features. Next: WP-FUNNEL-001, then WP-AI-003 chat. |
+| **AI Layer** | ✅ **Phase 2 = 3/7.** WP-AI-001 summarizes notes; WP-AI-002 suggests titles; **WP-AI-002b** suggests 3–5 smart tags through Groq/mock while the server remains read-only and the client applies each accepted tag through the existing tag write paths. Dedicated request-only E2E coverage exists for all three features. Next: WP-AI-003 chat. |
 | **Storage** | Local disk `backend/uploads/` (PNG/JPEG/WebP/GIF ≤5 MB × 10/note) |
 | **Search** | LIKE/ILIKE substring (`GET /api/notes?q=`), escaped wildcards, 100-row cap |
 | **E2E** | Playwright `backend/tests/e2e/mvp-smoke.spec.js` (3 scenarios incl. full UI journey) + API-level account test |
@@ -44,14 +44,14 @@
 - → **WP-UI-NOTES-001 (2026-08-13):** notes list + editor UX refresh — 2-line clamped snippets, tag chips + notebook pill in every row, hover-revealed pin control, green active-accent bar, larger 28px title, meta strip (edited time + live word count), floating toolbar pill, upgraded TipTap typography (code blocks, task-list strikethrough, blockquote, selection color), proper "no note open" empty state, styled scrollbars/sort control. SW cache bumped v4→v5 (also fixed the stale-PWA bug from PR #11). Landing/auth untouched ✅
 - → **WP-UI-NOTES-3D-001 (2026-08-17):** notes-app depth and motion polish — shared depth tokens, ≤300ms view/note transitions, context-only row stagger, delegated hover-only card tilt, button press physics, smooth scrolling, and CSS/JS reduced-motion guards. Bundle rebuilt; shell cache v7→v8. Landing/auth/backend untouched ✅
 - → **WP-AI-002b (2026-08-18):** smart tag suggestions — authenticated, owner-scoped `POST /api/notes/:id/suggest-tags`; deterministic keyless mock plus Groq provider; 3–5 bounded suggestions mapped to existing tag IDs; server never creates or attaches tags; session-once editor chips apply only through `POST /api/tags` + `PUT {tagIds}` with duplicate-race recovery. Dedicated `ai-tags-smoke` E2E ✅
+- → **WP-FUNNEL-001 (2026-08-18):** Green/Neon landing CTAs resolve at runtime via `notinAppOrigin()` — login → `/login.html`, signup → `/`, app → `/app.html`, contact → `mailto:hello@notin.app`. Mobile menu destinations set at creation. Auth-modal text-label click hijack removed; `?auth=otp` auto-open preserved. Platform binaries / store / extension links left dead by design ✅
 - → PWA: manifest + shell-only service worker (`notin-shell-v9`) + icons ✅
 - → Marketing: Green/Neon editions, video/Lottie hero, responsive ✅
 
 ## IN PROGRESS
 
-- → **WP-AI-002b** is implemented on `arena/01a01085-notin`; verification and PR handoff are the current task.
-- → Next, only after this WP merges: **WP-FUNNEL-001** (`CODING_AGENT_MASTER_PROMPT_WP-FUNNEL-001.md`).
-- → Locked queue after WP-FUNNEL-001: **WP-AI-003** → **WP-SCHEMA-001** → **WP-DEPLOY-001**.
+- → **WP-FUNNEL-001** complete on `arena/01a0123a-notin`.
+- → Locked queue: **WP-AI-003** → **WP-SCHEMA-001** → **WP-DEPLOY-001**.
 
 ## ARCHITECTURE DECISIONS LOCKED
 
@@ -111,6 +111,6 @@
 
 ## NEXT 3 PRIORITIES
 
-1. **Merge WP-AI-002b** from `arena/01a01085-notin` after its verification gates pass.
-2. **WP-FUNNEL-001** (`CODING_AGENT_MASTER_PROMPT_WP-FUNNEL-001.md`): wire the Green/Neon landing CTAs to the real auth/app journey.
-3. **WP-AI-003 — chat with note:** session-only, non-streaming Q&A against the open note, with deterministic mock support.
+1. **WP-AI-003 — chat with note:** session-only, non-streaming Q&A against the open note, with deterministic mock support.
+2. **WP-SCHEMA-001** — sync `prisma/schema.prisma` with `migrate.js`.
+3. **WP-DEPLOY-001** — production deploy gates.
