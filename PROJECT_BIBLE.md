@@ -10,8 +10,8 @@
 
 | Field | Value |
 |---|---|
-| **Last Updated** | 2026-08-18 (WP-AI-004 writing assistant) |
-| **Current Phase** | Phase 2 (AI Layer) — **WP-AI-001/002/002b/003/004 complete**; WP-SCHEMA-001 mirror and WP-DEPLOY-001 gates complete |
+| **Last Updated** | 2026-08-18 (WP-LEFTOVERS-001 landing leftovers + docs/ re-sync) |
+| **Current Phase** | Phase 2 (AI Layer) — **WP-AI-001/002/002b/003/004 complete**; WP-SCHEMA-001 mirror, WP-DEPLOY-001 gates, WP-FUNNEL-001, and **WP-LEFTOVERS-001** complete |
 | **MVP Completion** | ~78% |
 | **Production readiness** | ~85% — fail-closed boot, CORS lock, CI + Chromium, and a rehearsed backup/restore drill all landed (WP-DEPLOY-001). Remaining: a human runs `RUNBOOK.md` against real infrastructure with real secrets. |
 
@@ -49,14 +49,14 @@
 - → **WP-SCHEMA-001 (2026-08-18):** `backend/prisma/schema.prisma` now mirrors `migrate.js` exactly — 10 models, 1:1 column parity (verified by script), all 16 non-unique indexes, `@default(cuid())` on User/Note/Notebook/Tag only, no invented unique constraints. Documentation-only: no migration, no dependency, no runtime change ✅
 - → **WP-DEPLOY-001 (2026-08-18):** production readiness — (1) fail-closed boot: missing/placeholder `JWT_ACCESS_SECRET`/`JWT_REFRESH_SECRET`/`OTP_PEPPER`/`APP_ORIGIN` and any non-`postgres://` `DATABASE_URL` print `FATAL:` lines and exit 1; SQLite fallback and unreachable-Postgres downgrade are both refused in production. (2) CORS locked to the `APP_ORIGIN` allowlist in production (preview/localhost echo is now dev-only). (3) GitHub Actions `E2E` workflow: Chromium, whole-suite Playwright, two fail-closed smokes and a `postgres:16-alpine` positive-boot rehearsal — **staged at `ci/e2e.yml`; a human must `git mv` it to `.github/workflows/` because the agent's GitHub App token lacks the `workflows` permission (see `ci/README.md`)**. (4) `RUNBOOK.md` backup/restore drill, executed once. Dev/preview behavior byte-identical ✅
 - → PWA: manifest + shell-only service worker (`notin-shell-v11`) + icons ✅
-- → **WP-FUNNEL-001 (2026-08-18):** Green/Neon landing CTAs resolve at runtime via `notinAppOrigin()` — login → `/login.html`, signup → `/`, app → `/app.html`, contact → `mailto:hello@notin.app`. Mobile menu destinations set at creation. Auth-modal text-label click hijack removed; `?auth=otp` auto-open preserved. Platform binaries / store / extension links left dead by design ✅
+- → **WP-FUNNEL-001 (2026-08-18):** Green/Neon landing CTAs resolve at runtime via `notinAppOrigin()` — login → `/login.html`, signup → `/`, app → `/app.html`, contact → `mailto:hello@notin.app`. Mobile menu destinations set at creation. Auth-modal text-label click hijack removed; `?auth=otp` auto-open preserved. `data-cta` `href="#"` no-JS fallbacks kept by design ✅
+- → **WP-LEFTOVERS-001 (2026-08-18):** zero placeholder landing CTAs. Enterprise nav → `mailto:hello@notin.app?subject=Enterprise%20demo`. Eight binary/store/extension items per edition are disabled spans (`role="link"`, `aria-disabled`, “Coming soon — the web app is live today”). Changelog / Blog / Careers / Privacy / Terms / Security removed (Legal column dropped once empty). `docs/` GitHub Pages mirror re-synced byte-for-byte to `frontend/` (including `polish.css`) ✅
 
 - → Marketing: Green/Neon editions, video/Lottie hero, responsive ✅
 
 ## IN PROGRESS
 
-- → **WP-AI-004** is implemented on `arena/01a01387-notin`; dedicated assist smoke passes, while the pre-existing full browser journey remains blocked locally by unavailable Playwright Chromium.
-- → Locked queue after review: landing leftovers. No follow-on work has started.
+- → None. WP-LEFTOVERS-001 is complete. Next in queue: WP-AI-003b (streaming chat) or hosting (`RUNBOOK.md` with real secrets). Neither has started.
 
 ## ARCHITECTURE DECISIONS LOCKED
 
@@ -70,11 +70,12 @@
 ## KNOWN TECHNICAL DEBT (priority order)
 
 - → ~~SW cache staleness BUG~~ **FIXED 2026-08-13** by WP-UI-NOTES-001; latest shell cache is `notin-shell-v11` after WP-AI-004. Rule going forward: ANY change to a shell asset (bundle, CSS, HTML) must bump `CACHE_NAME` in `authentication/sw.js`. **Resolved**
-- → **Landing CTAs dead:** 26 × `href="#"` per edition (Log in / Start for free / Get started / pricing). Next instruction after WP-AI-001 (WP-FUNNEL-001). **High**
+- → ~~Landing leftover `href="#"` CTAs~~ **FIXED 2026-08-18** by WP-FUNNEL-001 + WP-LEFTOVERS-001: remaining `href="#"` are only the 11 data-cta / `#smartDownload` no-JS fallbacks. **Resolved**
 - → ~~Dev fallback JWT secrets + permissive CORS~~ **FIXED 2026-08-18** by WP-DEPLOY-001: production boot refuses missing/placeholder secrets and non-postgres URLs; CORS echoes only `APP_ORIGIN` allowlist entries. Dev keeps the permissive behavior deliberately. **Resolved**
 - → ~~Postgres→SQLite silent failover in `db.js`~~ **FIXED 2026-08-18** by WP-DEPLOY-001: refused in production at import, at `$connect()`, and mid-flight in `query()`. Still available in dev. **Resolved**
 - → Legacy `authentication/server.js` package: 3 advisories (1 high nodemailer CRLF, 2 moderate) — dead code path; retire the package or pin deps. **Low** (unified backend audit = 0 vulns)
-- → `docs/` duplicates `frontend/` (~14 MB each, already diverging) + `screenshots/` ~20 MB. Consolidate when touching marketing. **Low**
+- → `docs/package.json` and `docs/package-lock.json` remain stale artifacts (not part of the GitHub Pages mirror; cleanup deferred). **Low**
+- → `screenshots/` ~20 MB. Consolidate when touching marketing. **Low**
 - → Legacy `jsonwebtoken` fallback verification path — retire after token migration window. **Low**
 - → No unit tests; no deployment manifest. CI is written but **not yet active**: `ci/e2e.yml` must be moved to `.github/workflows/e2e.yml` by a human (agent tokens cannot push workflow files). Until then no run is enforced on PRs. **Medium**
 - → Single ~2,400-line `app.js` — acceptable while E2E-guarded. **Low**
@@ -116,6 +117,6 @@
 
 ## NEXT 3 PRIORITIES
 
-1. **Review and merge WP-AI-004** from `arena/01a01387-notin` once CI is green.
-2. **Leftovers:** landing binaries/store/extension links, `docs/` mirror re-sync, close PR #2 with salvage notes.
-3. **Phase 2 remainder:** define the final two AI work packages before implementation; neither has started.
+1. **WP-AI-003b** — streaming chat (AI-003 shipped non-streaming deliberately). Do not start in this session.
+2. **Hosting** — human follows `RUNBOOK.md` with real secrets.
+3. **PR #2 follow-up** — repo owner opens the security-follow-ups issue (salvage list recorded in the PR #2 closing comment).
