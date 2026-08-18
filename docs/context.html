@@ -11,20 +11,21 @@
 <link rel="apple-touch-icon" href="assets/notin-icon-favicon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="styles.css" />
+<link rel="stylesheet" href="polish.css" />
 </head>
 
-<body class="bg-bg-primary font-sans text-text-primary antialiased">
+<body class="theme-green context-page bg-bg-primary font-sans text-text-primary antialiased">
 <div id="scrollProgress" class="scroll-progress" aria-hidden="true"></div>
 
 <!-- ============ NAVBAR ============ -->
 <header id="nav" data-sentry-component="Navbar" data-sentry-source-file="components/Navbar.tsx"
   class="nav sticky top-0 z-50 border-b border-b-transparent bg-bg-primary/85 backdrop-blur-md">
-  <div class="mx-auto flex h-[72px] max-w-6xl items-center justify-between gap-6 px-6">
-    <a href="index.html" class="flex items-center gap-2.5" aria-label="Notin — home">
-      <img src="assets/notin-icon-nav.png" alt="" class="h-10 w-10" />
-      <span class="text-xl font-extrabold tracking-tight">Notin</span>
+  <div class="nav-inner mx-auto flex h-[72px] max-w-6xl items-center justify-between gap-6 px-6">
+    <a href="index.html" class="brand-logo flex items-center gap-2.5" aria-label="Notin — home">
+      <img src="assets/notin-icon-nav.png" alt="" class="brand-icon-3d h-10 w-10" />
+      <span class="brand-name text-xl font-extrabold tracking-tight">Notin</span>
     </a>
     <nav class="hidden items-center gap-7 md:flex">
       <a href="index.html#features" class="text-[15px] font-medium text-text-secondary transition hover:text-brand-500">Features</a>

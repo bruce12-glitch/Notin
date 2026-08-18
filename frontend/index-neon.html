@@ -135,7 +135,7 @@
       </div>
 
       <!-- direct links -->
-      <a href="#" class="px-3 py-2 text-[15px] font-medium text-text-secondary transition hover:text-brand-600">Enterprise</a>
+      <a href="mailto:hello@notin.app?subject=Enterprise%20demo" class="px-3 py-2 text-[15px] font-medium text-text-secondary transition hover:text-brand-600">Enterprise</a>
       <a href="context.html" class="px-3 py-2 text-[15px] font-medium text-text-secondary transition hover:text-brand-600">About</a>
     </nav>
 
@@ -777,7 +777,7 @@
             <p class="text-[12.5px] text-text-tertiary">Windows · Free download</p>
           </div>
         </div>
-        <a href="#" class="download-link mt-1 inline-flex items-center justify-center rounded-full border border-stroke-buttons bg-surface py-2 text-[13.5px] font-semibold transition hover:border-brand-500 hover:text-brand-600">Download .exe</a>
+        <span class="download-link mt-1 inline-flex items-center justify-center rounded-full border border-stroke-buttons bg-surface py-2 text-[13.5px] font-semibold transition hover:border-brand-500 hover:text-brand-600 is-disabled" role="link" aria-disabled="true" title="Coming soon — the web app is live today">Download .exe</span>
       </article>
 
       <article class="platform-card reveal flex flex-col gap-2.5 rounded-2xl border border-stroke-cards bg-surface p-6 transition hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(44,45,42,0.10)]" id="macos" data-os="macos">
@@ -791,7 +791,7 @@
             <p class="text-[12.5px] text-text-tertiary">macOS · Free download</p>
           </div>
         </div>
-        <a href="#" class="download-link mt-1 inline-flex items-center justify-center rounded-full border border-stroke-buttons bg-surface py-2 text-[13.5px] font-semibold transition hover:border-brand-500 hover:text-brand-600">Download .dmg</a>
+        <span class="download-link mt-1 inline-flex items-center justify-center rounded-full border border-stroke-buttons bg-surface py-2 text-[13.5px] font-semibold transition hover:border-brand-500 hover:text-brand-600 is-disabled" role="link" aria-disabled="true" title="Coming soon — the web app is live today">Download .dmg</span>
       </article>
 
       <article class="platform-card reveal flex flex-col gap-2.5 rounded-2xl border border-stroke-cards bg-surface p-6 transition hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(44,45,42,0.10)]" id="linux" data-os="linux">
@@ -805,7 +805,7 @@
             <p class="text-[12.5px] text-text-tertiary">AppImage · .deb · .rpm</p>
           </div>
         </div>
-        <a href="#" class="download-link mt-1 inline-flex items-center justify-center rounded-full border border-stroke-buttons bg-surface py-2 text-[13.5px] font-semibold transition hover:border-brand-500 hover:text-brand-600">Download AppImage</a>
+        <span class="download-link mt-1 inline-flex items-center justify-center rounded-full border border-stroke-buttons bg-surface py-2 text-[13.5px] font-semibold transition hover:border-brand-500 hover:text-brand-600 is-disabled" role="link" aria-disabled="true" title="Coming soon — the web app is live today">Download AppImage</span>
       </article>
 
       <article class="platform-card reveal flex flex-col gap-2.5 rounded-2xl border border-stroke-cards bg-surface p-6 transition hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(44,45,42,0.10)]" id="ios" data-os="ios">
@@ -819,7 +819,7 @@
             <p class="text-[12.5px] text-text-tertiary">iOS · App Store</p>
           </div>
         </div>
-        <a href="#" class="download-link mt-1 inline-flex items-center justify-center rounded-full border border-stroke-buttons bg-surface py-2 text-[13.5px] font-semibold transition hover:border-brand-500 hover:text-brand-600">App Store</a>
+        <span class="download-link mt-1 inline-flex items-center justify-center rounded-full border border-stroke-buttons bg-surface py-2 text-[13.5px] font-semibold transition hover:border-brand-500 hover:text-brand-600 is-disabled" role="link" aria-disabled="true" title="Coming soon — the web app is live today">App Store</span>
       </article>
 
       <article class="platform-card reveal flex flex-col gap-2.5 rounded-2xl border border-stroke-cards bg-surface p-6 transition hover:-translate-y-1 hover:shadow-[0_8px_30px_rgba(44,45,42,0.10)]" id="android" data-os="android">
@@ -833,7 +833,7 @@
             <p class="text-[12.5px] text-text-tertiary">Android · Google Play</p>
           </div>
         </div>
-        <a href="#" class="download-link mt-1 inline-flex items-center justify-center rounded-full border border-stroke-buttons bg-surface py-2 text-[13.5px] font-semibold transition hover:border-brand-500 hover:text-brand-600">Google Play</a>
+        <span class="download-link mt-1 inline-flex items-center justify-center rounded-full border border-stroke-buttons bg-surface py-2 text-[13.5px] font-semibold transition hover:border-brand-500 hover:text-brand-600 is-disabled" role="link" aria-disabled="true" title="Coming soon — the web app is live today">Google Play</span>
       </article>
     </div>
 
@@ -849,9 +849,9 @@
         </div>
       </div>
       <div class="flex flex-wrap gap-2.5">
-        <a href="#" class="btn-sm-evernote">Chrome</a>
-        <a href="#" class="btn-sm-evernote">Firefox</a>
-        <a href="#" class="btn-sm-evernote">Safari</a>
+        <span class="btn-sm-evernote is-disabled" role="link" aria-disabled="true" title="Coming soon — the web app is live today">Chrome</span>
+        <span class="btn-sm-evernote is-disabled" role="link" aria-disabled="true" title="Coming soon — the web app is live today">Firefox</span>
+        <span class="btn-sm-evernote is-disabled" role="link" aria-disabled="true" title="Coming soon — the web app is live today">Safari</span>
       </div>
     </div>
   </div>
@@ -927,20 +927,11 @@
       <a href="#features" class="text-[14.5px] text-[#b6b0c2] transition hover:text-white">Features</a>
       <a href="#pricing" class="text-[14.5px] text-[#b6b0c2] transition hover:text-white">Pricing</a>
       <a href="#download" class="text-[14.5px] text-[#b6b0c2] transition hover:text-white">Download</a>
-      <a href="#" class="text-[14.5px] text-[#b6b0c2] transition hover:text-white">Changelog</a>
     </div>
     <div class="flex flex-col gap-2.5">
       <h4 class="mb-1.5 text-sm font-bold uppercase tracking-[0.08em] text-white">Company</h4>
       <a href="context.html" class="text-[14.5px] text-[#b6b0c2] transition hover:text-white">About</a>
-      <a href="#" class="text-[14.5px] text-[#b6b0c2] transition hover:text-white">Blog</a>
-      <a href="#" class="text-[14.5px] text-[#b6b0c2] transition hover:text-white">Careers</a>
       <a href="#" data-cta="contact" class="text-[14.5px] text-[#b6b0c2] transition hover:text-white">Contact</a>
-    </div>
-    <div class="flex flex-col gap-2.5">
-      <h4 class="mb-1.5 text-sm font-bold uppercase tracking-[0.08em] text-white">Legal</h4>
-      <a href="#" class="text-[14.5px] text-[#b6b0c2] transition hover:text-white">Privacy</a>
-      <a href="#" class="text-[14.5px] text-[#b6b0c2] transition hover:text-white">Terms</a>
-      <a href="#" class="text-[14.5px] text-[#b6b0c2] transition hover:text-white">Security</a>
     </div>
   </div>
   <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2.5 pt-6 text-[13.5px] text-[#8b8695]">

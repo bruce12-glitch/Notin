@@ -23,6 +23,32 @@
 // Works on index.html and context.html (guards for missing elements)
 // ============================================================
 
+// WP-FUNNEL-001 — derive the app/auth origin for this environment.
+// Local dev: same host, port 5000. Arena preview: per-port hostnames share the
+// sandbox suffix, so swap the port prefix. Production: same origin.
+function notinAppOrigin(){
+  try{
+    const override = window.NOTIN_APP_ORIGIN;
+    if(override) return String(override).replace(/\/+$/, '');
+    const host = location.host;
+    const preview = host.match(/^\d+-(.+)$/);
+    if(preview) return `${location.protocol}//5000-${preview[1]}`;
+    if(/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host)) return `${location.protocol}//${location.hostname}:5000`;
+    return location.origin;
+  }catch{ return location.origin; }
+}
+
+// WP-FUNNEL-001 — resolve funnel CTAs at runtime (per-environment origin)
+document.addEventListener('DOMContentLoaded', () => {
+  const origin = notinAppOrigin();
+  const targets = { login: '/login.html', signup: '/', app: '/app.html' };
+  document.querySelectorAll('[data-cta]').forEach((el) => {
+    const kind = el.getAttribute('data-cta');
+    if(kind === 'contact'){ el.setAttribute('href', 'mailto:hello@notin.app'); return; }
+    if(targets[kind]) el.setAttribute('href', origin + targets[kind]);
+  });
+});
+
 // Navbar border on scroll
 const nav = document.getElementById('nav');
 if (nav) {
@@ -94,28 +120,34 @@ if (navToggle && mobilePanel) {
       }
     });
     const login = document.createElement('a');
-    login.href = '#';
+    login.href = notinAppOrigin() + '/login.html';
     login.textContent = 'Log in';
     login.className = 'mt-2 text-[15px] font-semibold text-text-secondary transition hover:text-brand-500';
     const cta = document.createElement('a');
-    cta.href = '#';
+    cta.href   = notinAppOrigin() + '/';
     cta.textContent = 'Start for free';
     cta.className = 'rounded-full bg-gradient-to-r from-brand-500 to-brand-400 px-5 py-2.5 text-center text-[15px] font-semibold text-[#2c2d2a] shadow-[0_8px_20px_rgba(255,125,66,0.35)]';
     mobilePanel.append(login, cta);
   };
   buildMobile();
 
+  const setMobileMenu = (expanded) => {
+    mobilePanel.classList.toggle('hidden', !expanded);
+    navToggle.textContent = expanded ? '✕' : '☰';
+    navToggle.setAttribute('aria-expanded', String(expanded));
+  };
+  navToggle.setAttribute('aria-expanded', 'false');
+  navToggle.setAttribute('aria-controls', 'navLinksMobile');
   navToggle.addEventListener('click', () => {
-    const open = mobilePanel.classList.toggle('hidden');
-    navToggle.textContent = open ? '☰' : '✕';
+    setMobileMenu(mobilePanel.classList.contains('hidden'));
   });
   mobilePanel.addEventListener('click', (e) => {
-    if (e.target.tagName === 'A' && !e.target.closest('.mob-sub') === false) {
-      // close when tapping a plain top-level link (not accordion children)
-      if (!e.target.closest('.mob-sub')) {
-        mobilePanel.classList.add('hidden');
-        navToggle.textContent = '☰';
-      }
+    if (e.target.closest('a')) setMobileMenu(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !mobilePanel.classList.contains('hidden')) {
+      setMobileMenu(false);
+      navToggle.focus();
     }
   });
 }
@@ -255,7 +287,7 @@ if (track && prevBtn && nextBtn) {
     stopAuto();
     autoplayTimer = setInterval(() => {
       if (!document.hidden && !track.matches(':hover')) go(1);
-    }, 2600);
+    }, 4200);
   };
   const stopAuto = () => { if (autoplayTimer) { clearInterval(autoplayTimer); autoplayTimer = null; } };
   track.addEventListener('mouseenter', stopAuto);
@@ -340,219 +372,6 @@ const OS_META = NOTIN_PLATFORMS[OS] || NOTIN_PLATFORMS.web;
   if (!btn || !label) return;
   label.textContent = `Download for ${OS_META.label}`;
   btn.setAttribute('href', OS_META.href);
-})();
-
-
-
-// ============================================================
-// MOTION & 3D ENGINE — premium effects (both pages)
-// Every effect is guarded, GPU-friendly, and disabled for
-// users who prefer reduced motion.
-// ============================================================
-(function () {
-  const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  // ---------- Scroll progress bar ----------
-  const prog = document.getElementById('scrollProgress');
-  const setProg = () => {
-    if (!prog) return;
-    const h = document.documentElement;
-    const max = h.scrollHeight - h.clientHeight;
-    prog.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + '%';
-  };
-  window.addEventListener('scroll', setProg, { passive: true });
-  setProg();
-
-  // ---------- Back to top ----------
-  const backTop = document.getElementById('backTop');
-  if (backTop) {
-    const onScrollBT = () => backTop.classList.toggle('show', window.scrollY > 600);
-    window.addEventListener('scroll', onScrollBT, { passive: true });
-    onScrollBT();
-    backTop.addEventListener('click', () => window.scrollTo({ top: 0, behavior: REDUCED ? 'auto' : 'smooth' }));
-  }
-
-  // ---------- Navbar shrink ----------
-  const navEl = document.getElementById('nav');
-  if (navEl) {
-    const onNav = () => navEl.classList.toggle('nav-shrunk', window.scrollY > 260);
-    window.addEventListener('scroll', onNav, { passive: true });
-    onNav();
-  }
-
-  // ---------- Animated counters ----------
-  const animateCount = (el) => {
-    const target = parseFloat(el.dataset.count || '0');
-    const decimals = parseInt(el.dataset.decimals || '0', 10);
-    const prefix = el.dataset.prefix || '';
-    const suffix = el.dataset.suffix || '';
-    const dur = 1300;
-    const t0 = performance.now();
-    const tick = (now) => {
-      const p = Math.min((now - t0) / dur, 1);
-      const eased = 1 - Math.pow(1 - p, 3);
-      const val = target * eased;
-      el.textContent = prefix + val.toFixed(decimals) + suffix;
-      if (p < 1) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  };
-  if (!REDUCED) {
-    const counters = [...document.querySelectorAll('[data-count]')];
-    if ('IntersectionObserver' in window && counters.length) {
-      const cio = new IntersectionObserver((entries) => {
-        entries.forEach((e) => { if (e.isIntersecting) { animateCount(e.target); cio.unobserve(e.target); } });
-      }, { threshold: 0.6 });
-      counters.forEach((c) => cio.observe(c));
-    } else counters.forEach(animateCount);
-  }
-
-  // ---------- 3D tilt (hero mockup + feature cards) ----------
-  const applyTilt = (wrap, el, maxDeg) => {
-    if (REDUCED) return;
-    let raf = null, tx = 0, ty = 0, cx = 0, cy = 0;
-    const lerp = (a, b) => a + (b - a) * 0.12;
-    const loop = () => {
-      cx = lerp(cx, tx); cy = lerp(cy, ty);
-      el.style.transform = `perspective(1100px) rotateX(${-cy * maxDeg}deg) rotateY(${cx * maxDeg}deg)`;
-      if (Math.abs(cx - tx) > 0.01 || Math.abs(cy - ty) > 0.01) raf = requestAnimationFrame(loop);
-      else raf = null;
-    };
-    const onMove = (ev) => {
-      const r = wrap.getBoundingClientRect();
-      tx = ((ev.clientX - r.left) / r.width) * 2 - 1;
-      ty = ((ev.clientY - r.top) / r.height) * 2 - 1;
-      if (!raf) raf = requestAnimationFrame(loop);
-    };
-    const onLeave = () => {
-      tx = 0; ty = 0;
-      if (!raf) raf = requestAnimationFrame(loop);
-    };
-    wrap.addEventListener('mousemove', onMove);
-    wrap.addEventListener('mouseleave', onLeave);
-  };
-
-  const heroWrap = document.querySelector('.tilt-wrap');
-  const heroDemo = document.querySelector('.hero-demo');
-  if (heroWrap && heroDemo && !REDUCED) applyTilt(heroWrap, heroDemo, 7);
-
-  // feature cards: tilt + cursor glare
-  document.querySelectorAll('#built article').forEach((card) => {
-    if (REDUCED) return;
-    card.classList.add('tilt-card');
-    let raf = null, tx = 0, ty = 0, cx = 0, cy = 0;
-    const loop = () => {
-      cx = lerp(cx, tx); cy = lerp(cy, ty);
-      card.style.transform = `perspective(900px) rotateX(${-cy * 4}deg) rotateY(${cx * 4}deg) translateY(-4px)`;
-      if (Math.abs(cx - tx) > 0.01 || Math.abs(cy - ty) > 0.01) raf = requestAnimationFrame(loop);
-      else raf = null;
-    };
-    const lerp = (a, b) => a + (b - a) * 0.15;
-    card.addEventListener('mousemove', (ev) => {
-      const r = card.getBoundingClientRect();
-      tx = ((ev.clientX - r.left) / r.width) * 2 - 1;
-      ty = ((ev.clientY - r.top) / r.height) * 2 - 1;
-      card.style.setProperty('--gx', ((ev.clientX - r.left) / r.width * 100) + '%');
-      card.style.setProperty('--gy', ((ev.clientY - r.top) / r.height * 100) + '%');
-      if (!raf) raf = requestAnimationFrame(loop);
-    });
-    card.addEventListener('mouseleave', () => { tx = 0; ty = 0; if (!raf) raf = requestAnimationFrame(loop); });
-  });
-
-  // ---------- Magnetic buttons ----------
-  if (!REDUCED) {
-    document.querySelectorAll('.magnetic').forEach((btn) => {
-      btn.addEventListener('mousemove', (ev) => {
-        const r = btn.getBoundingClientRect();
-        const dx = (ev.clientX - r.left - r.width / 2) * 0.22;
-        const dy = (ev.clientY - r.top - r.height / 2) * 0.22;
-        btn.classList.add('mag-active');
-        if (btn.classList.contains('btn-3d')) {
-          btn.style.setProperty('--mx', dx.toFixed(1) + 'px');
-          btn.style.setProperty('--my', dy.toFixed(1) + 'px');
-        } else {
-          btn.style.transform = `translate(${dx}px, ${dy}px)`;
-        }
-      });
-      btn.addEventListener('mouseleave', () => {
-        btn.classList.remove('mag-active');
-        btn.style.transform = '';
-        btn.style.removeProperty('--mx');
-        btn.style.removeProperty('--my');
-      });
-    });
-  }
-
-  // ---------- Parallax layers ----------
-  if (!REDUCED) {
-    const layers = [...document.querySelectorAll('[data-parallax]')];
-    if (layers.length) {
-      let ticking = false;
-      const onParallax = () => {
-        if (ticking) return;
-        ticking = true;
-        requestAnimationFrame(() => {
-          const y = window.scrollY;
-          layers.forEach((el) => {
-            const speed = parseFloat(el.dataset.parallax || '0.2');
-            el.style.transform = `translate3d(0, ${y * speed * 0.06}px, 0)`;
-          });
-          ticking = false;
-        });
-      };
-      window.addEventListener('scroll', onParallax, { passive: true });
-      onParallax();
-    }
-  }
-
-  // ---------- Staggered reveals ----------
-  document.querySelectorAll('.feature-grid, .pricing-grid, #platformGrid, .testimonial-grid, .download-grid, #built .grid, #roadmap .grid').forEach((grid) => {
-    [...grid.children].forEach((child, i) => {
-      child.classList.add('stagger');
-      child.style.setProperty('--stagger', Math.min(i * 70, 420) + 'ms');
-    });
-  });
-
-  // ---------- Context page: animate bars into view ----------
-  const bars = [...document.querySelectorAll('.ctx-bar')];
-  if (bars.length && 'IntersectionObserver' in window && !REDUCED) {
-    const bio = new IntersectionObserver((entries) => {
-      entries.forEach((e) => {
-        if (e.isIntersecting) {
-          e.target.style.width = (e.target.dataset.width || 0) + '%';
-          bio.unobserve(e.target);
-        }
-      });
-    }, { threshold: 0.35 });
-    bars.forEach((b) => bio.observe(b));
-  } else if (bars.length && REDUCED) {
-    bars.forEach((b) => (b.style.width = (b.dataset.width || 0) + '%'));
-  }
-
-  // ---------- Price flip animation on billing toggle ----------
-  const amountsEls = [...document.querySelectorAll('.amount')];
-  if (amountsEls.length) {
-    const flip = (el, text) => {
-      el.style.transition = 'opacity .12s ease, transform .12s ease';
-      el.style.opacity = '0';
-      el.style.transform = 'translateY(-6px)';
-      setTimeout(() => {
-        el.textContent = text;
-        el.style.opacity = '1';
-        el.style.transform = '';
-      }, 120);
-    };
-    // hook into existing setBilling: patch after it runs
-    const origClick = (btn) => btn.addEventListener('click', () => {
-      setTimeout(() => {
-        const yearly = document.getElementById('yearlyBtn').classList.contains('active');
-        amountsEls.forEach((el) => flip(el, yearly ? el.dataset.yearly : el.dataset.monthly));
-      }, 0);
-    });
-    const y = document.getElementById('yearlyBtn'), m = document.getElementById('monthlyBtn');
-    if (y) origClick(y);
-    if (m) origClick(m);
-  }
 })();
 
 
@@ -1002,7 +821,7 @@ if (yearEl) yearEl.textContent = new Date().getFullYear();
     state.ctaStatus = 'success';
     okEl.hidden = false;
     errEl.hidden = true;
-    setTimeout(() => { okEl.hidden = true; state.ctaStatus = 'idle'; }, 2600);
+    setTimeout(() => { okEl.hidden = true; state.ctaStatus = 'idle'; }, 4200);
   };
 
   if (cta) {
@@ -1032,4 +851,19 @@ if (yearEl) yearEl.textContent = new Date().getFullYear();
       photoWrap.classList.add('failed');
     });
   }
+})();
+
+// AUTH UI — connects the landing page to the separate JWT/Google OTP service
+(function () {
+  // Same-origin default: the dev server proxies /auth + /api to the unified API.
+  // (file:// fallback keeps the old standalone auth port for local double-click use)
+  const api = window.NOTIN_AUTH_API || (location.protocol.startsWith('http') ? location.origin : 'http://localhost:8787');
+  const modal = document.createElement('div'); modal.className='auth-modal'; modal.innerHTML=`<div class="auth-panel auth-3d" role="dialog" aria-modal="true" aria-labelledby="authTitle"><button class="auth-close" aria-label="Close">×</button><div class="auth-orbit"></div><p class="auth-kicker">SECURE ACCESS</p><h2 id="authTitle">Sign in to Notin</h2><p class="auth-copy">Continue with Google. We’ll send a one-time code to your verified Gmail.</p><button class="auth-google">Continue with Google</button><div class="auth-otp" hidden><label>Enter your 6-digit code<input inputmode="numeric" maxlength="6" autocomplete="one-time-code" class="auth-code"></label><button class="auth-verify">Verify code</button><button class="auth-resend">Resend code</button><p class="auth-status"></p></div></div>`; document.body.appendChild(modal);
+  const open=()=>modal.classList.add('is-open'), close=()=>modal.classList.remove('is-open');
+  modal.querySelector('.auth-close').onclick=close; modal.addEventListener('click',e=>{if(e.target===modal)close();});
+  const status=modal.querySelector('.auth-status'); const otp=modal.querySelector('.auth-otp');
+  modal.querySelector('.auth-google').onclick=()=>{ window.location.href=`${api}/auth/google`; };
+  modal.querySelector('.auth-verify').onclick=async()=>{const challenge=new URLSearchParams(location.search).get('challenge'); const code=modal.querySelector('.auth-code').value; try{const r=await fetch(`${api}/auth/otp/verify`,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({challenge,code})});const d=await r.json();if(!r.ok)throw Error(d.error);sessionStorage.setItem('notin_access_token',d.accessToken);status.textContent='Signed in successfully.';setTimeout(close,900);}catch(e){status.textContent=e.message;}};
+  // ?auth=otp — auto-open OTP panel after Google redirect (do not bind other CTAs)
+  if(new URLSearchParams(location.search).get('auth')==='otp'){open();otp.hidden=false;modal.querySelector('.auth-google').hidden=true;status.textContent='Code sent to your Gmail.';}
 })();
