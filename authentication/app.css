@@ -702,6 +702,25 @@ body.sidebar-collapsed .app-btn-logout::before{content:"⏻";font-size:15px}
 
 .app-list-items,.app-editor-body,.home-view,.shortcuts-view,.organize-view,.app-nav{scroll-behavior:smooth}
 
+/* WP-AI-003 — chat with note (session-only transcript, nothing persisted) */
+.visually-hidden{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;white-space:nowrap;clip:rect(0 0 0 0);clip-path:inset(50%)}
+.app-ai-chat{margin:0 18px 10px;padding:10px 12px;border:1px solid #3a4632;border-radius:10px;background:#1f261a;color:#d9e7cf;font-size:12.5px}
+.app-ai-chat-head{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--env-green);font-size:12px;font-weight:700}
+.app-ai-chat-head button{border:0;background:transparent;color:#9bad91;font-size:18px;line-height:1;cursor:pointer;padding:0 2px}
+.app-ai-chat-head button:hover{color:#fff}
+.app-ai-chat-log{max-height:220px;overflow:auto;margin:8px 0;display:flex;flex-direction:column;gap:6px}
+.app-ai-chat-log:empty{margin:4px 0 8px}
+.app-ai-chat-hint{margin:0;color:#8b9a82;font-size:11.5px}
+.app-ai-chat-msg{margin:0;padding:7px 10px;border-radius:9px;line-height:1.5;white-space:pre-wrap;max-width:92%}
+.app-ai-chat-msg.is-user{align-self:flex-end;background:#2c3626;border:1px solid #46543b;color:#e7f2dd}
+.app-ai-chat-msg.is-assistant{align-self:flex-start;background:#222a1d;border:1px solid #35402d;color:#c3d2b8}
+.app-ai-chat-form{display:flex;gap:8px;align-items:center}
+.app-ai-chat-form input{flex:1;min-width:0;border:1px solid #3f4a3a;border-radius:8px;background:#171d13;color:#e2eeda;padding:7px 10px;font-size:12.5px;font-family:inherit}
+.app-ai-chat-form input:focus{outline:none;border-color:var(--env-green)}
+.app-ai-chat-form button{flex:none;border:1px solid #3f4a3a;border-radius:8px;background:#242c20;color:#c9d9b8;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.app-ai-chat-form button:hover{border-color:var(--env-green);color:var(--env-green)}
+.app-ai-chat-form button:disabled{opacity:.6;cursor:wait}
+
 /* Master motion kill-switch: this must remain the final rule in app.css. */
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;scroll-behavior:auto !important}

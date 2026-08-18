@@ -18697,6 +18697,16 @@ var aiTagChips = document.getElementById("aiTagChips");
 var aiTagDismiss = document.getElementById("aiTagDismiss");
 var aiTagNoteId = null;
 var tagsSuggestedFor = /* @__PURE__ */ new Set();
+var askNoteBtn = document.getElementById("askNoteBtn");
+var aiChatPanel = document.getElementById("aiChatPanel");
+var aiChatLog = document.getElementById("aiChatLog");
+var aiChatForm = document.getElementById("aiChatForm");
+var aiChatInput = document.getElementById("aiChatInput");
+var aiChatSend = document.getElementById("aiChatSend");
+var aiChatClose = document.getElementById("aiChatClose");
+var chatNoteId = null;
+var chatHistory = [];
+var chatInFlight = false;
 var sharedNoteId = null;
 var attachmentRow = document.getElementById("attachmentRow");
 var attachImageBtn = document.getElementById("attachImageBtn");
@@ -19046,6 +19056,7 @@ function hideAiTitle() {
 async function maybeSuggestTitle(note) {
   hideAiTitle();
   hideAiTags();
+  hideAiChat();
   if (!note || note.isTrashed || offlineReadOnly) return;
   if (currentView !== "notes") return;
   if (titleSuggestedFor.has(note.id)) return;
@@ -19078,8 +19089,43 @@ function hideAiTags() {
   if (aiTagChips) aiTagChips.innerHTML = "";
   aiTagNoteId = null;
 }
+function hideAiChat() {
+  if (aiChatPanel) aiChatPanel.hidden = true;
+}
+function renderChatEmptyHint() {
+  if (!aiChatLog) return;
+  const hint = document.createElement("p");
+  hint.className = "app-ai-chat-hint";
+  hint.textContent = "Questions stay on this device until you switch notes.";
+  aiChatLog.appendChild(hint);
+}
+function clearAiChat() {
+  chatHistory = [];
+  if (aiChatLog) {
+    aiChatLog.textContent = "";
+    renderChatEmptyHint();
+  }
+  if (aiChatInput) aiChatInput.value = "";
+  hideAiChat();
+}
+function appendChatBubble(role, text) {
+  if (!aiChatLog) return;
+  const hint = aiChatLog.querySelector(".app-ai-chat-hint");
+  if (hint) hint.remove();
+  const bubble = document.createElement("p");
+  bubble.className = "app-ai-chat-msg" + (role === "user" ? " is-user" : " is-assistant");
+  bubble.textContent = text;
+  aiChatLog.appendChild(bubble);
+  aiChatLog.scrollTop = aiChatLog.scrollHeight;
+}
+function syncAiChatForSelection(noteId) {
+  if (noteId === chatNoteId) return;
+  chatNoteId = noteId;
+  clearAiChat();
+}
 async function maybeSuggestTags(note) {
   hideAiTags();
+  hideAiChat();
   if (!note || note.isTrashed || offlineReadOnly) return;
   if (currentView !== "notes" || tagsSuggestedFor.has(note.id)) return;
   const text = (note.contentText || note.description || "").trim();
@@ -19195,6 +19241,7 @@ function setViewChrome(view) {
   hideAiSummary();
   hideAiTitle();
   hideAiTags();
+  hideAiChat();
   const previousView = currentView;
   currentView = APP_ROUTES.has(view) ? view : "home";
   if (previousView !== currentView) listAnimateNext = true;
@@ -19730,6 +19777,8 @@ function updateEditorForSelection(note) {
   hideAiSummary();
   hideAiTitle();
   hideAiTags();
+  hideAiChat();
+  syncAiChatForSelection(note ? note.id : null);
   if (note && (currentView === "notes" || currentView === "trash")) {
     renderAiSummary(note, "Saved summary \u2014 regenerate after edits.");
   }
@@ -19747,6 +19796,7 @@ function updateEditorForSelection(note) {
   });
   if (shareBtn) shareBtn.hidden = !hasSelection2 || isTrashed || readOnly;
   if (summarizeBtn) summarizeBtn.hidden = !hasSelection2 || isTrashed || readOnly;
+  if (askNoteBtn) askNoteBtn.hidden = !hasSelection2 || isTrashed || readOnly;
   if (sharePanel) {
     if (!hasSelection2 || isTrashed || readOnly) sharePanel.hidden = true;
     else if (sharedNoteId === note.id && shareLinkInput?.value) sharePanel.hidden = false;
@@ -19895,6 +19945,59 @@ if (summarizeBtn) summarizeBtn.addEventListener("click", async () => {
   }
 });
 if (aiSummaryDismiss) aiSummaryDismiss.addEventListener("click", () => hideAiSummary());
+if (askNoteBtn) askNoteBtn.addEventListener("click", () => {
+  if (!selectedId) return;
+  syncAiChatForSelection(selectedId);
+  if (aiChatLog && !aiChatLog.childElementCount) renderChatEmptyHint();
+  if (aiChatPanel) aiChatPanel.hidden = false;
+  if (aiChatInput) aiChatInput.focus();
+});
+if (aiChatClose) aiChatClose.addEventListener("click", () => hideAiChat());
+if (aiChatForm) aiChatForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (chatInFlight || !selectedId) return;
+  const noteId = selectedId;
+  const question = (aiChatInput?.value || "").trim();
+  if (!question) return;
+  chatInFlight = true;
+  appendChatBubble("user", question);
+  if (aiChatSend) {
+    aiChatSend.disabled = true;
+    aiChatSend.textContent = "Thinking\u2026";
+  }
+  try {
+    const res = await fetchWithAuth(`${API_BASE2}/api/notes/${noteId}/chat`, {
+      method: "POST",
+      body: JSON.stringify({ question, history: chatHistory.slice(-6) })
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (res.status === 200) {
+      const answer = typeof payload.answer === "string" ? payload.answer : "";
+      if (selectedId === noteId && answer) {
+        appendChatBubble("assistant", answer);
+        chatHistory.push({ role: "user", content: question });
+        chatHistory.push({ role: "assistant", content: answer });
+        if (chatHistory.length > 12) chatHistory = chatHistory.slice(-12);
+      }
+      setError("");
+    } else if (res.status === 400) {
+      setError(payload.message || "Could not answer that question");
+    } else if (res.status === 429) {
+      setError("AI rate limit reached \u2014 try again in a few minutes.");
+    } else {
+      setError("AI is busy right now \u2014 try again in a moment.");
+    }
+  } catch {
+    setError("AI is busy right now \u2014 try again in a moment.");
+  } finally {
+    chatInFlight = false;
+    if (aiChatSend) {
+      aiChatSend.disabled = false;
+      aiChatSend.textContent = "Send";
+    }
+    if (aiChatInput) aiChatInput.value = "";
+  }
+});
 if (aiTitleApply) aiTitleApply.addEventListener("click", () => {
   if (!aiTitleNoteId || aiTitleNoteId !== selectedId || !titleInput) return;
   const suggested = aiTitleText ? aiTitleText.textContent.trim() : "";
@@ -19903,11 +20006,13 @@ if (aiTitleApply) aiTitleApply.addEventListener("click", () => {
   onEdit();
   hideAiTitle();
   hideAiTags();
+  hideAiChat();
   titleInput.focus();
 });
 if (aiTitleDismiss) aiTitleDismiss.addEventListener("click", () => {
   hideAiTitle();
   hideAiTags();
+  hideAiChat();
 });
 if (copyShareBtn) copyShareBtn.addEventListener("click", async () => {
   const value = shareLinkInput?.value || "";

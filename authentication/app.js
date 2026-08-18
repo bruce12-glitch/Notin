@@ -102,6 +102,17 @@ const aiTagChips = document.getElementById('aiTagChips');
 const aiTagDismiss = document.getElementById('aiTagDismiss');
 let aiTagNoteId = null;
 const tagsSuggestedFor = new Set(); // session-only: never re-suggest after fetch/dismiss
+// WP-AI-003 — chat with note (transcript is session-only: memory, never storage)
+const askNoteBtn = document.getElementById('askNoteBtn');
+const aiChatPanel = document.getElementById('aiChatPanel');
+const aiChatLog = document.getElementById('aiChatLog');
+const aiChatForm = document.getElementById('aiChatForm');
+const aiChatInput = document.getElementById('aiChatInput');
+const aiChatSend = document.getElementById('aiChatSend');
+const aiChatClose = document.getElementById('aiChatClose');
+let chatNoteId = null;
+let chatHistory = []; // [{role,content}] — in-memory only, cleared on note change/reload
+let chatInFlight = false;
 let sharedNoteId = null;
 // WP-APP-008 — image attachments
 const attachmentRow = document.getElementById('attachmentRow');
@@ -444,6 +455,7 @@ function hideAiTitle(){
 async function maybeSuggestTitle(note){
   hideAiTitle();
   hideAiTags();
+  hideAiChat(); // WP-AI-003
   if(!note || note.isTrashed || offlineReadOnly) return;
   if(currentView !== 'notes') return;
   if(titleSuggestedFor.has(note.id)) return;
@@ -477,8 +489,47 @@ function hideAiTags(){
   if(aiTagChips) aiTagChips.innerHTML = '';
   aiTagNoteId = null;
 }
+// WP-AI-003 — chat panel lifecycle. Hiding never persists or uploads anything;
+// the transcript only survives while the same note stays selected.
+function hideAiChat(){
+  if(aiChatPanel) aiChatPanel.hidden = true;
+}
+function renderChatEmptyHint(){
+  if(!aiChatLog) return;
+  const hint = document.createElement('p');
+  hint.className = 'app-ai-chat-hint';
+  hint.textContent = 'Questions stay on this device until you switch notes.';
+  aiChatLog.appendChild(hint);
+}
+function clearAiChat(){
+  chatHistory = [];
+  if(aiChatLog){
+    aiChatLog.textContent = '';
+    renderChatEmptyHint();
+  }
+  if(aiChatInput) aiChatInput.value = '';
+  hideAiChat();
+}
+function appendChatBubble(role, text){
+  if(!aiChatLog) return;
+  const hint = aiChatLog.querySelector('.app-ai-chat-hint');
+  if(hint) hint.remove();
+  const bubble = document.createElement('p');
+  bubble.className = 'app-ai-chat-msg' + (role === 'user' ? ' is-user' : ' is-assistant');
+  bubble.textContent = text; // never innerHTML — answers/questions are plain text
+  aiChatLog.appendChild(bubble);
+  aiChatLog.scrollTop = aiChatLog.scrollHeight;
+}
+// Selection changed → the previous note's transcript is dropped entirely.
+function syncAiChatForSelection(noteId){
+  if(noteId === chatNoteId) return;
+  chatNoteId = noteId;
+  clearAiChat();
+}
+
 async function maybeSuggestTags(note){
   hideAiTags();
+  hideAiChat(); // WP-AI-003
   if(!note || note.isTrashed || offlineReadOnly) return;
   if(currentView !== 'notes' || tagsSuggestedFor.has(note.id)) return;
   const text = (note.contentText || note.description || '').trim();
@@ -599,6 +650,7 @@ function setViewChrome(view){
   hideAiSummary();
   hideAiTitle(); // WP-AI-002
   hideAiTags(); // WP-AI-002b
+  hideAiChat(); // WP-AI-003
   const previousView = currentView;
   currentView = APP_ROUTES.has(view) ? view : 'home';
   if(previousView !== currentView) listAnimateNext = true; // WP-UI-NOTES-3D-001
@@ -1082,6 +1134,8 @@ function updateEditorForSelection(note){
   hideAiSummary();
   hideAiTitle(); // WP-AI-002 — reset on every selection change
   hideAiTags(); // WP-AI-002b — reset on every selection change
+  hideAiChat(); // WP-AI-003 — reset on every selection change
+  syncAiChatForSelection(note ? note.id : null); // drops the transcript when the note changes
   if(note && (currentView === 'notes' || currentView === 'trash')) {
     renderAiSummary(note, 'Saved summary — regenerate after edits.');
   }
@@ -1101,6 +1155,7 @@ function updateEditorForSelection(note){
   // WP-APP-009 — sharing is disabled in Trash and offline.
   if(shareBtn) shareBtn.hidden = !hasSelection || isTrashed || readOnly;
   if(summarizeBtn) summarizeBtn.hidden = !hasSelection || isTrashed || readOnly;
+  if(askNoteBtn) askNoteBtn.hidden = !hasSelection || isTrashed || readOnly; // WP-AI-003
   if(sharePanel){
     if(!hasSelection || isTrashed || readOnly) sharePanel.hidden = true;
     else if(sharedNoteId===note.id && shareLinkInput?.value) sharePanel.hidden = false;
@@ -1252,6 +1307,55 @@ if(summarizeBtn) summarizeBtn.addEventListener('click', async ()=>{
   }
 });
 if(aiSummaryDismiss) aiSummaryDismiss.addEventListener('click', ()=> hideAiSummary());
+// ── WP-AI-003 — chat with note. One JSON request per question (no streaming),
+// answers render through textContent, and nothing is written anywhere.
+if(askNoteBtn) askNoteBtn.addEventListener('click', ()=>{
+  if(!selectedId) return;
+  syncAiChatForSelection(selectedId);
+  if(aiChatLog && !aiChatLog.childElementCount) renderChatEmptyHint();
+  if(aiChatPanel) aiChatPanel.hidden = false;
+  if(aiChatInput) aiChatInput.focus();
+});
+if(aiChatClose) aiChatClose.addEventListener('click', ()=> hideAiChat());
+if(aiChatForm) aiChatForm.addEventListener('submit', async (event)=>{
+  event.preventDefault();
+  if(chatInFlight || !selectedId) return;
+  const noteId = selectedId;
+  const question = (aiChatInput?.value || '').trim();
+  if(!question) return;
+  chatInFlight = true;
+  appendChatBubble('user', question);
+  if(aiChatSend){ aiChatSend.disabled = true; aiChatSend.textContent = 'Thinking…'; }
+  try{
+    const res = await fetchWithAuth(`${API_BASE}/api/notes/${noteId}/chat`, {
+      method: 'POST',
+      body: JSON.stringify({ question, history: chatHistory.slice(-6) })
+    });
+    const payload = await res.json().catch(()=>({}));
+    if(res.status === 200){
+      const answer = typeof payload.answer === 'string' ? payload.answer : '';
+      if(selectedId === noteId && answer){
+        appendChatBubble('assistant', answer);
+        chatHistory.push({ role:'user', content: question });
+        chatHistory.push({ role:'assistant', content: answer });
+        if(chatHistory.length > 12) chatHistory = chatHistory.slice(-12); // cap 6 turns
+      }
+      setError('');
+    }else if(res.status === 400){
+      setError(payload.message || 'Could not answer that question');
+    }else if(res.status === 429){
+      setError('AI rate limit reached — try again in a few minutes.');
+    }else{
+      setError('AI is busy right now — try again in a moment.');
+    }
+  }catch{
+    setError('AI is busy right now — try again in a moment.');
+  }finally{
+    chatInFlight = false;
+    if(aiChatSend){ aiChatSend.disabled = false; aiChatSend.textContent = 'Send'; }
+    if(aiChatInput) aiChatInput.value = '';
+  }
+});
 // WP-AI-002 — apply/dismiss the suggested title. Applying goes through the
 // normal edit path (title input + onEdit → 900ms autosave), so the server's
 // suggestion only ever persists with explicit user consent.
@@ -1263,9 +1367,10 @@ if(aiTitleApply) aiTitleApply.addEventListener('click', ()=>{
   onEdit(); // marks dirty + schedules autosave
   hideAiTitle();
   hideAiTags();
+  hideAiChat(); // WP-AI-003
   titleInput.focus();
 });
-if(aiTitleDismiss) aiTitleDismiss.addEventListener('click', ()=>{ hideAiTitle(); hideAiTags(); });
+if(aiTitleDismiss) aiTitleDismiss.addEventListener('click', ()=>{ hideAiTitle(); hideAiTags(); hideAiChat(); });
 if(copyShareBtn) copyShareBtn.addEventListener('click', async ()=>{
   const value = shareLinkInput?.value || '';
   if(!value) return;

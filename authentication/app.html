@@ -226,6 +226,8 @@
             <option value="">None</option>
           </select>
           <button type="button" class="app-ai-btn" id="summarizeBtn" hidden>✨ Summarize</button>
+          <!-- WP-AI-003 — session-only chat with the open note -->
+          <button type="button" class="app-ai-btn" id="askNoteBtn" hidden>Ask this note</button>
           <button type="button" class="app-share-btn" id="shareBtn" hidden>Share</button>
           <span class="app-save-status" id="saveStatus"></span>
           <button class="app-save" id="saveBtn" disabled>Save</button>
@@ -268,6 +270,19 @@
         <span class="app-ai-tags-label">✨ Suggested tags:</span>
         <span class="app-ai-tags-chips" id="aiTagChips"></span>
         <button type="button" class="app-ai-tags-dismiss" id="aiTagDismiss" aria-label="Dismiss tag suggestions">×</button>
+      </div>
+      <!-- WP-AI-003 — chat with note (session-only transcript; never persisted) -->
+      <div class="app-ai-chat" id="aiChatPanel" hidden>
+        <div class="app-ai-chat-head">
+          <span>Ask this note</span>
+          <button type="button" id="aiChatClose" aria-label="Close chat">×</button>
+        </div>
+        <div class="app-ai-chat-log" id="aiChatLog" role="log" aria-live="polite"></div>
+        <form class="app-ai-chat-form" id="aiChatForm">
+          <label class="visually-hidden" for="aiChatInput">Question</label>
+          <input id="aiChatInput" type="text" maxlength="500" autocomplete="off" placeholder="Ask about this note…">
+          <button type="submit" id="aiChatSend">Send</button>
+        </form>
       </div>
       <!-- WP-APP-006 — note tags row (chips + add-tag picker) -->
       <div class="app-tag-row" id="tagRow" hidden>
