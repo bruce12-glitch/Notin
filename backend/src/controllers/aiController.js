@@ -123,11 +123,8 @@ export async function suggestNoteTags(req, res) {
 // ── WP-AI-003 — chat with note (read-only: no note UPDATE, no chat row) ─────
 export async function chatWithNoteController(req, res) {
   try {
-    const rawQuestion = typeof req.body?.question === 'string' ? req.body.question.trim() : '';
-    if (!rawQuestion || rawQuestion.length > MAX_CHAT_QUESTION_CHARS) {
-      return res.status(400).json({ message: 'Ask a question (1–500 characters)' });
-    }
-
+    // Guard order mirrors the sibling AI handlers: ownership first, so a
+    // non-owner can never distinguish a bad request from a missing note.
     const { rows } = await db.query(
       `SELECT id, title, "contentText", description, "isTrashed" FROM "Note" WHERE id = $1 AND "userId" = $2 LIMIT 1`,
       [req.params.id, req.userId],
@@ -135,6 +132,11 @@ export async function chatWithNoteController(req, res) {
     const note = rows[0];
     if (!note) return res.status(404).json({ message: 'Note not found' });
     if (isTrashed(note.isTrashed)) return res.status(400).json({ message: 'Restore the note before chatting' });
+
+    const rawQuestion = typeof req.body?.question === 'string' ? req.body.question.trim() : '';
+    if (!rawQuestion || rawQuestion.length > MAX_CHAT_QUESTION_CHARS) {
+      return res.status(400).json({ message: 'Ask a question (1–500 characters)' });
+    }
 
     const contentText = typeof note.contentText === 'string' ? note.contentText : '';
     const description = typeof note.description === 'string' ? note.description : '';

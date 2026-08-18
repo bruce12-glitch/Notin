@@ -702,8 +702,9 @@ body.sidebar-collapsed .app-btn-logout::before{content:"⏻";font-size:15px}
 
 .app-list-items,.app-editor-body,.home-view,.shortcuts-view,.organize-view,.app-nav{scroll-behavior:smooth}
 
-/* WP-AI-003 — chat with note (session-only transcript, nothing persisted) */
-.visually-hidden{position:absolute;width:1px;height:1px;margin:-1px;padding:0;border:0;overflow:hidden;white-space:nowrap;clip:rect(0 0 0 0);clip-path:inset(50%)}
+/* WP-AI-003 — chat with note (session-only transcript, nothing persisted).
+   Inputs use aria-label directly, matching globalSearchInput/newTagInput —
+   this app has no sr-only/visually-hidden class and gains none here. */
 .app-ai-chat{margin:0 18px 10px;padding:10px 12px;border:1px solid #3a4632;border-radius:10px;background:#1f261a;color:#d9e7cf;font-size:12.5px}
 .app-ai-chat-head{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--env-green);font-size:12px;font-weight:700}
 .app-ai-chat-head button{border:0;background:transparent;color:#9bad91;font-size:18px;line-height:1;cursor:pointer;padding:0 2px}
