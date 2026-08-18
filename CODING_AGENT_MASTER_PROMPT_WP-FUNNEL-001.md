@@ -1,4 +1,5 @@
 # CODING AGENT MASTER PROMPT — Notin · Task WP-FUNNEL-001
+## Wire the acquisition funnel (reconciled 2026-08-18 against post-PR-#14/#15/#16 main)
 
 > **HOW TO USE:** Paste this ENTIRE file into a fresh coding-agent session.
 > It is self-contained — no other context needed. One task per session.
@@ -17,37 +18,44 @@ on **port 5000**. The marketing landing (Green + Neon editions) is served on
 
 **The problem:** every primary CTA on the landing is a dead `href="#"` —
 "Log in", "Start for free", "Get Notin free", "Try it free", pricing buttons,
-the mobile-menu "Log in", and more (~26 per edition). Visitors cannot reach the
-product. Your single task is **WP-FUNNEL-001: wire the entire acquisition
-funnel** so every CTA reaches the right auth/app page on the correct origin in
-every environment (localhost, per-port preview hosts, single-origin production).
+"Download" items, and more — **exactly 26 per edition** (verified 2026-08-18 in
+`frontend/index.html` AND `frontend/index-neon.html`). Visitors cannot reach
+the product. Your single task is **WP-FUNNEL-001: wire the entire acquisition
+funnel** so every real CTA reaches the right auth/app page on the correct
+origin in every environment (localhost, per-port preview hosts, single-origin
+production).
 
 Rules:
 1. **No hardcoded hosts.** Preview environments use per-port hostnames
    (`3000-xxxx.e2b.app` vs `5000-xxxx.e2b.app`), so the app origin must be
    *derived at runtime*, never written as a literal.
-2. **Landing marketing stays untouched visually.** No layout, animation, theme,
-   or copy changes — only destination wiring.
+2. **Landing marketing stays visually untouched.** No layout, animation, theme,
+   or copy changes — destination wiring and two small behavior fixes only.
 3. **The app, backend, and auth pages are OUT OF SCOPE.** This task touches
    `frontend/` only.
+4. **Honesty over coverage.** Buttons for artifacts that do not exist (native
+   binaries, store apps, browser extensions) are NOT wired to fake
+   destinations — they are documented leftovers.
 
 ---
 
-## PART 2 — REPO GROUND TRUTH (verified)
+## PART 2 — REPO GROUND TRUTH (verified 2026-08-18, post-PR-#14/#15/#16 main)
 
 ```
 frontend/
-├── index.html        ← Green edition (~26 dead href="#" CTAs; header, hero,
-│                        pricing, download sections)
-├── index-neon.html   ← Neon edition (same structure, ~26 dead CTAs)
-├── script.js         ← landing interactions (~1,200 lines). Contains:
-│   • lines ~96–104: mobile menu builds a "Log in" <a href="#"> dynamically
-│   • lines ~1074–1090: an inline Google-OTP auth modal that posts to
-│     `${api}/auth/*` (api = location.origin via dev-server proxy).
-│     DO NOT modify this modal — it serves the ?auth=otp redirect flow.
-├── dev-server.mjs    ← static server + proxy: shouldProxy() matches ONLY
-│                        '/api*', '/auth*'. API_TARGET default http://127.0.0.1:5000
-└── styles.css / styles-neon.css / input*.css ← themes (DO NOT TOUCH)
+├── index.html        ← Green edition — 26 dead href="#" (exact inventory below)
+├── index-neon.html   ← Neon edition — 26 dead href="#", SAME inventory,
+│                        loads the SAME script.js (line ~989: <script src="script.js">)
+├── script.js         ← landing runtime. THREE blocks matter:
+│   • ~L93–102: mobile menu builds "Log in" + "Start for free" <a href="#"> dynamically
+│   • ~L700–810: organize-showcase CTA state machine — SCOPED to
+│     .organize-showcase__cta only. WORKING today (href="#pricing" exists);
+│     it preventDefaults, shows loading, scrolls, toasts success. DO NOT TOUCH.
+│   • END OF FILE: inline Google-OTP auth modal. CRITICAL: it hijacks clicks
+│     by TEXT — see Spec 4. The modal itself serves the ?auth=otp Google
+│     redirect flow and must keep working.
+├── dev-server.mjs    ← static server + proxy: '/api*' + '/auth*' only. UNCHANGED.
+└── styles.css / styles-neon.css / input*.css / polish.css ← DO NOT TOUCH
 ```
 
 **App pages on :5000 (destinations):**
@@ -61,6 +69,42 @@ frontend/
 | Local dev | `localhost:3000` / `127.0.0.1:3000` | same hostname, port `5000` |
 | Arena preview | `3000-<sandbox>.e2b.app` | `5000-<sandbox>.e2b.app` (same suffix) |
 | Production | single origin | same origin |
+
+**Exact 26-item inventory (identical in both editions):**
+1. Nav `Enterprise` ×1 → **leftover** (no section; list it)
+2. Header `Log in` ×1 → **login**
+3. Nav pill `Start for free` ×1 → **signup**
+4. Hero `Get Notin free` ×1 → **signup**
+5. Hero `Already have an account? Log in` ×1 → **login** (class `.hero-login`)
+6. `Try it free` ×1 → **signup**
+7. `Get started` ×1 → **signup** (plain bordered button; NOT the organize-showcase CTA)
+8. Pricing `Try Pro free for 14 days` ×1 → **signup**
+9. Pricing `Contact sales` ×1 → **contact**
+10. `Download Notin` — this is **`#smartDownload`** → **UNTOUCHED-BY-DESIGN**:
+    script.js OS_META logic already sets it to `#windows/#macos/#linux/#ios/#android/#web`
+    and all six platform cards exist with those exact ids (`#web` L~771,
+    `#windows` L~785, `#macos` L~799, `#linux` L~813, `#ios` L~827, `#android` L~841).
+    The OS-aware scroll flow works — do not rewire.
+11. Platform `.download-link` ×6:
+    - `Open notin.app` (inside `#web` card) → **app**
+    - `Download .exe`, `Download .dmg`, `Download AppImage`, `App Store`,
+      `Google Play` → **leftovers** (no artifacts exist; list them; add to debt)
+12. Browser `.btn-sm-evernote` ×3 (Chrome/Firefox/Safari) → **leftovers**
+    (no extensions exist; list them)
+13. Footer ×7: `Changelog`, `Blog`, `Careers`, `Contact`, `Privacy`, `Terms`,
+    `Security` → `Contact` → **contact** (mailto); other six → **leftovers**
+
+**Also working today (do not count as dead, do not touch):**
+- `.organize-showcase__cta` "Try it for free" → `href="#pricing"` via its own
+  state machine (both editions, verified).
+- Mega-menu links (`#features`, `#capture`, `#organize`, `#pricing`, `#ai-tools`
+  — all section ids exist).
+- Mobile menu builds 2 more funnel links dynamically (`Log in`, `Start for free`)
+  — these are covered by Spec 3, not the 26.
+
+**Mirror note:** `docs/index.html` (GitHub Pages mirror) has the same 26 dead
+links. It is OUT OF SCOPE (mirror sync happens at deploy) — but the final
+report MUST state this divergence explicitly.
 
 ---
 
@@ -99,17 +143,15 @@ function notinAppOrigin(){
 
 ### Spec 2 — CTA classification and wiring (both editions)
 
-Audit EVERY `href="#"` in `index.html` and `index-neon.html` (expect ~26 each).
 Add a `data-cta` attribute to each funnel element and keep `href="#"` as the
 no-JS fallback; `script.js` resolves destinations on `DOMContentLoaded`:
 
-| CTA (by visible text / context) | `data-cta` | Destination |
+| Elements (per PART 2 inventory) | `data-cta` | Destination |
 |---|---|---|
-| Header "Log in" · hero "Already have an account? Log in" · any "Log in" link | `login` | `${origin}/login.html` |
-| "Start for free" · "Get Notin free" · "Try it free" · pricing "Get started" · "Try Pro free for 14 days" · any signup-style button | `signup` | `${origin}/` |
-| "Download Notin" (`#smartDownload`) | `app` | `${origin}/app.html` |
-| "Contact sales" | `contact` | `mailto:hello@notin.app` (placeholder address — documented) |
-| "Enterprise" and pure nav/footer links | see Spec 4 | section anchor or leave |
+| Header "Log in" · hero "Already have an account? Log in" | `login` | `${origin}/login.html` |
+| "Start for free" · "Get Notin free" · "Try it free" · "Get started" · "Try Pro free for 14 days" | `signup` | `${origin}/` |
+| "Open notin.app" (`.download-link` inside `#web` card only) | `app` | `${origin}/app.html` |
+| "Contact sales" · footer "Contact" | `contact` | `mailto:hello@notin.app` |
 
 Binding (single delegated pass — no per-button listeners):
 ```js
@@ -124,108 +166,143 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 ```
-Full-page navigation (not the inline modal) is the funnel path — the OTP modal
-stays reserved for the `?auth=otp` Google redirect flow.
+Full-page navigation (not the inline modal) is the funnel path.
 
-### Spec 3 — Mobile menu "Log in" (`frontend/script.js` ~lines 96–104)
+**Classify ONLY the elements listed.** Do not add `data-cta` to
+`#smartDownload`, `.organize-showcase__cta`, mega-menu links, or any leftover.
 
-The mobile panel creates `login.href = '#'` dynamically. Change it to:
+### Spec 3 — Mobile menu links (`frontend/script.js` ~lines 93–102)
+
+The mobile panel builds `login.href = '#'` and `cta.href = '#'` dynamically.
+Change them to real destinations at creation time:
 ```js
 login.href = notinAppOrigin() + '/login.html';
+cta.href   = notinAppOrigin() + '/';
 ```
-and give the sibling signup CTA in that panel (the `cta` element) the signup
-destination as well. Keep classes/text unchanged.
+Keep their classes and text unchanged.
 
-### Spec 4 — Nav/footer anchor audit
+### Spec 4 — Neutralize the modal's click hijack (PRESERVE the modal)
 
-For remaining non-funnel `href="#"` links (nav items like Features/Pricing,
-footer links): if a section with a matching id exists in the same file
-(e.g., `#features`, `#pricing`), point the link at that anchor. If no target
-section exists, leave the link unchanged and list it in the final report.
-Do NOT invent new sections.
+At the END of `script.js`, the auth-modal module contains this block:
+```js
+const authLabels = new Set(['log in', 'start for free', 'get notin free', 'try it free', 'get started', 'try pro free for 14 days']);
+document.querySelectorAll('a').forEach((a) => {
+  if (authLabels.has(a.textContent.trim().toLowerCase())) {
+    a.addEventListener('click', (e) => { e.preventDefault(); open(); });
+  }
+});
+```
+It intercepts every primary funnel CTA by text content and swallows the click
+into the Google-only modal (which returns 503 while OAuth is unconfigured) —
+**it would break Spec 2 wiring. DELETE this binding block (all six lines).**
 
-### Spec 5 — Neon parity
+What you must NOT touch in that module: the modal DOM/panel, the
+`?auth=otp` auto-open branch, the Google button (`${api}/auth/google`), the
+verify/resend handlers, and the `api` origin constant. After your edit the
+modal still auto-opens for `?auth=otp` and opens never otherwise. This is the
+one intended behavioral change of this WP; document it in the report.
 
-Apply identical markup changes to `index-neon.html`. Both editions share
-`script.js` — confirm the Neon file actually loads `script.js` (read its
-`<script>` tags); if it loads a different script file, replicate Spec 1–3 there.
+### Spec 5 — Leftovers (do not wire)
 
-### Spec 6 — Dev-server sanity (no behavior change required)
+Leave these `href="#"` exactly as-is and list them in the report:
+`Enterprise` nav · `Download .exe` · `Download .dmg` · `Download AppImage` ·
+`App Store` · `Google Play` · `Chrome` · `Firefox` · `Safari` · `Changelog` ·
+`Blog` · `Careers` · `Privacy` · `Terms` · `Security` (15 per edition).
+Add one line to the report confirming each exists as a documented leftover.
+
+### Spec 6 — Neon parity
+
+`index-neon.html` loads the same `script.js` (verified line ~989) — no script
+replication. Apply the identical `data-cta` markup changes to the Neon file's
+matching elements (same inventory, same class names, `hero-login` is
+`text-[16px]` there — match by text and context, not by exact class strings).
+
+### Spec 7 — Dev-server sanity (no behavior change)
 
 Read `frontend/dev-server.mjs` and confirm the proxy rules remain `/api*` +
 `/auth*` only. Do NOT extend the proxy to serve app pages — origin derivation
-(Spec 1) is the designed mechanism. No changes expected in this file; if you
-believe a change is needed, stop and report it instead.
+(Spec 1) is the designed mechanism. No changes expected; if you believe one is
+needed, stop and report instead.
 
 ---
 
 ## PART 4 — MANDATORY WORKFLOW (in this order)
 
-1. **Read**: `frontend/script.js` (mobile menu block + auth modal block),
-   `frontend/index.html` + `index-neon.html` (list every `href="#"` with line
-   numbers before changing anything), `frontend/dev-server.mjs`.
-2. Classify all dead links into the Spec 2 table + Spec 4 anchors.
-3. Implement Spec 1–3 in `script.js`, then markup changes in both editions.
+1. **Read**: `frontend/script.js` (mobile menu block, organize-showcase CTA
+   block, auth-modal block), both HTML editions (list every `href="#"` with
+   line numbers FIRST — expect exactly 26 per file), `frontend/dev-server.mjs`.
+2. Confirm each of the 26 against the PART 2 inventory; flag any drift in the
+   report and classify by text/context (never guess silently).
+3. Implement Specs 1–4 in `script.js`, then markup in both editions.
 4. `node --check frontend/script.js` — must pass.
-5. Serve and verify:
+5. Resolver logic test with node (paste the function in a REPL/test harness):
+   - host `3000-abc.e2b.app` → `http(s)://5000-abc.e2b.app`
+   - host `localhost:3000` → `http://localhost:5000`
+   - host `notin.app` → same origin (`https://notin.app`)
+6. Serve and verify:
    ```bash
    cd backend && npm start &               # :5000 (migrate first if fresh env)
    cd frontend && PORT=3000 node dev-server.mjs &
-   curl -s localhost:3000/ | grep -c 'data-cta'        # > 0
+   curl -s localhost:3000/ | grep -c 'data-cta'           # ≥ 9
    curl -s -o /dev/null -w "%{http_code}" localhost:5000/login.html   # 200
    curl -s -o /dev/null -w "%{http_code}" localhost:5000/             # 200
+   curl -s localhost:3000/script.js | grep -c 'authLabels'            # 0 (hijack gone)
+   curl -s localhost:3000/script.js | grep -c "auth=otp"              # ≥ 1 (modal flow intact)
    ```
-6. Logic-test the resolver with node (paste the function):
-   - host `3000-abc.e2b.app` → `http://5000-abc.e2b.app` (protocol per input)
-   - host `localhost:3000` → `http://localhost:5000`
-   - host `notin.app` → same origin
-7. Re-grep both HTML files: zero `href="#"` remaining on elements classified as
-   funnel CTAs; any leftovers are the documented Spec 4 exceptions.
-8. Update `PROJECT_BIBLE.md`: mark WP-FUNNEL-001 complete, remove "dead landing
-   CTAs" from debt.
+7. Re-grep both HTML files: `grep -c 'href="#"'` must drop from 26 → **15**
+   (the documented leftovers) in EACH file.
+8. Update `PROJECT_BIBLE.md`: mark WP-FUNNEL-001 complete; remove "Landing CTAs
+   dead" from KNOWN TECHNICAL DEBT; add "Platform binaries/store/extension
+   downloads are dead links by design (no artifacts) — Low".
 
 ## PART 5 — DO NOT (hard constraints)
 
 → Do NOT touch `authentication/`, `backend/`, `docs/`, or any theme CSS.
-→ Do NOT modify the inline Google-OTP modal or its `?auth=otp` flow.
-→ Do NOT hardcode any sandbox/preview hostname or port-5000 literal URL in HTML —
+→ Do NOT modify the OTP modal's DOM, verify/resend/Google handlers, or its
+  `?auth=otp` auto-open — only the `authLabels` binding block is removed.
+→ Do NOT touch the `.organize-showcase__cta` state machine or `#smartDownload`
+  / OS_META logic — both work today.
+→ Do NOT wire the leftover download/browser/footer links to fake destinations.
+→ Do NOT hardcode any sandbox/preview hostname or port-5000 literal in HTML —
   destinations resolve at runtime only (mailto is the one static exception).
-→ Do NOT extend `dev-server.mjs` proxy rules.
-→ Do NOT change visual design, copy, animations, or the `smartDownload` logic
-  beyond its destination.
-→ Do NOT add npm dependencies or convert the landing to a framework.
-→ Do NOT build AI features or anything outside this work package.
+→ Do NOT extend `dev-server.mjs` proxy rules. Do NOT add npm dependencies.
+→ Do NOT change visual design, copy, animations, or tokens.
+→ Do NOT build anything outside this work package.
 
-## PART 6 — ACCEPTANCE CRITERIES
+## PART 6 — ACCEPTANCE CRITERIA
 
-□ Every funnel CTA (login/signup/app/contact, both editions, incl. mobile menu)
-  resolves at runtime to the correct destination for localhost, preview-host,
-  and same-origin cases
-□ `notinAppOrigin()` passes the three logic tests in PART 4 step 6
-□ Landing serves 200 on :3000; `/login.html` and `/` serve 200 on :5000;
-  a visitor clicking "Start for free" from a preview host lands on the
-  `5000-…` OTP page (verify by construction from the derivation, or live)
-□ Nav/footer links point at real section anchors where targets exist; remaining
-  `href="#"` instances are explicitly listed in the report
-□ No visual/layout diff (changes are attributes + one script block only)
-□ `node --check` clean; OTP modal untouched; dev-server proxy unchanged
+□ 26→15 `href="#"` per edition (exactly the Spec 5 leftovers), both files
+□ `data-cta` on exactly 9 static elements per edition: 2 login, 5 signup,
+  1 app, 2 contact (1 sales + 1 footer)
+□ Mobile menu's two dynamic links resolve via `notinAppOrigin()` at creation
+□ `authLabels` binding removed; `?auth=otp` modal path preserved; clicking a
+  wired CTA navigates full-page (no modal opens)
+□ Resolver passes the three logic cases; no host literals anywhere in HTML
+□ Landing 200 on :3000; `/login.html` + `/` 200 on :5000; by construction a
+  preview-host visitor clicking "Start for free" lands on `5000-<suffix>/`
+□ `#smartDownload` still OS-driven; organize CTA still scrolls with its state
+  machine; mega-menu anchors unaffected
+□ `node --check` clean; zero visual diff; dev-server proxy unchanged
+□ Report lists the 15 leftovers + the docs/ mirror divergence explicitly
 
 ## PART 7 — REPORT FORMAT (final message must follow this)
 
 ```
 WP-FUNNEL-001 REPORT
 1. Files modified:          [list]
-2. CTA inventory:           [count per data-cta class + leftovers with reason]
-3. Resolver tests:          [3 cases pass/fail]
-4. Live checks:             [landing 200, login page 200, grep counts]
-5. Unspecified decisions:   [should be none or trivial]
-6. Blockers:                [any]
-7. Suggested next:          WP-AI-003 (chat with note) — do NOT start it.
+2. CTA inventory:           [26→15 per edition; counts per data-cta class;
+                             leftovers listed; docs/ divergence noted]
+3. Hijack removal:          [authLabels block removed; ?auth=otp preserved — evidence]
+4. Resolver tests:          [3 cases pass/fail]
+5. Live checks:             [landing 200, auth pages 200, grep counts]
+6. Unspecified decisions:   [should be none or trivial]
+7. Blockers:                [any]
+8. Suggested next:          WP-AI-003 (chat with note) — do NOT start it.
 ```
 
 ## FUTURE QUEUE (context only — DO NOT BUILD IN THIS SESSION)
 
-1. **WP-AI-003** — chat with note (streaming, llama-3.1-70b-versatile).
-2. **WP-AI-004** — writing assistant (continue/rephrase/shorten, inline diff UX).
-3. Schema sync (`prisma/schema.prisma` ↔ migrate.js).
-4. Deploy gates: fail-closed startup, CORS lock, Postgres verification, CI with Chromium.
+1. **WP-AI-003** — chat with note (full spec: `CODING_AGENT_MASTER_PROMPT_FURTHER_DEVELOPMENT.md` § PART 5).
+2. **WP-SCHEMA-001** → **WP-DEPLOY-001** (same file § PART 6), then deploy.
+3. Leftover-link debt: platform binaries / store apps / browser extensions.
+4. docs/ mirror re-sync at deploy time.
