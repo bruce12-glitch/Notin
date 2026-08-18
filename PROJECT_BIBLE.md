@@ -10,10 +10,10 @@
 
 | Field | Value |
 |---|---|
-| **Last Updated** | 2026-08-18 (WP-SCHEMA-001 Prisma mirror sync) |
+| **Last Updated** | 2026-08-18 (WP-DEPLOY-001 production readiness gates) |
 | **Current Phase** | Phase 2 (AI Layer) — WP-AI-001/002/002b shipped; **WP-AI-003 chat with note complete on this branch** |
 | **MVP Completion** | ~75% |
-| **Production readiness** | ~40% (deploy gates listed below) |
+| **Production readiness** | ~85% — fail-closed boot, CORS lock, CI + Chromium, and a rehearsed backup/restore drill all landed (WP-DEPLOY-001). Remaining: a human runs `RUNBOOK.md` against real infrastructure with real secrets. |
 
 ---
 
@@ -26,7 +26,7 @@
 | **Backend** | Node 22 + Express 4.21 ESM, unified on **port 5000** (`backend/src/server.js`) |
 | **Database** | PostgreSQL (`pg`) prod · `node:sqlite` dev fallback · migrations `backend/src/db/migrate.js` (WP-* steps, both dialects) |
 | **Auth** | Custom JWT (jose): 15-min access in memory + rotating httpOnly refresh cookie · bcrypt passwords · email OTP (demo `123456` when no SMTP) · Google OAuth stub |
-| **AI Layer** | ✅ **Phase 2 = 4/7.** WP-AI-001 summarizes notes; WP-AI-002 suggests titles; **WP-AI-002b** suggests 3–5 smart tags through Groq/mock while the server remains read-only and the client applies each accepted tag through the existing tag write paths. **WP-AI-003** adds session-only, non-streaming chat against the open note. Dedicated request-only E2E coverage exists for all four features. Next: WP-DEPLOY-001. |
+| **AI Layer** | ✅ **Phase 2 = 4/7.** WP-AI-001 summarizes notes; WP-AI-002 suggests titles; **WP-AI-002b** suggests 3–5 smart tags through Groq/mock while the server remains read-only and the client applies each accepted tag through the existing tag write paths. **WP-AI-003** adds session-only, non-streaming chat against the open note. Dedicated request-only E2E coverage exists for all four features. Next: WP-AI-004. |
 | **Storage** | Local disk `backend/uploads/` (PNG/JPEG/WebP/GIF ≤5 MB × 10/note) |
 | **Search** | LIKE/ILIKE substring (`GET /api/notes?q=`), escaped wildcards, 100-row cap |
 | **E2E** | Playwright `backend/tests/e2e/mvp-smoke.spec.js` (3 scenarios incl. full UI journey) + API-level account test |
@@ -46,13 +46,14 @@
 - → **WP-AI-002b (2026-08-18):** smart tag suggestions — authenticated, owner-scoped `POST /api/notes/:id/suggest-tags`; deterministic keyless mock plus Groq provider; 3–5 bounded suggestions mapped to existing tag IDs; server never creates or attaches tags; session-once editor chips apply only through `POST /api/tags` + `PUT {tagIds}` with duplicate-race recovery. Dedicated `ai-tags-smoke` E2E ✅
 - → **WP-AI-003 (2026-08-18):** chat with note — authenticated, owner-scoped `POST /api/notes/:id/chat` (non-streaming, one JSON in / one JSON out); deterministic keyless mock plus Groq provider bounded to 800 chars; the server never writes the note and stores no transcript or chat table; the editor panel keeps the last 6 turns in memory only, clearing on note/view change and reload, and renders every bubble via `textContent`. Dedicated `ai-chat-smoke` E2E ✅
 - → **WP-SCHEMA-001 (2026-08-18):** `backend/prisma/schema.prisma` now mirrors `migrate.js` exactly — 10 models, 1:1 column parity (verified by script), all 16 non-unique indexes, `@default(cuid())` on User/Note/Notebook/Tag only, no invented unique constraints. Documentation-only: no migration, no dependency, no runtime change ✅
+- → **WP-DEPLOY-001 (2026-08-18):** production readiness — (1) fail-closed boot: missing/placeholder `JWT_ACCESS_SECRET`/`JWT_REFRESH_SECRET`/`OTP_PEPPER`/`APP_ORIGIN` and any non-`postgres://` `DATABASE_URL` print `FATAL:` lines and exit 1; SQLite fallback and unreachable-Postgres downgrade are both refused in production. (2) CORS locked to the `APP_ORIGIN` allowlist in production (preview/localhost echo is now dev-only). (3) GitHub Actions `E2E` workflow: Chromium, whole-suite Playwright, two fail-closed smokes and a `postgres:16-alpine` positive-boot rehearsal — **staged at `ci/e2e.yml`; a human must `git mv` it to `.github/workflows/` because the agent's GitHub App token lacks the `workflows` permission (see `ci/README.md`)**. (4) `RUNBOOK.md` backup/restore drill, executed once. Dev/preview behavior byte-identical ✅
 - → PWA: manifest + shell-only service worker (`notin-shell-v10`) + icons ✅
 - → Marketing: Green/Neon editions, video/Lottie hero, responsive ✅
 
 ## IN PROGRESS
 
 - → **WP-AI-003** is implemented on `arena/01a01262-notin`; verification and PR handoff are the current task.
-- → **WP-SCHEMA-001** is complete on `arena/01a01262-notin` (Prisma mirror synced). Locked queue: **WP-DEPLOY-001** → **WP-AI-004** (writing assistant).
+- → **WP-DEPLOY-001** is complete on `arena/01a01262-notin` (stacked on WP-AI-003 + WP-SCHEMA-001). Locked queue after merge: **WP-AI-004** (writing assistant) → landing leftovers.
 
 ## ARCHITECTURE DECISIONS LOCKED
 
@@ -67,12 +68,12 @@
 
 - → ~~SW cache staleness BUG~~ **FIXED 2026-08-13** by WP-UI-NOTES-001; latest shell cache is `notin-shell-v10` after WP-AI-003. Rule going forward: ANY change to a shell asset (bundle, CSS, HTML) must bump `CACHE_NAME` in `authentication/sw.js`. **Resolved**
 - → **Landing CTAs dead:** 26 × `href="#"` per edition (Log in / Start for free / Get started / pricing). Next instruction after WP-AI-001 (WP-FUNNEL-001). **High**
-- → Dev fallback JWT secrets (boot warning) + permissive non-prod CORS → **deploy-gate: fail closed** (see DEPLOY GATES). **Medium now / High at deploy**
-- → Postgres→SQLite silent failover in `db.js` — acceptable in dev, must be disabled in production. **Deploy gate**
+- → ~~Dev fallback JWT secrets + permissive CORS~~ **FIXED 2026-08-18** by WP-DEPLOY-001: production boot refuses missing/placeholder secrets and non-postgres URLs; CORS echoes only `APP_ORIGIN` allowlist entries. Dev keeps the permissive behavior deliberately. **Resolved**
+- → ~~Postgres→SQLite silent failover in `db.js`~~ **FIXED 2026-08-18** by WP-DEPLOY-001: refused in production at import, at `$connect()`, and mid-flight in `query()`. Still available in dev. **Resolved**
 - → Legacy `authentication/server.js` package: 3 advisories (1 high nodemailer CRLF, 2 moderate) — dead code path; retire the package or pin deps. **Low** (unified backend audit = 0 vulns)
 - → `docs/` duplicates `frontend/` (~14 MB each, already diverging) + `screenshots/` ~20 MB. Consolidate when touching marketing. **Low**
 - → Legacy `jsonwebtoken` fallback verification path — retire after token migration window. **Low**
-- → No unit tests, no CI workflow, no deployment manifest. **Medium** (add at deploy prep)
+- → No unit tests; no deployment manifest. CI is written but **not yet active**: `ci/e2e.yml` must be moved to `.github/workflows/e2e.yml` by a human (agent tokens cannot push workflow files). Until then no run is enforced on PRs. **Medium**
 - → Single 1,900-line `app.js` — acceptable while E2E-guarded. **Low**
 
 ## DATABASE SCHEMA VERSION
@@ -112,6 +113,6 @@
 
 ## NEXT 3 PRIORITIES
 
-1. **Merge WP-AI-003** from `arena/01a01262-notin` after its verification gates pass.
-2. **WP-DEPLOY-001:** fail-closed production boot, CORS lock, no SQLite fallback in `NODE_ENV=production`, CI with Playwright Chromium.
-3. **WP-AI-004:** writing assistant (continue / rephrase / shorten, inline diff).
+1. **Merge the stacked branch** `arena/01a01262-notin` (WP-AI-003 → WP-SCHEMA-001 → WP-DEPLOY-001) once CI is green.
+2. **WP-AI-004:** writing assistant (continue / rephrase / shorten, inline diff).
+3. **Leftovers:** landing binaries/store/extension links, `docs/` mirror re-sync, close PR #2 with salvage notes.

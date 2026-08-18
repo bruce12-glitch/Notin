@@ -1,0 +1,173 @@
+name: E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  e2e:
+    name: Playwright E2E + production boot gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: notin
+          POSTGRES_DB: notin
+          POSTGRES_PASSWORD: ci-throwaway-not-a-secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U notin -d notin"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            authentication/package-lock.json
+
+      - name: Install authentication deps
+        working-directory: authentication
+        run: npm ci
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci
+
+      - name: Apply migrations (SQLite dev path)
+        working-directory: backend
+        run: npm run db:migrate
+
+      - name: Install Chromium
+        working-directory: backend
+        run: npx playwright install --with-deps chromium
+
+      # Gate 1 — the server must refuse to boot in production with no config.
+      # Expect a non-zero exit AND at least one FATAL: line.
+      - name: Fail-closed smoke (production, no env)
+        working-directory: backend
+        env:
+          NODE_ENV: production
+          DATABASE_URL: ""
+          JWT_ACCESS_SECRET: ""
+          JWT_REFRESH_SECRET: ""
+          OTP_PEPPER: ""
+          APP_ORIGIN: ""
+        run: |
+          set +e
+          output=$(node src/server.js 2>&1)
+          code=$?
+          set -e
+          echo "$output"
+          if [ "$code" -eq 0 ]; then
+            echo "::error::Server booted in production with no configuration — fail-closed gate is broken"
+            exit 1
+          fi
+          if ! echo "$output" | grep -q '^FATAL:'; then
+            echo "::error::Non-zero exit but no FATAL: line was printed"
+            exit 1
+          fi
+          echo "OK: refused to boot (exit $code) with a FATAL: reason"
+
+      # Gate 1b — placeholder secrets from .env.example must also be rejected.
+      - name: Fail-closed smoke (placeholder secrets)
+        working-directory: backend
+        env:
+          NODE_ENV: production
+          DATABASE_URL: postgresql://notin:ci-throwaway-not-a-secret@localhost:5432/notin
+          APP_ORIGIN: https://app.example.com
+          JWT_ACCESS_SECRET: change-me-access-32chars-minimum-replace-in-prod
+          JWT_REFRESH_SECRET: change-me-refresh-32chars-minimum-replace-in-prod
+          OTP_PEPPER: change-me-pepper-32chars-minimum-replace
+        run: |
+          set +e
+          output=$(node src/server.js 2>&1)
+          code=$?
+          set -e
+          echo "$output"
+          if [ "$code" -eq 0 ]; then
+            echo "::error::Server accepted .env.example placeholder secrets in production"
+            exit 1
+          fi
+          echo "$output" | grep -q 'is still the .env.example placeholder' || {
+            echo "::error::Expected a placeholder-rejection FATAL line"; exit 1; }
+          echo "OK: placeholder secrets rejected"
+
+      # Gate 2 — the deploy rehearsal: correct config must boot on real Postgres.
+      - name: Positive production boot (Postgres rehearsal)
+        working-directory: backend
+        env:
+          NODE_ENV: production
+          DATABASE_URL: postgresql://notin:ci-throwaway-not-a-secret@localhost:5432/notin
+          APP_ORIGIN: https://app.example.com
+          PORT: 5000
+        run: |
+          # Random, non-placeholder secrets generated in-job; never printed.
+          export JWT_ACCESS_SECRET="$(openssl rand -hex 32)"
+          export JWT_REFRESH_SECRET="$(openssl rand -hex 32)"
+          export OTP_PEPPER="$(openssl rand -hex 32)"
+
+          npm run db:migrate
+
+          node src/server.js > /tmp/prod-boot.log 2>&1 &
+          server_pid=$!
+
+          ok=0
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:5000/health -o /tmp/health.json 2>/dev/null; then
+              if grep -q '"database":"PostgreSQL"' /tmp/health.json; then ok=1; break; fi
+            fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              echo "::error::Server exited during the production rehearsal"; break
+            fi
+            sleep 1
+          done
+
+          echo "--- server log ---"; cat /tmp/prod-boot.log
+          if [ "$ok" -ne 1 ]; then
+            echo "::error::/health did not report PostgreSQL within 30s"
+            kill "$server_pid" 2>/dev/null || true
+            exit 1
+          fi
+          echo "--- /health ---"; cat /tmp/health.json; echo
+          echo "OK: production boot healthy on PostgreSQL"
+
+          kill "$server_pid" 2>/dev/null || true
+          wait "$server_pid" 2>/dev/null || true
+
+      # Gate 3 — the full E2E suite (whole directory, never a hardcoded list).
+      # NODE_ENV stays development and GROQ_API_KEY is unset → deterministic mocks.
+      - name: Run E2E suite
+        working-directory: backend
+        env:
+          NODE_ENV: development
+          CI: "true"
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: backend/playwright-report/
+          retention-days: 7
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: backend/test-results/
+          retention-days: 7

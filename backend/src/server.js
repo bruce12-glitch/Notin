@@ -25,6 +25,43 @@ const app = express();
 const PORT = Number(process.env.PORT || 5000);
 const origin = process.env.APP_ORIGIN || 'http://localhost:4173';
 const isProd = process.env.NODE_ENV === 'production';
+// WP-DEPLOY-001 — APP_ORIGIN may hold a comma-separated allowlist. The first
+// entry is the canonical origin returned to non-allowlisted callers.
+const allowList = origin.split(',').map((s) => s.trim()).filter(Boolean);
+
+// WP-DEPLOY-001 — fail-closed production boot. Dev/preview is untouched: this
+// returns immediately unless NODE_ENV === 'production'. Only variable NAMES and
+// reasons are printed — never a value, not even a prefix.
+const ENV_PLACEHOLDERS = new Set([
+  'change-me-access-32chars-minimum-replace-in-prod',
+  'change-me-refresh-32chars-minimum-replace-in-prod',
+  'change-me-pepper-32chars-minimum-replace',
+]);
+
+export function assertProductionEnv(env = process.env) {
+  if (env.NODE_ENV !== 'production') return [];
+  const failures = [];
+
+  for (const name of ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET', 'OTP_PEPPER', 'APP_ORIGIN']) {
+    const value = env[name];
+    if (!value || !String(value).trim()) {
+      failures.push(`${name} is not set`);
+      continue;
+    }
+    if (ENV_PLACEHOLDERS.has(String(value))) {
+      failures.push(`${name} is still the .env.example placeholder`);
+    }
+  }
+
+  const dbUrl = String(env.DATABASE_URL || '');
+  if (!dbUrl.trim()) {
+    failures.push('DATABASE_URL is not set');
+  } else if (!dbUrl.startsWith('postgresql://') && !dbUrl.startsWith('postgres://')) {
+    failures.push('DATABASE_URL must be a postgres:// URL in production');
+  }
+
+  return failures;
+}
 
 app.set('trust proxy', 1);
 
@@ -40,11 +77,16 @@ app.use((req, res, next) => {
   res.removeHeader('X-Frame-Options');
   res.setHeader('Content-Security-Policy', 'frame-ancestors *');
   const reqOrigin = req.headers.origin;
-  let allowOrigin = origin;
+  // WP-DEPLOY-001 — CORS lockdown. In production only APP_ORIGIN allowlist
+  // entries are echoed; everyone else gets the canonical origin back, never
+  // their own. Preview/localhost echo is now strictly non-production.
+  let allowOrigin = allowList[0] || origin;
   if (reqOrigin) {
-    const isPreview = reqOrigin.includes('.e2b.app') || reqOrigin.includes('localhost') || reqOrigin.includes('127.0.0.1') || reqOrigin.includes('.arena.ai') || reqOrigin.includes('.proxy.');
-    if (isPreview) allowOrigin = reqOrigin;
-    if (!isProd && !isPreview) allowOrigin = reqOrigin;
+    if (isProd) {
+      if (allowList.includes(reqOrigin)) allowOrigin = reqOrigin;
+    } else {
+      allowOrigin = reqOrigin;
+    }
   }
   res.setHeader('Access-Control-Allow-Origin', allowOrigin);
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -118,6 +160,14 @@ app.use((err, req, res, next) => {
 });
 
 const start = async () => {
+  // WP-DEPLOY-001 — gate before anything touches the database or a socket.
+  const envFailures = assertProductionEnv();
+  if (envFailures.length) {
+    for (const reason of envFailures) console.error(`FATAL: ${reason}`);
+    console.error(`Refusing to start in production with ${envFailures.length} invalid environment variable(s).`);
+    process.exit(1);
+  }
+
   try {
     await db.$connect();
     // Ensure sqlite fallback file exists logging
