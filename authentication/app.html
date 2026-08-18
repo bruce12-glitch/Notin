@@ -228,12 +228,19 @@
           <button type="button" class="app-ai-btn" id="summarizeBtn" hidden>✨ Summarize</button>
           <!-- WP-AI-003 — session-only chat with the open note -->
           <button type="button" class="app-ai-btn" id="askNoteBtn" hidden>Ask this note</button>
+          <!-- WP-AI-004 — writing assistant suggestions; Apply is always explicit -->
+          <button type="button" class="app-ai-btn" id="assistBtn" hidden>✍ Assist</button>
           <button type="button" class="app-share-btn" id="shareBtn" hidden>Share</button>
           <span class="app-save-status" id="saveStatus"></span>
           <button class="app-save" id="saveBtn" disabled>Save</button>
           <button class="app-btn-trash" id="trashBtn" hidden title="Move to Trash">Trash</button>
           <button class="app-btn-restore" id="restoreBtn" hidden>Restore</button>
           <button class="app-btn-delete" id="deleteBtn" hidden>Delete forever</button>
+        </div>
+        <div class="app-ai-assist-menu" id="assistMenu" hidden>
+          <button type="button" data-action="continue">Continue writing</button>
+          <button type="button" data-action="rephrase">Rephrase selection</button>
+          <button type="button" data-action="shorten">Shorten selection</button>
         </div>
       </div>
       <!-- WP-UI-NOTES-001 — empty state shown when no note is open -->
@@ -282,6 +289,17 @@
           <input id="aiChatInput" type="text" maxlength="500" autocomplete="off" placeholder="Ask about this note…" aria-label="Question">
           <button type="submit" id="aiChatSend">Send</button>
         </form>
+      </div>
+      <!-- WP-AI-004 — review writing suggestions before explicitly applying -->
+      <div class="app-ai-assist" id="aiAssistBar" hidden>
+        <div class="app-ai-assist-head">
+          <span id="aiAssistLabel">✍ AI suggestion</span>
+          <span class="app-ai-assist-actions">
+            <button type="button" id="aiAssistApply">Apply</button>
+            <button type="button" id="aiAssistDismiss">Dismiss</button>
+          </span>
+        </div>
+        <p id="aiAssistText"></p>
       </div>
       <!-- WP-APP-006 — note tags row (chips + add-tag picker) -->
       <div class="app-tag-row" id="tagRow" hidden>

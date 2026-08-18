@@ -31,3 +31,18 @@ export const MAX_CHAT_NOTE_CHARS = 6000;
 export const MAX_CHAT_QUESTION_CHARS = 500;
 export const MAX_CHAT_ANSWER_CHARS = 800;
 export const MAX_CHAT_HISTORY = 6; // client+server: last N {role,content} turns
+
+// WP-AI-004 — writing assistant
+export const ASSIST_ACTIONS = ['continue', 'rephrase', 'shorten'];
+export const ASSIST_SYSTEM = {
+  continue: 'You continue a note. Write 1 or 2 sentences that naturally continue the text. Match the tone. Plain prose, no headings, no preamble, do not repeat the note.',
+  rephrase: 'You rewrite text. Return a clearer rephrasing that keeps the exact same meaning and roughly the same length. Plain prose, no preamble.',
+  shorten: 'You shorten text. Return only the single most important point, at most half the original length. Plain prose, no preamble.',
+};
+export function assistUserPrompt(action, text) {
+  return `${action.toUpperCase()}:\n${text}`;
+}
+export const MAX_ASSIST_CONTEXT_CHARS = 3000; // continue: tail of the note
+export const MAX_ASSIST_INPUT_CHARS = 2000; // rephrase/shorten: selection
+export const MAX_ASSIST_OUTPUT_CHARS = 800;
+export const MIN_ASSIST_NOTE_CHARS = 40; // continue guard

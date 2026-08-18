@@ -18707,6 +18707,18 @@ var aiChatClose = document.getElementById("aiChatClose");
 var chatNoteId = null;
 var chatHistory = [];
 var chatInFlight = false;
+var assistBtn = document.getElementById("assistBtn");
+var assistMenu = document.getElementById("assistMenu");
+var aiAssistBar = document.getElementById("aiAssistBar");
+var aiAssistLabel = document.getElementById("aiAssistLabel");
+var aiAssistText = document.getElementById("aiAssistText");
+var aiAssistApply = document.getElementById("aiAssistApply");
+var aiAssistDismiss = document.getElementById("aiAssistDismiss");
+var assistAction = null;
+var assistRange = null;
+var assistInFlight = false;
+var assistSuggestion = "";
+var assistNoteId = null;
 var sharedNoteId = null;
 var attachmentRow = document.getElementById("attachmentRow");
 var attachImageBtn = document.getElementById("attachImageBtn");
@@ -19057,6 +19069,7 @@ async function maybeSuggestTitle(note) {
   hideAiTitle();
   hideAiTags();
   hideAiChat();
+  hideAiAssist();
   if (!note || note.isTrashed || offlineReadOnly) return;
   if (currentView !== "notes") return;
   if (titleSuggestedFor.has(note.id)) return;
@@ -19088,6 +19101,15 @@ function hideAiTags() {
   }
   if (aiTagChips) aiTagChips.innerHTML = "";
   aiTagNoteId = null;
+}
+function hideAiAssist() {
+  if (aiAssistBar) aiAssistBar.hidden = true;
+  if (assistMenu) assistMenu.hidden = true;
+  if (aiAssistText) aiAssistText.textContent = "";
+  assistAction = null;
+  assistRange = null;
+  assistSuggestion = "";
+  assistNoteId = null;
 }
 function hideAiChat() {
   if (aiChatPanel) aiChatPanel.hidden = true;
@@ -19126,6 +19148,7 @@ function syncAiChatForSelection(noteId) {
 async function maybeSuggestTags(note) {
   hideAiTags();
   hideAiChat();
+  hideAiAssist();
   if (!note || note.isTrashed || offlineReadOnly) return;
   if (currentView !== "notes" || tagsSuggestedFor.has(note.id)) return;
   const text = (note.contentText || note.description || "").trim();
@@ -19208,7 +19231,10 @@ if (aiTagChips) aiTagChips.addEventListener("click", async (event) => {
       renderTagChips(updated);
       chip.remove();
       aiTagBar?.suggestions?.delete(label);
-      if (!aiTagChips.querySelector(".app-ai-tag-chip")) hideAiTags();
+      if (!aiTagChips.querySelector(".app-ai-tag-chip")) {
+        hideAiTags();
+        hideAiAssist();
+      }
       setSaveStatus("Saved", "is-saved");
     }
     await loadTags();
@@ -19220,7 +19246,10 @@ if (aiTagChips) aiTagChips.addEventListener("click", async (event) => {
     }
   }
 });
-if (aiTagDismiss) aiTagDismiss.addEventListener("click", hideAiTags);
+if (aiTagDismiss) aiTagDismiss.addEventListener("click", () => {
+  hideAiTags();
+  hideAiAssist();
+});
 var APP_ROUTES = /* @__PURE__ */ new Set(["home", "notes", "shortcuts", "notebooks", "tags", "trash", "account"]);
 function routeFromHash() {
   const value = location.hash.replace(/^#\/?/, "").split("/")[0].toLowerCase();
@@ -19242,6 +19271,7 @@ function setViewChrome(view) {
   hideAiTitle();
   hideAiTags();
   hideAiChat();
+  hideAiAssist();
   const previousView = currentView;
   currentView = APP_ROUTES.has(view) ? view : "home";
   if (previousView !== currentView) listAnimateNext = true;
@@ -19778,6 +19808,7 @@ function updateEditorForSelection(note) {
   hideAiTitle();
   hideAiTags();
   hideAiChat();
+  hideAiAssist();
   syncAiChatForSelection(note ? note.id : null);
   if (note && (currentView === "notes" || currentView === "trash")) {
     renderAiSummary(note, "Saved summary \u2014 regenerate after edits.");
@@ -19797,6 +19828,7 @@ function updateEditorForSelection(note) {
   if (shareBtn) shareBtn.hidden = !hasSelection2 || isTrashed || readOnly;
   if (summarizeBtn) summarizeBtn.hidden = !hasSelection2 || isTrashed || readOnly;
   if (askNoteBtn) askNoteBtn.hidden = !hasSelection2 || isTrashed || readOnly;
+  if (assistBtn) assistBtn.hidden = !hasSelection2 || isTrashed || readOnly;
   if (sharePanel) {
     if (!hasSelection2 || isTrashed || readOnly) sharePanel.hidden = true;
     else if (sharedNoteId === note.id && shareLinkInput?.value) sharePanel.hidden = false;
@@ -19998,6 +20030,100 @@ if (aiChatForm) aiChatForm.addEventListener("submit", async (event) => {
     if (aiChatInput) aiChatInput.value = "";
   }
 });
+function setAssistControlsPending(pending) {
+  assistInFlight = pending;
+  if (assistBtn) {
+    assistBtn.disabled = pending;
+    assistBtn.textContent = pending ? "Working\u2026" : "\u270D Assist";
+  }
+  assistMenu?.querySelectorAll("button").forEach((button) => {
+    button.disabled = pending;
+  });
+  if (aiAssistApply) aiAssistApply.disabled = pending;
+  if (aiAssistDismiss) aiAssistDismiss.disabled = pending;
+}
+if (assistBtn) assistBtn.addEventListener("click", () => {
+  if (assistInFlight || !selectedId || !assistMenu) return;
+  assistMenu.hidden = !assistMenu.hidden;
+});
+if (assistMenu) assistMenu.addEventListener("click", async (event) => {
+  const control = event.target.closest("button[data-action]");
+  if (!control || !assistMenu.contains(control) || assistInFlight || !editor || !selectedId) return;
+  const action = control.dataset.action;
+  if (!["continue", "rephrase", "shorten"].includes(action)) return;
+  const noteId = selectedId;
+  const note = notes.find((item) => item.id === noteId);
+  if (!note || note.isTrashed || offlineReadOnly) return;
+  const selection = editor.state.selection;
+  const range = action === "continue" ? null : { from: selection.from, to: selection.to };
+  const selectedText = range ? editor.state.doc.textBetween(range.from, range.to, " ").trim() : "";
+  if (range && (!selectedText || range.from === range.to)) {
+    assistMenu.hidden = true;
+    setError("Select some text to use this action.");
+    return;
+  }
+  hideAiAssist();
+  assistAction = action;
+  assistRange = range;
+  assistNoteId = noteId;
+  setAssistControlsPending(true);
+  setError("");
+  try {
+    const body = action === "continue" ? { action } : { action, text: selectedText };
+    const res = await fetchWithAuth(`${API_BASE2}/api/notes/${noteId}/assist`, {
+      method: "POST",
+      body: JSON.stringify(body)
+    });
+    const payload = await res.json().catch(() => ({}));
+    if (res.status === 200) {
+      const suggestion = typeof payload.suggestion === "string" ? payload.suggestion.trim() : "";
+      if (!suggestion) {
+        setError("AI is busy right now \u2014 try again in a moment.");
+        hideAiAssist();
+        return;
+      }
+      if (selectedId !== noteId || assistNoteId !== noteId) return;
+      assistSuggestion = suggestion;
+      if (aiAssistLabel) aiAssistLabel.textContent = action === "continue" ? "\u270D Continue suggestion" : action === "rephrase" ? "\u270D Rephrase suggestion" : "\u270D Shorten suggestion";
+      if (aiAssistText) aiAssistText.textContent = suggestion;
+      if (aiAssistBar) aiAssistBar.hidden = false;
+      setError("");
+    } else if (res.status === 400) {
+      setError(payload.message || "Could not create a writing suggestion");
+      hideAiAssist();
+    } else if (res.status === 429) {
+      setError("AI rate limit reached \u2014 try again in a few minutes.");
+      hideAiAssist();
+    } else {
+      setError("AI is busy right now \u2014 try again in a moment.");
+      hideAiAssist();
+    }
+  } catch {
+    setError("AI is busy right now \u2014 try again in a moment.");
+    hideAiAssist();
+  } finally {
+    setAssistControlsPending(false);
+  }
+});
+if (aiAssistApply) aiAssistApply.addEventListener("click", () => {
+  if (!editor || !assistSuggestion || !assistAction || !assistNoteId) return;
+  if (selectedId !== assistNoteId) {
+    hideAiAssist();
+    return;
+  }
+  const currentSize = editor.state.doc.content.size;
+  if (assistRange && assistRange.to > currentSize) {
+    hideAiAssist();
+    return;
+  }
+  const suggestion = assistSuggestion;
+  const applied = assistAction === "continue" ? editor.chain().focus().insertContentAt(currentSize, suggestion).run() : editor.chain().focus().insertContentAt(assistRange, suggestion).run();
+  if (!applied) return;
+  onEdit();
+  hideAiAssist();
+  editor.commands.focus();
+});
+if (aiAssistDismiss) aiAssistDismiss.addEventListener("click", hideAiAssist);
 if (aiTitleApply) aiTitleApply.addEventListener("click", () => {
   if (!aiTitleNoteId || aiTitleNoteId !== selectedId || !titleInput) return;
   const suggested = aiTitleText ? aiTitleText.textContent.trim() : "";
@@ -20007,12 +20133,14 @@ if (aiTitleApply) aiTitleApply.addEventListener("click", () => {
   hideAiTitle();
   hideAiTags();
   hideAiChat();
+  hideAiAssist();
   titleInput.focus();
 });
 if (aiTitleDismiss) aiTitleDismiss.addEventListener("click", () => {
   hideAiTitle();
   hideAiTags();
   hideAiChat();
+  hideAiAssist();
 });
 if (copyShareBtn) copyShareBtn.addEventListener("click", async () => {
   const value = shareLinkInput?.value || "";
