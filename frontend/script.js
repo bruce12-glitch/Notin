@@ -23,6 +23,32 @@
 // Works on index.html and context.html (guards for missing elements)
 // ============================================================
 
+// WP-FUNNEL-001 — derive the app/auth origin for this environment.
+// Local dev: same host, port 5000. Arena preview: per-port hostnames share the
+// sandbox suffix, so swap the port prefix. Production: same origin.
+function notinAppOrigin(){
+  try{
+    const override = window.NOTIN_APP_ORIGIN;
+    if(override) return String(override).replace(/\/+$/, '');
+    const host = location.host;
+    const preview = host.match(/^\d+-(.+)$/);
+    if(preview) return `${location.protocol}//5000-${preview[1]}`;
+    if(/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host)) return `${location.protocol}//${location.hostname}:5000`;
+    return location.origin;
+  }catch{ return location.origin; }
+}
+
+// WP-FUNNEL-001 — resolve funnel CTAs at runtime (per-environment origin)
+document.addEventListener('DOMContentLoaded', () => {
+  const origin = notinAppOrigin();
+  const targets = { login: '/login.html', signup: '/', app: '/app.html' };
+  document.querySelectorAll('[data-cta]').forEach((el) => {
+    const kind = el.getAttribute('data-cta');
+    if(kind === 'contact'){ el.setAttribute('href', 'mailto:hello@notin.app'); return; }
+    if(targets[kind]) el.setAttribute('href', origin + targets[kind]);
+  });
+});
+
 // Navbar border on scroll
 const nav = document.getElementById('nav');
 if (nav) {
@@ -94,11 +120,11 @@ if (navToggle && mobilePanel) {
       }
     });
     const login = document.createElement('a');
-    login.href = '#';
+    login.href = notinAppOrigin() + '/login.html';
     login.textContent = 'Log in';
     login.className = 'mt-2 text-[15px] font-semibold text-text-secondary transition hover:text-brand-500';
     const cta = document.createElement('a');
-    cta.href = '#';
+    cta.href   = notinAppOrigin() + '/';
     cta.textContent = 'Start for free';
     cta.className = 'rounded-full bg-gradient-to-r from-brand-500 to-brand-400 px-5 py-2.5 text-center text-[15px] font-semibold text-[#2c2d2a] shadow-[0_8px_20px_rgba(255,125,66,0.35)]';
     mobilePanel.append(login, cta);
@@ -834,15 +860,10 @@ if (yearEl) yearEl.textContent = new Date().getFullYear();
   const api = window.NOTIN_AUTH_API || (location.protocol.startsWith('http') ? location.origin : 'http://localhost:8787');
   const modal = document.createElement('div'); modal.className='auth-modal'; modal.innerHTML=`<div class="auth-panel auth-3d" role="dialog" aria-modal="true" aria-labelledby="authTitle"><button class="auth-close" aria-label="Close">×</button><div class="auth-orbit"></div><p class="auth-kicker">SECURE ACCESS</p><h2 id="authTitle">Sign in to Notin</h2><p class="auth-copy">Continue with Google. We’ll send a one-time code to your verified Gmail.</p><button class="auth-google">Continue with Google</button><div class="auth-otp" hidden><label>Enter your 6-digit code<input inputmode="numeric" maxlength="6" autocomplete="one-time-code" class="auth-code"></label><button class="auth-verify">Verify code</button><button class="auth-resend">Resend code</button><p class="auth-status"></p></div></div>`; document.body.appendChild(modal);
   const open=()=>modal.classList.add('is-open'), close=()=>modal.classList.remove('is-open');
-  const authLabels = new Set(['log in', 'start for free', 'get notin free', 'try it free', 'get started', 'try pro free for 14 days']);
-  document.querySelectorAll('a').forEach((a) => {
-    if (authLabels.has(a.textContent.trim().toLowerCase())) {
-      a.addEventListener('click', (e) => { e.preventDefault(); open(); });
-    }
-  });
   modal.querySelector('.auth-close').onclick=close; modal.addEventListener('click',e=>{if(e.target===modal)close();});
   const status=modal.querySelector('.auth-status'); const otp=modal.querySelector('.auth-otp');
   modal.querySelector('.auth-google').onclick=()=>{ window.location.href=`${api}/auth/google`; };
   modal.querySelector('.auth-verify').onclick=async()=>{const challenge=new URLSearchParams(location.search).get('challenge'); const code=modal.querySelector('.auth-code').value; try{const r=await fetch(`${api}/auth/otp/verify`,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({challenge,code})});const d=await r.json();if(!r.ok)throw Error(d.error);sessionStorage.setItem('notin_access_token',d.accessToken);status.textContent='Signed in successfully.';setTimeout(close,900);}catch(e){status.textContent=e.message;}};
+  // ?auth=otp — auto-open OTP panel after Google redirect (do not bind other CTAs)
   if(new URLSearchParams(location.search).get('auth')==='otp'){open();otp.hidden=false;modal.querySelector('.auth-google').hidden=true;status.textContent='Code sent to your Gmail.';}
 })();
