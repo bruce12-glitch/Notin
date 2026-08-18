@@ -10,8 +10,8 @@
 
 | Field | Value |
 |---|---|
-| **Last Updated** | 2026-08-17 (WP-UI-NOTES-3D-001 implementation) |
-| **Current Phase** | Phase 2 (AI Layer) — WP-AI-001 + WP-AI-002 shipped; notes 3D polish complete on this branch |
+| **Last Updated** | 2026-08-18 (WP-AI-002b implementation) |
+| **Current Phase** | Phase 2 (AI Layer) — WP-AI-001 + WP-AI-002 shipped; WP-AI-002b smart tags complete on this branch |
 | **MVP Completion** | ~75% |
 | **Production readiness** | ~40% (deploy gates listed below) |
 
@@ -26,7 +26,7 @@
 | **Backend** | Node 22 + Express 4.21 ESM, unified on **port 5000** (`backend/src/server.js`) |
 | **Database** | PostgreSQL (`pg`) prod · `node:sqlite` dev fallback · migrations `backend/src/db/migrate.js` (WP-* steps, both dialects) |
 | **Auth** | Custom JWT (jose): 15-min access in memory + rotating httpOnly refresh cookie · bcrypt passwords · email OTP (demo `123456` when no SMTP) · Google OAuth stub |
-| **AI Layer** | ✅ **Phase 2 = 2/7.** WP-AI-001 shipped (`6cb4441`): `POST /api/notes/:id/summarize` + `Note.summary` + editor summary card. **WP-AI-002 shipped on `arena/019fecbf-notin`**: `POST /api/notes/:id/suggest-title` — server suggests (Groq/mock), NEVER writes the title; client applies via existing autosave; suggestion bar with Use/Dismiss; once-per-session guard; its own E2E (`ai-title-smoke`). Both CTO-verified live 2026-08-14. Next: WP-AI-002b (smart tags) |
+| **AI Layer** | ✅ **Phase 2 = 3/7.** WP-AI-001 summarizes notes; WP-AI-002 suggests titles; **WP-AI-002b** suggests 3–5 smart tags through Groq/mock while the server remains read-only and the client applies each accepted tag through the existing tag write paths. Dedicated request-only E2E coverage exists for all three features. Next: WP-FUNNEL-001, then WP-AI-003 chat. |
 | **Storage** | Local disk `backend/uploads/` (PNG/JPEG/WebP/GIF ≤5 MB × 10/note) |
 | **Search** | LIKE/ILIKE substring (`GET /api/notes?q=`), escaped wildcards, 100-row cap |
 | **E2E** | Playwright `backend/tests/e2e/mvp-smoke.spec.js` (3 scenarios incl. full UI journey) + API-level account test |
@@ -43,14 +43,15 @@
 - → **WP-UI-HOME-PIXEL-001 (PR #11, 2026-08-10):** post-auth Evernote-dark Home — exact 13-item sidebar IA, notes grid + scratch pad band, capture band, FAB, sidebar collapse, reload rehydration via refresh cookie — **E2E-locked** ✅
 - → **WP-UI-NOTES-001 (2026-08-13):** notes list + editor UX refresh — 2-line clamped snippets, tag chips + notebook pill in every row, hover-revealed pin control, green active-accent bar, larger 28px title, meta strip (edited time + live word count), floating toolbar pill, upgraded TipTap typography (code blocks, task-list strikethrough, blockquote, selection color), proper "no note open" empty state, styled scrollbars/sort control. SW cache bumped v4→v5 (also fixed the stale-PWA bug from PR #11). Landing/auth untouched ✅
 - → **WP-UI-NOTES-3D-001 (2026-08-17):** notes-app depth and motion polish — shared depth tokens, ≤300ms view/note transitions, context-only row stagger, delegated hover-only card tilt, button press physics, smooth scrolling, and CSS/JS reduced-motion guards. Bundle rebuilt; shell cache v7→v8. Landing/auth/backend untouched ✅
-- → PWA: manifest + shell-only service worker (`notin-shell-v8`) + icons ✅
+- → **WP-AI-002b (2026-08-18):** smart tag suggestions — authenticated, owner-scoped `POST /api/notes/:id/suggest-tags`; deterministic keyless mock plus Groq provider; 3–5 bounded suggestions mapped to existing tag IDs; server never creates or attaches tags; session-once editor chips apply only through `POST /api/tags` + `PUT {tagIds}` with duplicate-race recovery. Dedicated `ai-tags-smoke` E2E ✅
+- → PWA: manifest + shell-only service worker (`notin-shell-v9`) + icons ✅
 - → Marketing: Green/Neon editions, video/Lottie hero, responsive ✅
 
 ## IN PROGRESS
 
-- → **WP-UI-NOTES-3D-001** is implemented on `arena/01a01085-notin`; verification and PR handoff are the current task.
-- → Next, only after this WP merges: **WP-AI-002b — smart tag suggestions** (`CODING_AGENT_MASTER_PROMPT_WP-AI-002B.md`).
-- → Locked queue after WP-AI-002b: **WP-FUNNEL-001** → **WP-AI-003** → **WP-SCHEMA-001** → **WP-DEPLOY-001**.
+- → **WP-AI-002b** is implemented on `arena/01a01085-notin`; verification and PR handoff are the current task.
+- → Next, only after this WP merges: **WP-FUNNEL-001** (`CODING_AGENT_MASTER_PROMPT_WP-FUNNEL-001.md`).
+- → Locked queue after WP-FUNNEL-001: **WP-AI-003** → **WP-SCHEMA-001** → **WP-DEPLOY-001**.
 
 ## ARCHITECTURE DECISIONS LOCKED
 
@@ -63,7 +64,7 @@
 
 ## KNOWN TECHNICAL DEBT (priority order)
 
-- → ~~SW cache staleness BUG~~ **FIXED 2026-08-13** by WP-UI-NOTES-001; latest shell cache is `notin-shell-v8` after WP-UI-NOTES-3D-001. Rule going forward: ANY change to a shell asset (bundle, CSS, HTML) must bump `CACHE_NAME` in `authentication/sw.js`. **Resolved**
+- → ~~SW cache staleness BUG~~ **FIXED 2026-08-13** by WP-UI-NOTES-001; latest shell cache is `notin-shell-v9` after WP-AI-002b. Rule going forward: ANY change to a shell asset (bundle, CSS, HTML) must bump `CACHE_NAME` in `authentication/sw.js`. **Resolved**
 - → **Landing CTAs dead:** 26 × `href="#"` per edition (Log in / Start for free / Get started / pricing). Next instruction after WP-AI-001 (WP-FUNNEL-001). **High**
 - → `prisma/schema.prisma` drifts from migrate.js (missing Notebook/Tag/NoteTag/password_reset_tokens models; Note lacks isPinned/notebookId). Quick sync task. **Medium**
 - → Dev fallback JWT secrets (boot warning) + permissive non-prod CORS → **deploy-gate: fail closed** (see DEPLOY GATES). **Medium now / High at deploy**
@@ -82,6 +83,7 @@
 ## API ENDPOINTS BUILT
 
 - → Notes: `GET/POST /api/notes` · `GET/PUT/PATCH/DELETE /api/notes/:id` · `POST :id/trash` · `POST :id/restore` · `POST/DELETE :id/share` ✅
+- → AI: `POST /api/notes/:id/summarize` · `POST :id/suggest-title` · `POST :id/suggest-tags` ✅
 - → Public: `GET /api/public/share/:token(+/files/:id)` ✅
 - → `GET/POST/PATCH/DELETE /api/notebooks(/:id)` · `GET/POST/DELETE /api/tags(/:id)` ✅
 - → Attachments: `GET/POST /api/notes/:id/attachments` · `GET /api/attachments/:id/file` · `DELETE /api/attachments/:id` ✅
@@ -93,11 +95,10 @@
 
 - → `DATABASE_URL` (omit → SQLite) · `SQLITE_PATH` · `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` / `JWT_ISSUER` (+legacy `JWT_SECRET`) · `OTP_PEPPER` · `APP_ORIGIN` · `PORT` · `NODE_ENV` · `UPLOAD_DIR`
 - → Optional: `SENTRY_DSN`/`SENTRY_ENVIRONMENT` · `GOOGLE_CLIENT_ID`/`SECRET`/`REDIRECT_URI` · `SMTP_HOST/PORT/SECURE/USER/PASSWORD` + `MAIL_FROM` (unset ⇒ demo OTP + dev reset-token echo)
-- → **Planned: `GROQ_API_KEY`** (WP-AI-001; blank = deterministic mock mode)
+- → Optional: `GROQ_API_KEY` for live AI; blank keeps summarize/title/tag suggestions in deterministic mock mode
 
 ## CURRENT BLOCKERS
 
-- → No `GROQ_API_KEY`. Unblocks with key OR ships keyless via WP-AI-001 mock provider (recommended).
 - → Playwright Chromium unavailable in Arena sandboxes — full UI journey must run in CI or a dev machine (`cd backend && npm run test:e2e`).
 
 ## DEPLOY GATES (must pass before any real deployment — do not build now)
@@ -110,6 +111,6 @@
 
 ## NEXT 3 PRIORITIES
 
-1. **Merge WP-UI-NOTES-3D-001** from `arena/01a01085-notin` after its verification gates pass.
-2. **WP-AI-002b — smart tag suggestions** (`CODING_AGENT_MASTER_PROMPT_WP-AI-002B.md`): complete the note-level AI trio without changing the existing tag persistence path.
-3. **WP-FUNNEL-001** (`CODING_AGENT_MASTER_PROMPT_WP-FUNNEL-001.md`): wire the Green/Neon landing CTAs to the real auth/app journey, then proceed to WP-AI-003.
+1. **Merge WP-AI-002b** from `arena/01a01085-notin` after its verification gates pass.
+2. **WP-FUNNEL-001** (`CODING_AGENT_MASTER_PROMPT_WP-FUNNEL-001.md`): wire the Green/Neon landing CTAs to the real auth/app journey.
+3. **WP-AI-003 — chat with note:** session-only, non-streaming Q&A against the open note, with deterministic mock support.

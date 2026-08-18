@@ -18692,6 +18692,11 @@ var aiTitleApply = document.getElementById("aiTitleApply");
 var aiTitleDismiss = document.getElementById("aiTitleDismiss");
 var aiTitleNoteId = null;
 var titleSuggestedFor = /* @__PURE__ */ new Set();
+var aiTagBar = document.getElementById("aiTagBar");
+var aiTagChips = document.getElementById("aiTagChips");
+var aiTagDismiss = document.getElementById("aiTagDismiss");
+var aiTagNoteId = null;
+var tagsSuggestedFor = /* @__PURE__ */ new Set();
 var sharedNoteId = null;
 var attachmentRow = document.getElementById("attachmentRow");
 var attachImageBtn = document.getElementById("attachImageBtn");
@@ -19040,6 +19045,7 @@ function hideAiTitle() {
 }
 async function maybeSuggestTitle(note) {
   hideAiTitle();
+  hideAiTags();
   if (!note || note.isTrashed || offlineReadOnly) return;
   if (currentView !== "notes") return;
   if (titleSuggestedFor.has(note.id)) return;
@@ -19064,6 +19070,111 @@ async function maybeSuggestTitle(note) {
   } catch {
   }
 }
+function hideAiTags() {
+  if (aiTagBar) {
+    aiTagBar.hidden = true;
+    aiTagBar.suggestions = /* @__PURE__ */ new Map();
+  }
+  if (aiTagChips) aiTagChips.innerHTML = "";
+  aiTagNoteId = null;
+}
+async function maybeSuggestTags(note) {
+  hideAiTags();
+  if (!note || note.isTrashed || offlineReadOnly) return;
+  if (currentView !== "notes" || tagsSuggestedFor.has(note.id)) return;
+  const text = (note.contentText || note.description || "").trim();
+  if (text.length < 100 || (note.tags || []).length >= 3) return;
+  tagsSuggestedFor.add(note.id);
+  try {
+    const res = await fetchWithAuth(`${API_BASE2}/api/notes/${note.id}/suggest-tags`, { method: "POST" });
+    if (res.status !== 200) return;
+    const payload = await res.json().catch(() => ({}));
+    if (selectedId !== note.id || !Array.isArray(payload.tags)) return;
+    const suggestions = /* @__PURE__ */ new Map();
+    if (aiTagChips) aiTagChips.innerHTML = "";
+    for (const item of payload.tags) {
+      const name = typeof item?.name === "string" ? item.name.trim() : "";
+      if (!name || suggestions.has(name)) continue;
+      const suggestion = { name, existing: typeof item.existing === "string" ? item.existing : null };
+      suggestions.set(name, suggestion);
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "app-ai-tag-chip";
+      chip.dataset.tagName = name;
+      chip.dataset.existing = suggestion.existing || "";
+      chip.textContent = name;
+      aiTagChips?.appendChild(chip);
+    }
+    if (!suggestions.size || selectedId !== note.id) return;
+    if (aiTagBar) {
+      aiTagBar.suggestions = suggestions;
+      aiTagBar.hidden = false;
+    }
+    aiTagNoteId = note.id;
+  } catch {
+  }
+}
+if (aiTagChips) aiTagChips.addEventListener("click", async (event) => {
+  const chip = event.target.closest(".app-ai-tag-chip");
+  if (!chip || !aiTagChips.contains(chip) || !aiTagNoteId) return;
+  const suggestion = aiTagBar?.suggestions instanceof Map ? aiTagBar.suggestions.get(chip.dataset.tagName) : null;
+  const noteId = aiTagNoteId;
+  const note = notes.find((item) => item.id === noteId);
+  if (!suggestion || !note || selectedId !== noteId || note.isTrashed || offlineReadOnly) return;
+  const label = suggestion.name;
+  chip.disabled = true;
+  chip.textContent = "Adding\u2026";
+  setError("");
+  try {
+    let tagId = suggestion.existing;
+    if (!tagId) {
+      const createRes = await fetchWithAuth(`${API_BASE2}/api/tags`, {
+        method: "POST",
+        body: JSON.stringify({ name: label })
+      });
+      if (createRes.status === 201) {
+        const created = await createRes.json();
+        tagId = created.id;
+      } else if (createRes.status === 409) {
+        const tagsRes = await fetchWithAuth(`${API_BASE2}/api/tags`, { method: "GET" });
+        const latestTags = await tagsRes.json().catch(() => []);
+        if (!tagsRes.ok) throw new Error(tagsRes.status === 429 ? "AI rate limit reached \u2014 try again in a few minutes." : "Could not refresh tags");
+        tagId = latestTags.find((tag) => String(tag.name).toLowerCase() === label.toLowerCase())?.id || null;
+        if (!tagId) throw new Error("Could not find that tag");
+      } else {
+        const payload = await createRes.json().catch(() => ({}));
+        throw new Error(createRes.status === 429 ? "AI rate limit reached \u2014 try again in a few minutes." : payload.message || "Could not create tag");
+      }
+    }
+    const currentIds = (note.tags || []).map((tag) => tag.id);
+    const newIds = [.../* @__PURE__ */ new Set([...currentIds, tagId])];
+    const applyRes = await fetchWithAuth(`${API_BASE2}/api/notes/${noteId}`, {
+      method: "PUT",
+      body: JSON.stringify({ tagIds: newIds })
+    });
+    const updated = await applyRes.json().catch(() => ({}));
+    if (!applyRes.ok) {
+      throw new Error(applyRes.status === 429 ? "AI rate limit reached \u2014 try again in a few minutes." : updated.message || "Could not add tag");
+    }
+    const index = notes.findIndex((item) => item.id === noteId);
+    if (index >= 0) notes[index] = updated;
+    if (selectedId === noteId && aiTagNoteId === noteId) {
+      renderTagChips(updated);
+      chip.remove();
+      aiTagBar?.suggestions?.delete(label);
+      if (!aiTagChips.querySelector(".app-ai-tag-chip")) hideAiTags();
+      setSaveStatus("Saved", "is-saved");
+    }
+    await loadTags();
+  } catch (error) {
+    setError(error.message || "Could not add suggested tag");
+    if (chip.isConnected) {
+      chip.disabled = false;
+      chip.textContent = label;
+    }
+  }
+});
+if (aiTagDismiss) aiTagDismiss.addEventListener("click", hideAiTags);
 var APP_ROUTES = /* @__PURE__ */ new Set(["home", "notes", "shortcuts", "notebooks", "tags", "trash", "account"]);
 function routeFromHash() {
   const value = location.hash.replace(/^#\/?/, "").split("/")[0].toLowerCase();
@@ -19083,6 +19194,7 @@ function closeMobileSidebar() {
 function setViewChrome(view) {
   hideAiSummary();
   hideAiTitle();
+  hideAiTags();
   const previousView = currentView;
   currentView = APP_ROUTES.has(view) ? view : "home";
   if (previousView !== currentView) listAnimateNext = true;
@@ -19617,10 +19729,12 @@ function updateEditorForSelection(note) {
   const readOnly = offlineReadOnly;
   hideAiSummary();
   hideAiTitle();
+  hideAiTags();
   if (note && (currentView === "notes" || currentView === "trash")) {
     renderAiSummary(note, "Saved summary \u2014 regenerate after edits.");
   }
   if (note && currentView === "notes") maybeSuggestTitle(note);
+  if (note && currentView === "notes") maybeSuggestTags(note);
   updateEditorDisabled(!hasSelection2 || isTrashed || readOnly);
   if (nbSelect) {
     nbSelect.disabled = !hasSelection2 || isTrashed || readOnly;
@@ -19788,9 +19902,13 @@ if (aiTitleApply) aiTitleApply.addEventListener("click", () => {
   titleInput.value = suggested;
   onEdit();
   hideAiTitle();
+  hideAiTags();
   titleInput.focus();
 });
-if (aiTitleDismiss) aiTitleDismiss.addEventListener("click", () => hideAiTitle());
+if (aiTitleDismiss) aiTitleDismiss.addEventListener("click", () => {
+  hideAiTitle();
+  hideAiTags();
+});
 if (copyShareBtn) copyShareBtn.addEventListener("click", async () => {
   const value = shareLinkInput?.value || "";
   if (!value) return;

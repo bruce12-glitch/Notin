@@ -263,6 +263,12 @@
           <button type="button" id="aiTitleDismiss">Dismiss</button>
         </span>
       </div>
+      <!-- WP-AI-002b — AI tag suggestions (each chip applies via the existing tag write path) -->
+      <div class="app-ai-tags" id="aiTagBar" hidden>
+        <span class="app-ai-tags-label">✨ Suggested tags:</span>
+        <span class="app-ai-tags-chips" id="aiTagChips"></span>
+        <button type="button" class="app-ai-tags-dismiss" id="aiTagDismiss" aria-label="Dismiss tag suggestions">×</button>
+      </div>
       <!-- WP-APP-006 — note tags row (chips + add-tag picker) -->
       <div class="app-tag-row" id="tagRow" hidden>
         <div class="app-tag-chips" id="tagChips"></div>

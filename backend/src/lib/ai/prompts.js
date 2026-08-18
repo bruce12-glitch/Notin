@@ -11,3 +11,13 @@ export const TITLE_SYSTEM = 'You title notes. Reply with exactly one title: a si
 export function titleUserPrompt(text) { return `Give this note a title:\n\n${text}`; }
 export const MAX_TITLE_INPUT_CHARS = 500;
 export const MAX_TITLE_LEN = 60;
+
+// WP-AI-002b — smart tag suggestions
+export const TAGS_SYSTEM = 'You suggest tags for notes. Reply with ONLY a JSON array of 3 to 5 tags. Each tag is a short lowercase phrase, at most 25 characters, no leading #. Example: ["meeting notes","ideas","q3 planning"]';
+export function tagsUserPrompt(text, existingTags) {
+  const existing = existingTags.length ? `The user already uses these tags: ${existingTags.join(', ')}. Reuse relevant ones and add complementary ones.\n\n` : '';
+  return `${existing}Suggest tags for this note:\n\n${text}`;
+}
+export const MAX_TAGS_INPUT_CHARS = 3000;
+export const MAX_TAGS_COUNT = 5;
+export const MAX_TAG_LEN = 25;

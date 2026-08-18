@@ -651,6 +651,16 @@ body.sidebar-collapsed .app-btn-logout::before{content:"⏻";font-size:15px}
 .app-ai-title-actions #aiTitleDismiss:hover{border-color:#666;color:#ddd}
 @media (max-width:560px){.app-ai-title{flex-wrap:wrap}}
 
+/* WP-AI-002b — smart tag suggestions */
+.app-ai-tags{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 18px 10px;padding:9px 12px;border:1px solid #3a4632;border-radius:10px;background:#1f261a;color:#d9e7cf;font-size:12.5px}
+.app-ai-tags-label{color:var(--env-green);font-weight:700;flex:none}
+.app-ai-tags-chips{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:0}
+.app-ai-tag-chip{border:1px solid #3f4a3a;border-radius:999px;background:#242c20;color:#c9d9b8;padding:4px 11px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:border-color .14s,color .14s}
+.app-ai-tag-chip:hover{border-color:var(--env-green);color:var(--env-green)}
+.app-ai-tag-chip:disabled{opacity:.5;cursor:wait}
+.app-ai-tags-dismiss{border:0;background:transparent;color:#9bad91;font-size:18px;line-height:1;cursor:pointer;padding:0 2px}
+.app-ai-tags-dismiss:hover{color:#fff}
+
 /* ============================================================
    WP-UI-NOTES-3D-001 — smooth, restrained depth + motion
    ============================================================ */
