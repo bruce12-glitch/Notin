@@ -113,6 +113,19 @@ const aiChatClose = document.getElementById('aiChatClose');
 let chatNoteId = null;
 let chatHistory = []; // [{role,content}] — in-memory only, cleared on note change/reload
 let chatInFlight = false;
+// WP-AI-004 — writing assistant (pending suggestions live in memory only)
+const assistBtn = document.getElementById('assistBtn');
+const assistMenu = document.getElementById('assistMenu');
+const aiAssistBar = document.getElementById('aiAssistBar');
+const aiAssistLabel = document.getElementById('aiAssistLabel');
+const aiAssistText = document.getElementById('aiAssistText');
+const aiAssistApply = document.getElementById('aiAssistApply');
+const aiAssistDismiss = document.getElementById('aiAssistDismiss');
+let assistAction = null;
+let assistRange = null;
+let assistInFlight = false;
+let assistSuggestion = '';
+let assistNoteId = null;
 let sharedNoteId = null;
 // WP-APP-008 — image attachments
 const attachmentRow = document.getElementById('attachmentRow');
@@ -456,6 +469,7 @@ async function maybeSuggestTitle(note){
   hideAiTitle();
   hideAiTags();
   hideAiChat(); // WP-AI-003
+  hideAiAssist(); // WP-AI-004
   if(!note || note.isTrashed || offlineReadOnly) return;
   if(currentView !== 'notes') return;
   if(titleSuggestedFor.has(note.id)) return;
@@ -488,6 +502,16 @@ function hideAiTags(){
   }
   if(aiTagChips) aiTagChips.innerHTML = '';
   aiTagNoteId = null;
+}
+// WP-AI-004 — discard only the pending suggestion; editor content is untouched.
+function hideAiAssist(){
+  if(aiAssistBar) aiAssistBar.hidden = true;
+  if(assistMenu) assistMenu.hidden = true;
+  if(aiAssistText) aiAssistText.textContent = '';
+  assistAction = null;
+  assistRange = null;
+  assistSuggestion = '';
+  assistNoteId = null;
 }
 // WP-AI-003 — chat panel lifecycle. Hiding never persists or uploads anything;
 // the transcript only survives while the same note stays selected.
@@ -530,6 +554,7 @@ function syncAiChatForSelection(noteId){
 async function maybeSuggestTags(note){
   hideAiTags();
   hideAiChat(); // WP-AI-003
+  hideAiAssist(); // WP-AI-004
   if(!note || note.isTrashed || offlineReadOnly) return;
   if(currentView !== 'notes' || tagsSuggestedFor.has(note.id)) return;
   const text = (note.contentText || note.description || '').trim();
@@ -618,7 +643,10 @@ if(aiTagChips) aiTagChips.addEventListener('click', async (event)=>{
       renderTagChips(updated);
       chip.remove();
       aiTagBar?.suggestions?.delete(label);
-      if(!aiTagChips.querySelector('.app-ai-tag-chip')) hideAiTags();
+      if(!aiTagChips.querySelector('.app-ai-tag-chip')){
+        hideAiTags();
+        hideAiAssist(); // WP-AI-004
+      }
       setSaveStatus('Saved', 'is-saved');
     }
     await loadTags();
@@ -627,7 +655,7 @@ if(aiTagChips) aiTagChips.addEventListener('click', async (event)=>{
     if(chip.isConnected){ chip.disabled = false; chip.textContent = label; }
   }
 });
-if(aiTagDismiss) aiTagDismiss.addEventListener('click', hideAiTags);
+if(aiTagDismiss) aiTagDismiss.addEventListener('click', ()=>{ hideAiTags(); hideAiAssist(); });
 
 // ── WP-UI-HOME-001 — authenticated view router + Home dashboard ──
 const APP_ROUTES = new Set(['home','notes','shortcuts','notebooks','tags','trash','account']);
@@ -651,6 +679,7 @@ function setViewChrome(view){
   hideAiTitle(); // WP-AI-002
   hideAiTags(); // WP-AI-002b
   hideAiChat(); // WP-AI-003
+  hideAiAssist(); // WP-AI-004
   const previousView = currentView;
   currentView = APP_ROUTES.has(view) ? view : 'home';
   if(previousView !== currentView) listAnimateNext = true; // WP-UI-NOTES-3D-001
@@ -1135,6 +1164,7 @@ function updateEditorForSelection(note){
   hideAiTitle(); // WP-AI-002 — reset on every selection change
   hideAiTags(); // WP-AI-002b — reset on every selection change
   hideAiChat(); // WP-AI-003 — reset on every selection change
+  hideAiAssist(); // WP-AI-004 — reset on every selection change
   syncAiChatForSelection(note ? note.id : null); // drops the transcript when the note changes
   if(note && (currentView === 'notes' || currentView === 'trash')) {
     renderAiSummary(note, 'Saved summary — regenerate after edits.');
@@ -1156,6 +1186,7 @@ function updateEditorForSelection(note){
   if(shareBtn) shareBtn.hidden = !hasSelection || isTrashed || readOnly;
   if(summarizeBtn) summarizeBtn.hidden = !hasSelection || isTrashed || readOnly;
   if(askNoteBtn) askNoteBtn.hidden = !hasSelection || isTrashed || readOnly; // WP-AI-003
+  if(assistBtn) assistBtn.hidden = !hasSelection || isTrashed || readOnly; // WP-AI-004
   if(sharePanel){
     if(!hasSelection || isTrashed || readOnly) sharePanel.hidden = true;
     else if(sharedNoteId===note.id && shareLinkInput?.value) sharePanel.hidden = false;
@@ -1356,6 +1387,105 @@ if(aiChatForm) aiChatForm.addEventListener('submit', async (event)=>{
     if(aiChatInput) aiChatInput.value = '';
   }
 });
+
+// ── WP-AI-004 — non-streaming writing assistant. The endpoint only suggests;
+// editor mutation happens here, and only after an explicit Apply click.
+function setAssistControlsPending(pending){
+  assistInFlight = pending;
+  if(assistBtn){
+    assistBtn.disabled = pending;
+    assistBtn.textContent = pending ? 'Working…' : '✍ Assist';
+  }
+  assistMenu?.querySelectorAll('button').forEach(button=>{ button.disabled = pending; });
+  if(aiAssistApply) aiAssistApply.disabled = pending;
+  if(aiAssistDismiss) aiAssistDismiss.disabled = pending;
+}
+if(assistBtn) assistBtn.addEventListener('click', ()=>{
+  if(assistInFlight || !selectedId || !assistMenu) return;
+  assistMenu.hidden = !assistMenu.hidden;
+});
+if(assistMenu) assistMenu.addEventListener('click', async (event)=>{
+  const control = event.target.closest('button[data-action]');
+  if(!control || !assistMenu.contains(control) || assistInFlight || !editor || !selectedId) return;
+  const action = control.dataset.action;
+  if(!['continue','rephrase','shorten'].includes(action)) return;
+  const noteId = selectedId;
+  const note = notes.find(item=>item.id===noteId);
+  if(!note || note.isTrashed || offlineReadOnly) return;
+
+  const selection = editor.state.selection;
+  const range = action === 'continue' ? null : { from:selection.from, to:selection.to };
+  const selectedText = range ? editor.state.doc.textBetween(range.from, range.to, ' ').trim() : '';
+  if(range && (!selectedText || range.from === range.to)){
+    assistMenu.hidden = true;
+    setError('Select some text to use this action.');
+    return;
+  }
+
+  hideAiAssist();
+  assistAction = action;
+  assistRange = range;
+  assistNoteId = noteId;
+  setAssistControlsPending(true);
+  setError('');
+  try{
+    const body = action === 'continue' ? { action } : { action, text:selectedText };
+    const res = await fetchWithAuth(`${API_BASE}/api/notes/${noteId}/assist`, {
+      method:'POST',
+      body:JSON.stringify(body),
+    });
+    const payload = await res.json().catch(()=>({}));
+    if(res.status === 200){
+      const suggestion = typeof payload.suggestion === 'string' ? payload.suggestion.trim() : '';
+      if(!suggestion){
+        setError('AI is busy right now — try again in a moment.');
+        hideAiAssist();
+        return;
+      }
+      // A view/note change clears assistNoteId, preventing stale responses from resurfacing.
+      if(selectedId !== noteId || assistNoteId !== noteId) return;
+      assistSuggestion = suggestion;
+      if(aiAssistLabel) aiAssistLabel.textContent = action === 'continue'
+        ? '✍ Continue suggestion'
+        : action === 'rephrase'
+          ? '✍ Rephrase suggestion'
+          : '✍ Shorten suggestion';
+      if(aiAssistText) aiAssistText.textContent = suggestion; // plain text, never innerHTML
+      if(aiAssistBar) aiAssistBar.hidden = false;
+      setError('');
+    }else if(res.status === 400){
+      setError(payload.message || 'Could not create a writing suggestion');
+      hideAiAssist();
+    }else if(res.status === 429){
+      setError('AI rate limit reached — try again in a few minutes.');
+      hideAiAssist();
+    }else{
+      setError('AI is busy right now — try again in a moment.');
+      hideAiAssist();
+    }
+  }catch{
+    setError('AI is busy right now — try again in a moment.');
+    hideAiAssist();
+  }finally{
+    setAssistControlsPending(false);
+  }
+});
+if(aiAssistApply) aiAssistApply.addEventListener('click', ()=>{
+  if(!editor || !assistSuggestion || !assistAction || !assistNoteId) return;
+  if(selectedId !== assistNoteId){ hideAiAssist(); return; }
+  const currentSize = editor.state.doc.content.size;
+  if(assistRange && assistRange.to > currentSize){ hideAiAssist(); return; }
+  const suggestion = assistSuggestion;
+  const applied = assistAction === 'continue'
+    ? editor.chain().focus().insertContentAt(currentSize, suggestion).run()
+    : editor.chain().focus().insertContentAt(assistRange, suggestion).run();
+  if(!applied) return;
+  onEdit(); // existing 900 ms autosave is the only persistence path
+  hideAiAssist();
+  editor.commands.focus();
+});
+if(aiAssistDismiss) aiAssistDismiss.addEventListener('click', hideAiAssist);
+
 // WP-AI-002 — apply/dismiss the suggested title. Applying goes through the
 // normal edit path (title input + onEdit → 900ms autosave), so the server's
 // suggestion only ever persists with explicit user consent.
@@ -1368,9 +1498,10 @@ if(aiTitleApply) aiTitleApply.addEventListener('click', ()=>{
   hideAiTitle();
   hideAiTags();
   hideAiChat(); // WP-AI-003
+  hideAiAssist(); // WP-AI-004
   titleInput.focus();
 });
-if(aiTitleDismiss) aiTitleDismiss.addEventListener('click', ()=>{ hideAiTitle(); hideAiTags(); hideAiChat(); });
+if(aiTitleDismiss) aiTitleDismiss.addEventListener('click', ()=>{ hideAiTitle(); hideAiTags(); hideAiChat(); hideAiAssist(); });
 if(copyShareBtn) copyShareBtn.addEventListener('click', async ()=>{
   const value = shareLinkInput?.value || '';
   if(!value) return;

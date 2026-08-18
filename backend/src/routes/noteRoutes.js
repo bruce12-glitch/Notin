@@ -10,7 +10,13 @@ import {
 } from '../controllers/noteController.js';
 import auth from '../middleware/auth.js';
 import { createShare, revokeShare } from '../controllers/shareController.js';
-import { summarizeNote, suggestNoteTitle, suggestNoteTags, chatWithNoteController } from '../controllers/aiController.js';
+import {
+  summarizeNote,
+  suggestNoteTitle,
+  suggestNoteTags,
+  chatWithNoteController,
+  assistNoteController,
+} from '../controllers/aiController.js';
 
 const router = express.Router();
 
@@ -36,6 +42,9 @@ router.post('/:id/suggest-tags', tagsLimit, suggestNoteTags);
 // WP-AI-003 — chat with the open note (non-streaming; nothing is persisted)
 const chatLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false });
 router.post('/:id/chat', chatLimit, chatWithNoteController);
+// WP-AI-004 — writing assistant (suggestion only; client applies explicitly)
+const assistLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 5, standardHeaders: true, legacyHeaders: false });
+router.post('/:id/assist', assistLimit, assistNoteController);
 // Read-only secret share links (owner only; POST rotates, DELETE revokes)
 router.post('/:id/share', createShare);
 router.delete('/:id/share', revokeShare);

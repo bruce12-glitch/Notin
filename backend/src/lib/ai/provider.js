@@ -17,6 +17,11 @@ import {
   MAX_CHAT_QUESTION_CHARS,
   MAX_CHAT_ANSWER_CHARS,
   MAX_CHAT_HISTORY,
+  ASSIST_SYSTEM,
+  assistUserPrompt,
+  MAX_ASSIST_CONTEXT_CHARS,
+  MAX_ASSIST_INPUT_CHARS,
+  MAX_ASSIST_OUTPUT_CHARS,
 } from './prompts.js';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -351,4 +356,76 @@ export async function chatWithNote(noteText, question, history = []) {
 
   console.log(`[AI] chat via ${provider}`);
   return { answer, provider };
+}
+
+// ── WP-AI-004 — writing assistant (suggestion only; never writes the note) ──
+function assistSentences(input) {
+  const sentences = (String(input).match(/[^.!?]+[.!?]+/g) || [])
+    .map((sentence) => sentence.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+  return sentences.length ? sentences : [String(input).replace(/\s+/g, ' ').trim()];
+}
+
+function mockAssist(action, input) {
+  const sentences = assistSentences(input);
+  if (action === 'continue') {
+    const tail = sentences.at(-1).slice(0, 80).trim();
+    return `Next step: revisit "${tail}" and turn it into one concrete, dated action.`;
+  }
+  if (action === 'rephrase') return [...sentences].reverse().join(' ');
+  const normalized = String(input).replace(/\s+/g, ' ').trim();
+  const maxLength = Math.max(1, Math.floor(normalized.length / 2));
+  return sentences[0].slice(0, maxLength).trim();
+}
+
+async function assistWithGroq(action, input, apiKey) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(GROQ_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        temperature: action === 'continue' ? 0.4 : 0.2,
+        max_tokens: 300,
+        messages: [
+          { role: 'system', content: ASSIST_SYSTEM[action] },
+          { role: 'user', content: assistUserPrompt(action, input) },
+        ],
+      }),
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error('AI_PROVIDER_ERROR');
+    const payload = await response.json();
+    const suggestion = payload?.choices?.[0]?.message?.content?.trim();
+    if (!suggestion) throw new Error('AI_PROVIDER_ERROR');
+    return suggestion.slice(0, MAX_ASSIST_OUTPUT_CHARS);
+  } catch (error) {
+    if (error?.message === 'AI_PROVIDER_ERROR') throw error;
+    throw new Error('AI_PROVIDER_ERROR');
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function assistWrite(action, text) {
+  const maxChars = action === 'continue' ? MAX_ASSIST_CONTEXT_CHARS : MAX_ASSIST_INPUT_CHARS;
+  const input = String(text ?? '').trim().slice(0, maxChars);
+  let provider;
+  let suggestion;
+
+  if (process.env.GROQ_API_KEY) {
+    provider = 'groq';
+    suggestion = await assistWithGroq(action, input, process.env.GROQ_API_KEY);
+  } else {
+    provider = 'mock';
+    suggestion = mockAssist(action, input).slice(0, MAX_ASSIST_OUTPUT_CHARS);
+  }
+
+  console.log(`[AI] assist via ${provider}`);
+  return { suggestion, provider };
 }

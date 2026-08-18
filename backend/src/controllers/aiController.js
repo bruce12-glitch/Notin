@@ -1,6 +1,12 @@
 import db from '../config/db.js';
-import { summarizeText, suggestTitle, suggestTags, chatWithNote } from '../lib/ai/provider.js';
-import { MAX_CHAT_QUESTION_CHARS } from '../lib/ai/prompts.js';
+import { summarizeText, suggestTitle, suggestTags, chatWithNote, assistWrite } from '../lib/ai/provider.js';
+import {
+  MAX_CHAT_QUESTION_CHARS,
+  ASSIST_ACTIONS,
+  MAX_ASSIST_CONTEXT_CHARS,
+  MAX_ASSIST_INPUT_CHARS,
+  MIN_ASSIST_NOTE_CHARS,
+} from '../lib/ai/prompts.js';
 
 function isTrashed(value) {
   return value === true || value === 1 || value === '1' || value === 't' || value === 'true';
@@ -155,5 +161,51 @@ export async function chatWithNoteController(req, res) {
     }
     console.error(error);
     return res.status(500).json({ message: 'Could not answer that question' });
+  }
+}
+
+// ── WP-AI-004 — writing assistant (suggestion only; server never writes) ─────
+export async function assistNoteController(req, res) {
+  try {
+    const { rows } = await db.query(
+      `SELECT id, title, "contentText", description, "isTrashed" FROM "Note" WHERE id = $1 AND "userId" = $2 LIMIT 1`,
+      [req.params.id, req.userId],
+    );
+    const note = rows[0];
+    if (!note) return res.status(404).json({ message: 'Note not found' });
+    if (isTrashed(note.isTrashed)) return res.status(400).json({ message: 'Restore the note before using AI' });
+
+    const action = req.body?.action;
+    if (!ASSIST_ACTIONS.includes(action)) {
+      return res.status(400).json({ message: 'Unknown assist action' });
+    }
+
+    let sourceText;
+    if (action === 'continue') {
+      const contentText = typeof note.contentText === 'string' ? note.contentText : '';
+      const description = typeof note.description === 'string' ? note.description : '';
+      const noteText = (contentText.trim() ? contentText : description).trim();
+      if (noteText.length < MIN_ASSIST_NOTE_CHARS) {
+        return res.status(400).json({ message: 'Note is too short to continue (needs at least 40 characters)' });
+      }
+      sourceText = noteText.slice(-MAX_ASSIST_CONTEXT_CHARS);
+    } else {
+      const selection = typeof req.body?.text === 'string' ? req.body.text.trim() : '';
+      if (!selection || selection.length > MAX_ASSIST_INPUT_CHARS) {
+        return res.status(400).json({ message: 'Select some text first (1–2000 characters)' });
+      }
+      sourceText = selection;
+    }
+
+    // Deliberate: no UPDATE. The client may apply the suggestion through the
+    // editor's existing consent + autosave path.
+    const { suggestion, provider } = await assistWrite(action, sourceText);
+    return res.status(200).json({ suggestion, action, provider });
+  } catch (error) {
+    if (error?.message === 'AI_PROVIDER_ERROR') {
+      return res.status(503).json({ message: 'AI is busy right now — try again in a moment' });
+    }
+    console.error(error);
+    return res.status(500).json({ message: 'Could not assist with that text' });
   }
 }

@@ -722,6 +722,22 @@ body.sidebar-collapsed .app-btn-logout::before{content:"⏻";font-size:15px}
 .app-ai-chat-form button:hover{border-color:var(--env-green);color:var(--env-green)}
 .app-ai-chat-form button:disabled{opacity:.6;cursor:wait}
 
+/* WP-AI-004 — compact writing-assistant menu and explicit review/apply bar. */
+.app-editor-header{position:relative}
+.app-ai-assist-menu{position:absolute;z-index:20;right:18px;top:calc(100% - 7px);width:190px;padding:6px;border:1px solid #46543b;border-radius:10px;background:#1b2118;box-shadow:0 12px 30px rgba(0,0,0,.34)}
+.app-ai-assist-menu button{display:block;width:100%;border:0;border-radius:7px;background:transparent;color:#d9e7cf;padding:8px 10px;text-align:left;font:600 12px/1.2 "Inter",sans-serif;cursor:pointer}
+.app-ai-assist-menu button:hover,.app-ai-assist-menu button:focus-visible{outline:0;background:#2a3324;color:var(--env-green)}
+.app-ai-assist-menu button:disabled{opacity:.5;cursor:wait}
+.app-ai-assist{margin:0 18px 10px;padding:11px 13px;border:1px solid #4a5b3d;border-radius:10px;background:#222a1d;color:#dce9d2;font-size:12.5px}
+.app-ai-assist-head{display:flex;align-items:center;justify-content:space-between;gap:12px;color:var(--env-green);font-size:12px;font-weight:700}
+.app-ai-assist-actions{display:flex;gap:6px}
+.app-ai-assist-actions button{border:1px solid #46543b;border-radius:7px;background:#293322;color:#cfe3bc;padding:6px 10px;font:600 11.5px/1 "Inter",sans-serif;cursor:pointer}
+.app-ai-assist-actions button:hover{border-color:var(--env-green);color:var(--env-green)}
+.app-ai-assist-actions button:disabled{opacity:.55;cursor:wait}
+#aiAssistDismiss{background:transparent;color:#9bad91}
+.app-ai-assist p{margin:8px 0 0;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+@media (max-width:560px){.app-ai-assist-menu{left:16px;right:16px;top:100%;width:auto}.app-ai-assist{margin-left:16px;margin-right:16px}}
+
 /* Master motion kill-switch: this must remain the final rule in app.css. */
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;scroll-behavior:auto !important}
