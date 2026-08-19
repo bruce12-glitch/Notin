@@ -1,5 +1,7 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
+import { isOriginAllowed } from '../lib/httpSecurity.js';
+import { verifyCsrfToken } from '../lib/jwt.js';
 import {
   googleStart,
   googleCallback,
@@ -32,6 +34,28 @@ const resetStrict = rateLimit({
 // Apply rate limit to all /api/auth/* (and legacy /auth/* if mounted)
 router.use(strict);
 
+// WP-SEC-002 — trusted-origin enforcement on mutating auth routes. Absent
+// Origin = non-browser caller → allowed (CORS already governs browsers).
+const MUTATING = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+function originGuard(req, res, next) {
+  if (!MUTATING.has(req.method)) return next();
+  const originHeader = req.headers.origin;
+  if (!originHeader || isOriginAllowed(originHeader)) return next();
+  return res.status(403).json({ error: 'Invalid origin' });
+}
+// WP-SEC-002 — signed double-submit CSRF for the ONLY cookie-authenticated
+// mutations. No refresh cookie → the SEC-001 generic-401 path owns it.
+function csrfGuard(req, res, next) {
+  if (!req.cookies?.notin_refresh) return next();
+  const cookieToken = req.cookies?.notin_csrf;
+  const headerToken = req.headers['x-notin-csrf'];
+  if (!cookieToken || !headerToken || cookieToken !== headerToken || !verifyCsrfToken(cookieToken)) {
+    return res.status(403).json({ error: 'Invalid CSRF token' });
+  }
+  next();
+}
+router.use(originGuard);
+
 router.get('/google', googleStart);
 router.get('/google/callback', googleCallback);
 router.post('/otp/resend', otpResend);
@@ -39,8 +63,8 @@ router.post('/otp/demo-request', otpDemoRequest);
 router.post('/otp/verify', otpVerify);
 router.post('/forgot-password', resetStrict, forgotPassword);
 router.post('/reset-password', resetStrict, resetPassword);
-router.post('/refresh', refresh);
-router.post('/logout', logout);
+router.post('/refresh', csrfGuard, refresh);
+router.post('/logout', csrfGuard, logout);
 router.get('/health', health);
 
 export default router;

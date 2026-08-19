@@ -1,7 +1,7 @@
 // Notin minimal PWA service worker — static shell only.
 // Authenticated API responses are deliberately NEVER stored in Cache Storage;
 // per-user note snapshots live in IndexedDB and are managed by app.js.
-const CACHE_NAME = 'notin-shell-v14';
+const CACHE_NAME = 'notin-shell-v15';
 const SHELL_PATHS = [
   '/app.html',
   '/app.bundle.js',

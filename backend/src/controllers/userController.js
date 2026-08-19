@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import db from '../config/db.js';
-import { createAccessToken, randomToken, hashToken } from '../lib/jwt.js';
+import { createAccessToken, randomToken, hashToken, mintCsrfToken } from '../lib/jwt.js';
 
 function publicUser(u) {
   if (!u) return null;
@@ -68,6 +68,14 @@ export const signup = async (req, res) => {
       path: '/auth',
       maxAge: 30 * 86400000,
     });
+    // WP-SEC-002 — readable double-submit cookie; root path covers both mounts
+    res.cookie('notin_csrf', mintCsrfToken(), {
+      httpOnly: false,
+      secure: isProd,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 30 * 86400000,
+    });
 
     const pub = publicUser(user);
     res.status(201).json({ user: pub, token: accessToken, accessToken });
@@ -122,6 +130,14 @@ export const signin = async (req, res) => {
       secure: isProd,
       sameSite: 'lax',
       path: '/auth',
+      maxAge: 30 * 86400000,
+    });
+    // WP-SEC-002 — readable double-submit cookie; root path covers both mounts
+    res.cookie('notin_csrf', mintCsrfToken(), {
+      httpOnly: false,
+      secure: isProd,
+      sameSite: 'lax',
+      path: '/',
       maxAge: 30 * 86400000,
     });
 

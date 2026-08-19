@@ -72,3 +72,20 @@ export function hashToken(value) {
 export function randomToken(bytes = 32) {
   return crypto.randomBytes(bytes).toString('base64url');
 }
+
+// WP-SEC-002 — signed double-submit CSRF tokens (cookie-carried mutations only).
+// Not httpOnly: the client must read + echo it. Signature defeats value forgery.
+const csrfKey = crypto.createHash('sha256').update(`csrf:${refreshSecret}`).digest();
+export function mintCsrfToken() {
+  const rand = randomToken(24);
+  return `${rand}.${crypto.createHmac('sha256', csrfKey).update(rand).digest('hex')}`;
+}
+export function verifyCsrfToken(token) {
+  if (typeof token !== 'string') return false;
+  const dot = token.lastIndexOf('.');
+  if (dot < 1) return false;
+  const expected = crypto.createHmac('sha256', csrfKey).update(token.slice(0, dot)).digest('hex');
+  const sig = Buffer.from(token.slice(dot + 1));
+  const exp = Buffer.from(expected);
+  return sig.length === exp.length && crypto.timingSafeEqual(sig, exp);
+}

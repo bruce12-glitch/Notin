@@ -3,7 +3,7 @@ import nodemailer from 'nodemailer';
 import bcrypt from 'bcryptjs';
 import { OAuth2Client } from 'google-auth-library';
 import db from '../config/db.js';
-import { createAccessToken, hashToken, randomToken } from '../lib/jwt.js';
+import { createAccessToken, hashToken, randomToken, mintCsrfToken } from '../lib/jwt.js';
 
 const env = process.env;
 const origin = env.APP_ORIGIN || 'http://localhost:4173';
@@ -41,6 +41,8 @@ const cookieOptsLegacy = {
   sameSite: 'lax',
   path: '/auth',
 };
+// WP-SEC-002 — readable double-submit cookie; root path covers both mounts
+const csrfCookieOpts = { httpOnly: false, secure: isProduction, sameSite: 'lax', path: '/' };
 
 function publicUser(u) {
   if (!u) return null;
@@ -266,6 +268,7 @@ export async function otpVerify(req, res) {
   );
   res.cookie('notin_refresh', refreshRaw, { ...cookieOpts, maxAge: 30 * 86400000 });
   res.cookie('notin_refresh', refreshRaw, { ...cookieOptsLegacy, maxAge: 30 * 86400000 });
+  res.cookie('notin_csrf', mintCsrfToken(), { ...csrfCookieOpts, maxAge: 30 * 86400000 });
   res.json({ accessToken, token: accessToken, user: publicUser(user) });
 }
 
@@ -324,6 +327,7 @@ export async function refresh(req, res) {
         console.error('[SECURITY] refresh-token replay detected — rotation family revoked', { userId: row.user_id });
         res.clearCookie('notin_refresh', cookieOpts);
         res.clearCookie('notin_refresh', cookieOptsLegacy);
+        res.clearCookie('notin_csrf', csrfCookieOpts);
         throw new Error('Replay');
       }
       console.warn('[SECURITY] refresh reuse inside rotation grace — sibling issued', { userId: row.user_id });
@@ -339,6 +343,7 @@ export async function refresh(req, res) {
     );
     res.cookie('notin_refresh', nextRaw, { ...cookieOpts, maxAge: 30 * 86400000 });
     res.cookie('notin_refresh', nextRaw, { ...cookieOptsLegacy, maxAge: 30 * 86400000 });
+    res.cookie('notin_csrf', mintCsrfToken(), { ...csrfCookieOpts, maxAge: 30 * 86400000 });
     const accessToken = await createAccessToken(user, 15);
     res.json({ accessToken, token: accessToken, user: publicUser(user) });
   } catch {
@@ -361,6 +366,7 @@ export async function logout(req, res) {
   }
   res.clearCookie('notin_refresh', cookieOpts);
   res.clearCookie('notin_refresh', cookieOptsLegacy);
+  res.clearCookie('notin_csrf', csrfCookieOpts);
   res.status(204).end();
 }
 
