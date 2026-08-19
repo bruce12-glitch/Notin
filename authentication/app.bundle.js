@@ -18714,6 +18714,7 @@ var aiAssistLabel = document.getElementById("aiAssistLabel");
 var aiAssistText = document.getElementById("aiAssistText");
 var aiAssistApply = document.getElementById("aiAssistApply");
 var aiAssistDismiss = document.getElementById("aiAssistDismiss");
+var aiBubbleMenu = document.getElementById("aiBubbleMenu");
 var assistAction = null;
 var assistRange = null;
 var assistInFlight = false;
@@ -19105,11 +19106,30 @@ function hideAiTags() {
 function hideAiAssist() {
   if (aiAssistBar) aiAssistBar.hidden = true;
   if (assistMenu) assistMenu.hidden = true;
+  if (aiBubbleMenu) aiBubbleMenu.hidden = true;
   if (aiAssistText) aiAssistText.textContent = "";
   assistAction = null;
   assistRange = null;
   assistSuggestion = "";
   assistNoteId = null;
+}
+function syncAssistBubble() {
+  if (!aiBubbleMenu || !editor) return;
+  const note = notes.find((item) => item.id === selectedId);
+  const selection = editor.state.selection;
+  const selText = selection.empty ? "" : editor.state.doc.textBetween(selection.from, selection.to, " ").trim();
+  if (assistInFlight || currentView !== "notes" || !note || note.isTrashed || offlineReadOnly || !selText) {
+    aiBubbleMenu.hidden = true;
+    return;
+  }
+  const rect = editor.view.coordsAtPos(selection.to);
+  aiBubbleMenu.style.top = `${Math.max(8, rect.bottom + 8)}px`;
+  aiBubbleMenu.style.left = `${Math.max(8, rect.left)}px`;
+  aiBubbleMenu.hidden = false;
+  const w = aiBubbleMenu.offsetWidth;
+  if (w && rect.left + w > window.innerWidth - 8) {
+    aiBubbleMenu.style.left = `${Math.max(8, window.innerWidth - w - 8)}px`;
+  }
 }
 function hideAiChat() {
   if (aiChatPanel) aiChatPanel.hidden = true;
@@ -19594,7 +19614,15 @@ function initEditor() {
     onCreate: () => {
       updateToolbar();
     },
-    onSelectionUpdate: () => updateToolbar()
+    onSelectionUpdate: () => {
+      updateToolbar();
+      syncAssistBubble();
+    },
+    // WP-AI-004b — bubble follows selection
+    onBlur: () => {
+      if (aiBubbleMenu) aiBubbleMenu.hidden = true;
+    }
+    // WP-AI-004b — mousedown-preventDefault keeps blur rare
   });
   const toolbar = document.getElementById("toolbar");
   if (toolbar) {
@@ -20125,6 +20153,9 @@ function setAssistControlsPending(pending) {
   assistMenu?.querySelectorAll("button").forEach((button) => {
     button.disabled = pending;
   });
+  aiBubbleMenu?.querySelectorAll("button").forEach((button) => {
+    button.disabled = pending;
+  });
   if (aiAssistApply) aiAssistApply.disabled = pending;
   if (aiAssistDismiss) aiAssistDismiss.disabled = pending;
 }
@@ -20132,11 +20163,10 @@ if (assistBtn) assistBtn.addEventListener("click", () => {
   if (assistInFlight || !selectedId || !assistMenu) return;
   assistMenu.hidden = !assistMenu.hidden;
 });
-if (assistMenu) assistMenu.addEventListener("click", async (event) => {
-  const control = event.target.closest("button[data-action]");
-  if (!control || !assistMenu.contains(control) || assistInFlight || !editor || !selectedId) return;
-  const action = control.dataset.action;
-  if (!["continue", "rephrase", "shorten"].includes(action)) return;
+var ASSIST_LABELS = { continue: "\u270D Continue suggestion", rephrase: "\u270D Rephrase suggestion", shorten: "\u270D Shorten suggestion", expand: "\u270D Expand suggestion" };
+async function runAssist(action) {
+  if (assistInFlight || !editor || !selectedId) return;
+  if (!["continue", "rephrase", "shorten", "expand"].includes(action)) return;
   const noteId = selectedId;
   const note = notes.find((item) => item.id === noteId);
   if (!note || note.isTrashed || offlineReadOnly) return;
@@ -20144,7 +20174,7 @@ if (assistMenu) assistMenu.addEventListener("click", async (event) => {
   const range = action === "continue" ? null : { from: selection.from, to: selection.to };
   const selectedText = range ? editor.state.doc.textBetween(range.from, range.to, " ").trim() : "";
   if (range && (!selectedText || range.from === range.to)) {
-    assistMenu.hidden = true;
+    if (assistMenu) assistMenu.hidden = true;
     setError("Select some text to use this action.");
     return;
   }
@@ -20170,7 +20200,7 @@ if (assistMenu) assistMenu.addEventListener("click", async (event) => {
       }
       if (selectedId !== noteId || assistNoteId !== noteId) return;
       assistSuggestion = suggestion;
-      if (aiAssistLabel) aiAssistLabel.textContent = action === "continue" ? "\u270D Continue suggestion" : action === "rephrase" ? "\u270D Rephrase suggestion" : "\u270D Shorten suggestion";
+      if (aiAssistLabel) aiAssistLabel.textContent = ASSIST_LABELS[action] || "\u270D AI suggestion";
       if (aiAssistText) aiAssistText.textContent = suggestion;
       if (aiAssistBar) aiAssistBar.hidden = false;
       setError("");
@@ -20190,7 +20220,26 @@ if (assistMenu) assistMenu.addEventListener("click", async (event) => {
   } finally {
     setAssistControlsPending(false);
   }
+}
+if (assistMenu) assistMenu.addEventListener("click", (event) => {
+  const control = event.target.closest("button[data-action]");
+  if (!control || !assistMenu.contains(control)) return;
+  runAssist(control.dataset.action);
 });
+if (aiBubbleMenu) aiBubbleMenu.addEventListener("mousedown", (event) => event.preventDefault());
+if (aiBubbleMenu) aiBubbleMenu.addEventListener("click", (event) => {
+  const control = event.target.closest("button[data-action]");
+  if (!control || assistInFlight) return;
+  aiBubbleMenu.hidden = true;
+  runAssist(control.dataset.action);
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && aiBubbleMenu && !aiBubbleMenu.hidden) aiBubbleMenu.hidden = true;
+});
+var assistEditorScroll = document.querySelector(".app-editor-body");
+if (assistEditorScroll) assistEditorScroll.addEventListener("scroll", () => {
+  if (aiBubbleMenu && !aiBubbleMenu.hidden) aiBubbleMenu.hidden = true;
+}, { passive: true });
 if (aiAssistApply) aiAssistApply.addEventListener("click", () => {
   if (!editor || !assistSuggestion || !assistAction || !assistNoteId) return;
   if (selectedId !== assistNoteId) {

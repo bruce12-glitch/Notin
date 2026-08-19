@@ -738,6 +738,13 @@ body.sidebar-collapsed .app-btn-logout::before{content:"⏻";font-size:15px}
 .app-ai-assist p{margin:8px 0 0;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
 @media (max-width:560px){.app-ai-assist-menu{left:16px;right:16px;top:100%;width:auto}.app-ai-assist{margin-left:16px;margin-right:16px}}
 
+/* WP-AI-004b — floating selection bubble menu (zero-dependency positioning) */
+.app-ai-assist-bubble{position:fixed;z-index:30;display:flex;gap:4px;padding:5px;border:1px solid #46543b;border-radius:10px;background:#1b2118;box-shadow:0 12px 30px rgba(0,0,0,.34)}
+.app-ai-assist-bubble[hidden]{display:none}
+.app-ai-assist-bubble button{border:0;border-radius:7px;background:transparent;color:#d9e7cf;padding:7px 10px;font:600 12px/1.2 "Inter",sans-serif;cursor:pointer}
+.app-ai-assist-bubble button:hover,.app-ai-assist-bubble button:focus-visible{outline:0;background:#2a3324;color:var(--env-green)}
+.app-ai-assist-bubble button:disabled{opacity:.5;cursor:wait}
+
 /* Master motion kill-switch: this must remain the final rule in app.css. */
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;scroll-behavior:auto !important}
