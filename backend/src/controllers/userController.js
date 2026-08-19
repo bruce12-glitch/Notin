@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import db from '../config/db.js';
-import { createAccessToken, randomToken, hashToken } from '../lib/jwt.js';
+import { createAccessToken, randomToken, hashToken, mintCsrfToken } from '../lib/jwt.js';
 
 function publicUser(u) {
   if (!u) return null;
@@ -44,9 +44,11 @@ export const signup = async (req, res) => {
     const refreshRaw = randomToken(48);
     const now = new Date().toISOString();
     const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString();
+    // WP-SEC-001 — every signup starts a NEW rotation family
+    const familyId = randomToken(24);
     await db.query(
-      `INSERT INTO refresh_tokens (hash, user_id, expires_at, revoked_at, created_at) VALUES ($1, $2, $3, $4, $5)`,
-      [hashToken(refreshRaw), user.id, expiresAt, null, now]
+      `INSERT INTO refresh_tokens (hash, user_id, family_id, expires_at, revoked_at, revoke_reason, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [hashToken(refreshRaw), user.id, familyId, expiresAt, null, null, now]
     );
 
     // Set httpOnly cookie for refresh (same options as auth)
@@ -64,6 +66,14 @@ export const signup = async (req, res) => {
       secure: isProd,
       sameSite: 'lax',
       path: '/auth',
+      maxAge: 30 * 86400000,
+    });
+    // WP-SEC-002 — readable double-submit cookie; root path covers both mounts
+    res.cookie('notin_csrf', mintCsrfToken(), {
+      httpOnly: false,
+      secure: isProd,
+      sameSite: 'lax',
+      path: '/',
       maxAge: 30 * 86400000,
     });
 
@@ -101,9 +111,11 @@ export const signin = async (req, res) => {
     const refreshRaw = randomToken(48);
     const now = new Date().toISOString();
     const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString();
+    // WP-SEC-001 — every signin starts a NEW rotation family
+    const familyId = randomToken(24);
     await db.query(
-      `INSERT INTO refresh_tokens (hash, user_id, expires_at, revoked_at, created_at) VALUES ($1, $2, $3, $4, $5)`,
-      [hashToken(refreshRaw), user.id, expiresAt, null, now]
+      `INSERT INTO refresh_tokens (hash, user_id, family_id, expires_at, revoked_at, revoke_reason, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [hashToken(refreshRaw), user.id, familyId, expiresAt, null, null, now]
     );
     const isProd = process.env.NODE_ENV === 'production';
     res.cookie('notin_refresh', refreshRaw, {
@@ -118,6 +130,14 @@ export const signin = async (req, res) => {
       secure: isProd,
       sameSite: 'lax',
       path: '/auth',
+      maxAge: 30 * 86400000,
+    });
+    // WP-SEC-002 — readable double-submit cookie; root path covers both mounts
+    res.cookie('notin_csrf', mintCsrfToken(), {
+      httpOnly: false,
+      secure: isProd,
+      sameSite: 'lax',
+      path: '/',
       maxAge: 30 * 86400000,
     });
 

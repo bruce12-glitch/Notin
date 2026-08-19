@@ -155,6 +155,9 @@ model RefreshToken {
   userId    String    @map("user_id")
   expiresAt DateTime  @map("expires_at")
   revokedAt DateTime? @map("revoked_at")
+  // WP-SEC-001 — rotation family + replay-detection reason (docs-only mirror of migrate.js)
+  familyId     String?  @map("family_id")
+  revokeReason String?  @map("revoke_reason")
   createdAt DateTime  @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

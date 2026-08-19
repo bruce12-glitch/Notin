@@ -400,9 +400,18 @@ function loadCachedNotes(){
   }
 }
 
-async function bootstrapToken(){
+// WP-SEC-002 — echo the signed double-submit cookie on cookie-carried mutations
+function readCookie(name){
+  const m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+  return m ? decodeURIComponent(m[1]) : '';
+}
+function csrfHeaders(){
+  const t = readCookie('notin_csrf');
+  return t ? { 'x-notin-csrf': t } : {};
+}
+async function bootstrapTokenCore(){
   try{
-    const r = await fetch(API_BASE + '/api/auth/refresh', {method:'POST', credentials:'include'});
+    const r = await fetch(API_BASE + '/api/auth/refresh', {method:'POST', credentials:'include', headers: csrfHeaders()});
     if(r.ok){
       const j = await r.json();
       memToken = j.accessToken || j.token;
@@ -410,7 +419,7 @@ async function bootstrapToken(){
     }
   }catch{}
   try{
-    const r2 = await fetch(API_BASE + '/auth/refresh', {method:'POST', credentials:'include'});
+    const r2 = await fetch(API_BASE + '/auth/refresh', {method:'POST', credentials:'include', headers: csrfHeaders()});
     if(r2.ok){
       const j = await r2.json();
       memToken = j.accessToken || j.token;
@@ -418,6 +427,16 @@ async function bootstrapToken(){
     }
   }catch{}
   return null;
+}
+// WP-SEC-001 — single-flight refresh: parallel 401s share ONE rotation call.
+// Without this, same-tab bursts replay a consumed cookie into the new
+// server-side family detection and sign the user out for no reason.
+let refreshFlight = null;
+function bootstrapToken(){
+  if(!refreshFlight){
+    refreshFlight = bootstrapTokenCore().finally(()=>{ refreshFlight = null; });
+  }
+  return refreshFlight;
 }
 async function fetchWithAuth(url, opts={}){
   const headers = {...(opts.headers || {})};
@@ -2515,8 +2534,8 @@ document.addEventListener('keydown', (e)=>{
 });
 
 if(logoutBtn) logoutBtn.addEventListener('click', async ()=>{
-  try{ await fetch(API_BASE + '/api/auth/logout', {method:'POST', credentials:'include'}); }catch{}
-  try{ await fetch(API_BASE + '/auth/logout', {method:'POST', credentials:'include'}); }catch{}
+  try{ await fetch(API_BASE + '/api/auth/logout', {method:'POST', credentials:'include', headers: csrfHeaders()}); }catch{}
+  try{ await fetch(API_BASE + '/auth/logout', {method:'POST', credentials:'include', headers: csrfHeaders()}); }catch{}
   memToken = null;
   currentUserId = null;
   try{ sessionStorage.removeItem('notin_email'); sessionStorage.removeItem('notin_offline_user_id'); }catch{}

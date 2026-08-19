@@ -17,17 +17,14 @@ import authRoutes from './routes/authRoutes.js';
 import attachmentRoutes from './routes/attachmentRoutes.js';
 import publicShareRoutes from './routes/publicShareRoutes.js';
 import { signup, signin } from './controllers/userController.js';
+import { allowList, canonicalOrigin, isOriginAllowed } from './lib/httpSecurity.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = Number(process.env.PORT || 5000);
-const origin = process.env.APP_ORIGIN || 'http://localhost:4173';
 const isProd = process.env.NODE_ENV === 'production';
-// WP-DEPLOY-001 — APP_ORIGIN may hold a comma-separated allowlist. The first
-// entry is the canonical origin returned to non-allowlisted callers.
-const allowList = origin.split(',').map((s) => s.trim()).filter(Boolean);
 
 // WP-DEPLOY-001 — fail-closed production boot. Dev/preview is untouched: this
 // returns immediately unless NODE_ENV === 'production'. Only variable NAMES and
@@ -80,17 +77,17 @@ app.use((req, res, next) => {
   // WP-DEPLOY-001 — CORS lockdown. In production only APP_ORIGIN allowlist
   // entries are echoed; everyone else gets the canonical origin back, never
   // their own. Preview/localhost echo is now strictly non-production.
-  let allowOrigin = allowList[0] || origin;
+  let allowOrigin = canonicalOrigin;
   if (reqOrigin) {
     if (isProd) {
-      if (allowList.includes(reqOrigin)) allowOrigin = reqOrigin;
+      if (isOriginAllowed(reqOrigin)) allowOrigin = reqOrigin;
     } else {
       allowOrigin = reqOrigin;
     }
   }
   res.setHeader('Access-Control-Allow-Origin', allowOrigin);
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Notin-CSRF');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   res.setHeader('Vary', 'Origin');
   if (req.method === 'OPTIONS') return res.sendStatus(204);

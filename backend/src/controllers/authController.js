@@ -3,7 +3,7 @@ import nodemailer from 'nodemailer';
 import bcrypt from 'bcryptjs';
 import { OAuth2Client } from 'google-auth-library';
 import db from '../config/db.js';
-import { createAccessToken, hashToken, randomToken } from '../lib/jwt.js';
+import { createAccessToken, hashToken, randomToken, mintCsrfToken } from '../lib/jwt.js';
 
 const env = process.env;
 const origin = env.APP_ORIGIN || 'http://localhost:4173';
@@ -41,6 +41,8 @@ const cookieOptsLegacy = {
   sameSite: 'lax',
   path: '/auth',
 };
+// WP-SEC-002 — readable double-submit cookie; root path covers both mounts
+const csrfCookieOpts = { httpOnly: false, secure: isProduction, sameSite: 'lax', path: '/' };
 
 function publicUser(u) {
   if (!u) return null;
@@ -258,14 +260,25 @@ export async function otpVerify(req, res) {
   const accessToken = await createAccessToken(user, 15);
   const refreshRaw = randomToken(48);
   const expiresAt = futureIso(30 * 86400000);
+  // WP-SEC-001 — every verified session starts a NEW rotation family
+  const familyId = randomToken(24);
   await db.query(
-    `INSERT INTO refresh_tokens (hash, user_id, expires_at, revoked_at, created_at) VALUES ($1, $2, $3, $4, $5)`,
-    [hashToken(refreshRaw), user.id, expiresAt, null, now]
+    `INSERT INTO refresh_tokens (hash, user_id, family_id, expires_at, revoked_at, revoke_reason, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [hashToken(refreshRaw), user.id, familyId, expiresAt, null, null, now]
   );
   res.cookie('notin_refresh', refreshRaw, { ...cookieOpts, maxAge: 30 * 86400000 });
   res.cookie('notin_refresh', refreshRaw, { ...cookieOptsLegacy, maxAge: 30 * 86400000 });
+  res.cookie('notin_csrf', mintCsrfToken(), { ...csrfCookieOpts, maxAge: 30 * 86400000 });
   res.json({ accessToken, token: accessToken, user: publicUser(user) });
 }
+
+// WP-SEC-001 — rotation with family replay detection. A consumed refresh
+// token being presented again means either a benign rotation race (two
+// tabs/calls fired together, inside the grace window) or a stolen cookie
+// replayed after rotation. The race gets a fresh family sibling; the theft
+// nukes the ENTIRE family so attacker and victim both return to sign-in.
+// Every failure path returns the identical 401 body — never an oracle.
+const REFRESH_FAMILY_GRACE_MS = 10_000;
 
 export async function refresh(req, res) {
   try {
@@ -273,23 +286,64 @@ export async function refresh(req, res) {
     if (!raw) throw new Error('No refresh');
     const now = nowIso();
     const { rows } = await db.query(
-      `SELECT * FROM refresh_tokens WHERE hash = $1 AND revoked_at IS NULL AND expires_at > $2 LIMIT 1`,
-      [hashToken(raw), now]
+      `SELECT * FROM refresh_tokens WHERE hash = $1 LIMIT 1`,
+      [hashToken(raw)]
     );
-    const row = rows[0];
+    let row = rows[0];
     if (!row) throw new Error('Invalid');
-    // Rotate: revoke old
-    await db.query(`UPDATE refresh_tokens SET revoked_at = $1 WHERE hash = $2`, [now, hashToken(raw)]);
+    // Dual-driver truth: pg returns Date objects, SQLite returns ISO strings.
+    const toTs = (value) => value instanceof Date ? value.getTime() : Date.parse(String(value));
+    const expiresTs = toTs(row.expires_at);
+    if (!Number.isFinite(expiresTs) || expiresTs <= Date.parse(now)) throw new Error('Expired');
+
+    if (!row.revoked_at) {
+      // Live token — rotate via compare-and-swap so a concurrent request
+      // cannot silently fork the family.
+      const { rowCount } = await db.query(
+        `UPDATE refresh_tokens SET revoked_at = $1, revoke_reason = 'rotation' WHERE hash = $2 AND revoked_at IS NULL`,
+        [now, hashToken(raw)]
+      );
+      if (rowCount === 0) {
+        // Lost the race: the row is now rotated; re-read and fall into the
+        // grace evaluation below (same behavior as a sequential reuse).
+        const again = await db.query(`SELECT * FROM refresh_tokens WHERE hash = $1 LIMIT 1`, [hashToken(raw)]);
+        row = again.rows[0] || row;
+      }
+    }
+
+    if (row.revoked_at) {
+      const revokedTs = toTs(row.revoked_at);
+      const inGrace = row.revoke_reason === 'rotation'
+        && Number.isFinite(revokedTs)
+        && (Date.parse(now) - revokedTs) <= REFRESH_FAMILY_GRACE_MS;
+      if (!inGrace) {
+        // REPLAY — revoke every live member of this rotation family.
+        if (row.family_id) {
+          await db.query(
+            `UPDATE refresh_tokens SET revoked_at = $1, revoke_reason = 'replay' WHERE family_id = $2 AND revoked_at IS NULL`,
+            [now, row.family_id]
+          );
+        }
+        console.error('[SECURITY] refresh-token replay detected — rotation family revoked', { userId: row.user_id });
+        res.clearCookie('notin_refresh', cookieOpts);
+        res.clearCookie('notin_refresh', cookieOptsLegacy);
+        res.clearCookie('notin_csrf', csrfCookieOpts);
+        throw new Error('Replay');
+      }
+      console.warn('[SECURITY] refresh reuse inside rotation grace — sibling issued', { userId: row.user_id });
+    }
+
     const user = await db.user.findById(row.user_id);
     if (!user) throw new Error('No user');
     const nextRaw = randomToken(48);
     const expiresAt = futureIso(30 * 86400000);
     await db.query(
-      `INSERT INTO refresh_tokens (hash, user_id, expires_at, revoked_at, created_at) VALUES ($1, $2, $3, $4, $5)`,
-      [hashToken(nextRaw), user.id, expiresAt, null, now]
+      `INSERT INTO refresh_tokens (hash, user_id, family_id, expires_at, revoked_at, revoke_reason, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [hashToken(nextRaw), user.id, row.family_id, expiresAt, null, null, now]
     );
     res.cookie('notin_refresh', nextRaw, { ...cookieOpts, maxAge: 30 * 86400000 });
     res.cookie('notin_refresh', nextRaw, { ...cookieOptsLegacy, maxAge: 30 * 86400000 });
+    res.cookie('notin_csrf', mintCsrfToken(), { ...csrfCookieOpts, maxAge: 30 * 86400000 });
     const accessToken = await createAccessToken(user, 15);
     res.json({ accessToken, token: accessToken, user: publicUser(user) });
   } catch {
@@ -301,10 +355,18 @@ export async function logout(req, res) {
   const raw = req.cookies.notin_refresh;
   if (raw) {
     const now = nowIso();
-    await db.query(`UPDATE refresh_tokens SET revoked_at = $1 WHERE hash = $2`, [now, hashToken(raw)]);
+    // WP-SEC-001 — by-hash revoke with reason; idempotent guard so a
+    // concurrent rotation/logout pair cannot clobber the other's reason.
+    // Deliberate consequence: replaying a logged-out cookie is an instant
+    // family nuke — logout is NOT sheltered by the rotation grace.
+    await db.query(
+      `UPDATE refresh_tokens SET revoked_at = $1, revoke_reason = 'logout' WHERE hash = $2 AND revoked_at IS NULL`,
+      [now, hashToken(raw)]
+    );
   }
   res.clearCookie('notin_refresh', cookieOpts);
   res.clearCookie('notin_refresh', cookieOptsLegacy);
+  res.clearCookie('notin_csrf', csrfCookieOpts);
   res.status(204).end();
 }
 
@@ -389,7 +451,7 @@ export async function resetPassword(req, res) {
     // Single-use: consume the token…
     await db.query(`UPDATE password_reset_tokens SET used_at = $1 WHERE id = $2`, [now, r.id]);
     // …and revoke every existing refresh session for the user (new sign-in required)
-    await db.query(`UPDATE refresh_tokens SET revoked_at = $1 WHERE user_id = $2 AND revoked_at IS NULL`, [now, user.id]);
+    await db.query(`UPDATE refresh_tokens SET revoked_at = $1, revoke_reason = 'password-reset' WHERE user_id = $2 AND revoked_at IS NULL`, [now, user.id]);
     res.json({ ok: true, message: 'Password updated. Sign in with your new password.' });
   } catch (e) {
     console.error('resetPassword', e);
