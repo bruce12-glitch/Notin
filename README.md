@@ -1,166 +1,449 @@
-<div align="center">
+# 📝 Notin — Full-Stack Note-Taking Platform
 
-<!-- 3D animated title with layered glow -->
-<a href="https://github.com/bruce12-glitch/Notin">
-  <img src="https://readme-typing-svg.demolab.com?font=IBM+Plex+Sans&weight=700&size=42&duration=2800&pause=300&color=8FE333&center=true&vCenter=true&width=600&lines=📝+Notin+—+Your+Second+Brain;Green+Edition+🌿;Neon+Edition+⚡;3D+Motion+Design+🎨" alt="Notin — Your Second Brain" />
-</a>
-
-<!-- 3D floating logo/icon -->
-<p>
-  <img src="https://raw.githubusercontent.com/bruce12-glitch/Notin/main/frontend/assets/notin-icon-nav.png" width="90" alt="Notin 3D icon" />
+<p align="center">
+  <img src="frontend/assets/notin-icon-nav.png" width="100" alt="Notin 3D icon" />
 </p>
 
-<!-- animated 3D badges (shields.io with custom colors) -->
-<p>
-  <img src="https://img.shields.io/badge/Edition-Green-8FE333?style=for-the-badge&logo=leaflet&logoColor=white" />
-  <img src="https://img.shields.io/badge/Edition-Neon-8FE333?style=for-the-badge&logo=lightning&logoColor=black" />
-  <img src="https://img.shields.io/badge/3D-Interactions-8FE333?style=for-the-badge&logo=threedotjs&logoColor=white" />
-  <img src="https://img.shields.io/badge/Tailwind-v4-8FE333?style=for-the-badge&logo=tailwindcss&logoColor=white" />
-</p>
-<p>
-  <img src="https://img.shields.io/github/repo-size/bruce12-glitch/Notin?style=flat-square&label=Repo%20Size&color=8FE333" />
-  <img src="https://img.shields.io/github/last-commit/bruce12-glitch/Notin?style=flat-square&label=Last%20Commit&color=8FE333" />
-  <img src="https://img.shields.io/github/license/bruce12-glitch/Notin?style=flat-square&label=License&color=8FE333" />
-  <img src="https://img.shields.io/badge/status-🚀%20Active-8FE333?style=flat-square" />
+<p align="center">
+  <strong>An Evernote-inspired note-taking web application with a pixel-perfect marketing site (Green &amp; Neon editions), a RESTful API backend, and authentication — all built from scratch.</strong>
 </p>
 
-<!-- subtle divider with glow -->
-<p><img src="https://readme-typing-svg.demolab.com?font=IBM+Plex+Sans&size=16&duration=4000&color=8FE333&center=true&width=500&lines=✨+A+beautiful,+Evernote-inspired+note-taking+web+experience+with+3D+motion+design+✨" alt="tagline" /></p>
-
-</div>
+<p align="center">
+  <img src="https://img.shields.io/badge/Node.js-22.x-339933?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/Express-4.21-000000?style=flat-square&logo=express&logoColor=white" alt="Express" />
+  <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL" />
+  <img src="https://img.shields.io/badge/Prisma-ORM-2D3748?style=flat-square&logo=prisma&logoColor=white" alt="Prisma" />
+  <img src="https://img.shields.io/badge/Tailwind-v4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS v4" />
+  <img src="https://img.shields.io/badge/TipTap-2.27-6C47FF?style=flat-square" alt="TipTap Editor" />
+  <img src="https://img.shields.io/badge/Playwright-E2E-45BA4B?style=flat-square&logo=playwright&logoColor=white" alt="Playwright" />
+  <img src="https://img.shields.io/badge/JWT-auth-000000?style=flat-square&logo=jsonwebtokens&logoColor=white" alt="JWT" />
+  <img src="https://img.shields.io/badge/type-Personal%2FPortfolio-8FE333?style=flat-square" alt="Project type" />
+</p>
 
 ---
 
-## ✨ Overview
+## 📋 Table of Contents
 
-**Notin** is a premium landing experience for a note-taking app, meticulously crafted to match the design language of leading productivity tools. It ships in **two complete themes** — a warm **Green Edition** (cream + green) and a bold **Neon Edition** (black + neon lime) — sharing the same Evernote-style architecture, 3D interactions, and motion system.
-
-> 🎯 Goal: feel like a production-grade SaaS landing page — pixel-matched to the "green note" reference, with every interaction polished.
+- [Overview](#-overview)
+- [Architecture](#-architecture)
+- [Tech Stack](#️-tech-stack)
+- [Features](#-features)
+- [Project Structure](#-project-structure)
+- [Getting Started](#-getting-started)
+- [API Endpoints](#-api-endpoints)
+- [Testing](#-testing)
+- [CI/CD](#-cicd)
+- [Security](#-security)
+- [Key Learnings & Challenges](#-key-learnings--challenges)
 
 ---
 
-## 🚀 Quick Start
+## 📌 Overview
 
-```bash
-# 1) Open the site (no build needed — everything is pre-compiled)
-open frontend/index.html        # Green Edition
-open frontend/index-neon.html   # Neon Edition
+**Notin** is a full-stack note-taking platform inspired by Evernote. It consists of three integrated layers:
 
-# 2) Rebuild CSS after editing a theme source
-cd frontend
-npm install
-npx @tailwindcss/cli -i input.css       -o styles.css      --minify   # Green
-npx @tailwindcss/cli -i input-neon.css  -o styles-neon.css --minify   # Neon
+| Layer | Description | Status |
+|---|---|---|
+| 🎨 **Marketing Site** | Pixel-perfect Evernote-style landing page in two themes (Green & Neon) with 3D motion design, Lottie animations, and responsive layout | ✅ Complete |
+| ⚙️ **REST API** | Express.js backend with PostgreSQL/SQLite, JWT auth, CRUD for notes/notebooks/tags, image attachments, AI integration, and read-only public sharing | ✅ Complete |
+| 🔐 **Auth & Editor App** | Google OAuth + email OTP sign-in, TipTap rich-text editor, post-auth Home dashboard (Evernote-dark clone), PWA offline support | ✅ Complete |
+
+The entire frontend is built with **vanilla JavaScript** (no React/Angular/Vue) and **Tailwind CSS v4**, demonstrating deep understanding of the DOM, CSS architecture, and interactive motion design.
+
+---
+
+## 🏗️ Architecture
+
 ```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        NOTIN REPOSITORY                              │
+│                                                                      │
+│  ┌─────────────────────┐  ┌─────────────────┐  ┌─────────────────┐ │
+│  │    FRONTEND          │  │    BACKEND       │  │ AUTHENTICATION  │ │
+│  │   (Marketing Site)   │  │   (API Server)   │  │   (App & Auth)  │ │
+│  │                      │  │                  │  │                 │ │
+│  │  index.html (Green)  │  │  Express 4.21    │  │  App (TipTap)   │ │
+│  │  index-neon.html     │  │  RESTful routes   │  │  Sign-up/Login  │ │
+│  │  context.html        │  │  Controllers      │  │  OAuth + OTP    │ │
+│  │  Tailwind v4 CSS     │  │  Middleware       │  │  PWA + SW       │ │
+│  │  Vanilla ES6 JS      │  │  Prisma ORM       │  │  Share renderer │ │
+│  │  3D Motion Engine    │  │  PostgreSQL/SQLite│  │                 │ │
+│  │  Lottie Animations   │  │  Sentry Monitoring│  │                 │ │
+│  └─────────────────────┘  └─────────────────┘  └─────────────────┘ │
+│                              │                        │              │
+│                              └──────────┬─────────────┘              │
+│                                         │                            │
+│                              ┌──────────▼──────────┐                │
+│                              │   Database           │                │
+│                              │   (PostgreSQL prod,  │                │
+│                              │    SQLite dev)       │                │
+│                              └─────────────────────┘                │
+└─────────────────────────────────────────────────────────────────────┘
 
-> The root `notin/index.html` redirects to the frontend — deploy the whole folder to any static host (Netlify / Vercel / GitHub Pages).
-
-### Operations
-For the unified app/API setup, environment behavior, deployment checklist, backups, optional Sentry monitoring, and E2E commands, see **[RUNBOOK.md](RUNBOOK.md)**. Port `5000` is the source of truth; do not deploy the legacy standalone auth server on `8787`.
-
----
-
-## 🗂️ Project Structure
-
+  Port 5000: Unified API + Auth + App (backend/src/server.js)
+  Port 3000: Marketing site dev server (frontend/dev-server.mjs)
 ```
-notin/
-├── index.html                  ← entry point (redirects to frontend)
-├── README.md                   ← you are here
-├── frontend/                   ← ALL frontend code
-│   ├── index.html              ← Green Edition landing page
-│   ├── index-neon.html         ← Neon Edition landing page
-│   ├── context.html            ← About / roadmap / what-we-built
-│   ├── input.css               ← Green theme source (Tailwind v4 + tokens)
-│   ├── input-neon.css          ← Neon theme source
-│   ├── styles.css              ← compiled Green CSS (offline-ready)
-│   ├── styles-neon.css         ← compiled Neon CSS
-│   ├── polish.css              ← shared responsive visual refinement layer
-│   ├── script.js               ← interactions & motion engine (documented)
-│   ├── evernote-analysis.md    ← deep design analysis of the reference
-│   ├── evernote-match-score.md ← Notin ↔ Evernote match breakdown
-│   └── assets/                 ← video, 3D logo, Lottie, images, icons
-├── backend/                    ← (future) API / storage / sync
-├── authentication/             ← (future) auth flows
-└── screenshots/                ← design verification captures
-```
-
----
-
-## 🎨 Design System
-
-### 🌿 Green Edition (light)
-| Token | Value |
-|---|---|
-| Background | `#F4EEE5` warm cream |
-| Accent green | `#8FE333` (extracted from reference) |
-| Text | `#141414` / `#292929` |
-| Dark sections | `#141414` |
-
-### ⚡ Neon Edition (dark)
-| Token | Value |
-|---|---|
-| Background | `#0F0F0F` near-black |
-| Accent green | `#8FE333` neon lime |
-| Text | `#FFFFFF` / `#8F8F8F` |
-| Glows | `rgba(143,227,51,…)` |
-
-### 🔤 Typography
-| Role | Font |
-|---|---|
-| Display / headings | **Manrope** |
-| Body / UI | **Inter** |
-| Tags / metadata | **JetBrains Mono** |
-| System fallback | SF Pro stack |
-
----
-
-## 🧊 Features
-
-- **Split hero** — full-viewport, perfectly centered, with a 1920×1200 product video (guaranteed playback + play-enforcer)
-- **3D floating assets** — mouse-parallax note cards, glowing AI badge, rotating ring
-- **CardsShowcase** — Evernote's exact 8 feature cards (Template → AI Features), circle designs on hover/click, seamless infinite loop with autoplay
-- **Organize showcase** — layered notebook / task / info popups, floating category labels, 60px display heading
-- **Dark CTA** — "Your productivity, supercharged" in neon lime
-- **Mega-menu navigation** — Features / Explore / Plans dropdowns + mobile accordion
-- **3D depth everywhere** — pricing, download, testimonial, and feature cards tilt in 3D on hover
-- **Evernote-faithful buttons** — `rounded-md`, solid dark→green / outline / small utility variants
-- **Theme switcher** — one click between Green ⇄ Neon from the navbar
-- **Motion engine** — scroll progress, back-to-top, counters, magnetic buttons, parallax, staggered reveals
-- **Accessible** — `prefers-reduced-motion` respected, focus rings, aria labels, semantic HTML
-- **Honest content** — no fake stats, prices, or versions
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Layer | Choice |
+### Frontend (Marketing Site)
+| Technology | Purpose |
 |---|---|
-| Styling | **Tailwind CSS v4** (pre-compiled, no CDN) |
-| Fonts | IBM Plex Sans · Inter · JetBrains Mono (Google Fonts) |
-| Video | Native HTML5 `<video>` + JS play-enforcer |
-| JS | Vanilla ES6 (modular IIFEs, documented) |
-| 3D/Motion | CSS `perspective` + `transform3d` + `requestAnimationFrame` |
+| **HTML5** | Semantic markup, ARIA accessibility |
+| **Tailwind CSS v4** | Utility-first CSS (pre-compiled, zero runtime) |
+| **Vanilla ES6 JavaScript** | Motion engine, 3D parallax, Lottie, theme switching |
+| **CSS 3D Transforms** | `perspective`, `transform3d`, `requestAnimationFrame` |
+| **Google Fonts** | Manrope, Inter, JetBrains Mono, IBM Plex Sans |
+| **Lottie-web** | Vector animations |
+
+### Backend (API)
+| Technology | Purpose |
+|---|---|
+| **Node.js 22** | Runtime |
+| **Express 4.21** | HTTP framework (ESM) |
+| **PostgreSQL 16** | Production database |
+| **SQLite (node:sqlite)** | Development/demo fallback |
+| **Prisma ORM** | Schema declaration & documentation |
+| **JWT (jose)** | Access + refresh token auth |
+| **bcryptjs** | Password hashing |
+| **Multer** | File upload handling |
+| **Sentry** | Error monitoring (optional) |
+| **Groq API** | AI features (summarize, chat, assist) |
+
+### Authentication & Editor App
+| Technology | Purpose |
+|---|---|
+| **TipTap 2.27** | Rich-text editor (ProseMirror-based) |
+| **esbuild** | JavaScript bundler |
+| **Google OAuth** | Third-party authentication |
+| **SMTP** | Email OTP delivery |
+| **Service Worker** | PWA offline read-only support |
+| **IndexedDB** | Offline note snapshots |
+
+### DevOps
+| Technology | Purpose |
+|---|---|
+| **Playwright** | E2E smoke tests (Chromium) |
+| **GitHub Actions** | CI pipeline (`ci/e2e.yml`) |
+| **pg_dump / SQLite** | Backup & restore |
 
 ---
 
-## 🔍 Code Quality
+## ✨ Features
 
-- HTML validated (no unclosed tags, single `h1` per page, no broken anchors)
-- JS syntax-checked; all modules guard missing elements
-- CSS organized with a table of contents; dead code removed (74KB → 28KB)
-- No fake numbers anywhere — every value is real or part of the design replica
+### Marketing Site (Green + Neon Editions)
+- **Split hero** — Full-viewport layout with 1920×1200 product video, play-enforcer, and fallback
+- **CardsShowcase** — 8 exact Evernote feature cards in an infinite autoplay loop with hover circle animations
+- **3D interactions** — Mouse-parallax note cards, glowing AI badge, rotating ring, tilt-on-hover throughout
+- **Mega-menu navigation** — Features/Explore/Plans dropdowns with responsive mobile accordion
+- **Theme switcher** — Seamless toggle between Green (cream + green) and Neon (black + lime) editions
+- **Motion engine** — Scroll progress bar, staggered reveals, magnetic buttons, back-to-top, animated counters
+- **Evernote-faithful design** — Exact typography scale, spacing rhythm, color palette, and button styles
+
+### Note-Taking App (Post-Auth)
+- **Rich-text editor** — TipTap with bold, italic, underline, headings, bullet/ordered/checklist lists, code blocks, blockquotes
+- **Organize** — Notebooks (create/rename/delete) + Tags (create/delete, replace-set on notes) + sidebar counts
+- **Search** — Title/body substring search with notebook and tag filters
+- **Attachments** — Upload PNG/JPEG/WebP/GIF (≤5 MB, ≤10 per note), owner-only access
+- **Public sharing** — Cryptographically secure share links (32-byte random tokens, SHA-256 at rest), scoped to note
+- **Trash management** — Trash → restore → delete-forever (trash-first guard)
+- **Pin notes** — Pinned-first sorting with hover-revealed pin control
+- **Auto-save** — 900ms debounced persistence + manual save + Ctrl/Cmd+S
+- **Account export/delete** — Full JSON export and complete account cascade deletion
+
+### AI Features
+- **Summarize** — `POST /api/notes/:id/summarize` with Groq integration (mock when key unset)
+- **Title suggestions** — AI-generated titles for notes
+- **Smart tags** — Suggested tags mapped to existing tags
+- **Note chat** — Session-only Q&A about a note (no transcript stored)
+- **Writing assistant** — Continue, rephrase, shorten, and expand actions with selection bubble menu
+- **Streaming chat** — SSE streaming for chat responses (with JSON fallback, shared rate budget)
+
+### PWA & Offline
+- **Service worker** — Caches static shell assets; app.html reads last-known data from IndexedDB when offline
+- **Offline banner** — Disables create/edit/save/share when `navigator.onLine` is false
+- **Manifest** — Installable web app with 192px/512px icons
+
+---
+
+## 📁 Project Structure
+
+```
+notin/
+├── index.html                  # Entry — redirects to frontend/
+├── README.md                   # ← You are here
+├── RUNBOOK.md                  # Operations, deployment, backup/restore, E2E
+├── ARCHITECTURE_DIAGRAM.md    # Full system architecture diagram
+├── GAP_ANALYSIS.md             # Product gap analysis & roadmap
+├── PROJECT_BIBLE.md            # Comprehensive project state reference
+│
+├── frontend/                   # 🎨 MARKETING SITE
+│   ├── index.html              # Green Edition landing page
+│   ├── index-neon.html         # Neon Edition landing page
+│   ├── context.html            # About / roadmap page
+│   ├── input.css               # Tailwind v4 source (Green theme)
+│   ├── input-neon.css          # Tailwind v4 source (Neon theme)
+│   ├── styles.css              # Compiled Green CSS (28KB minified)
+│   ├── styles-neon.css         # Compiled Neon CSS
+│   ├── polish.css              # Shared responsive visual layer
+│   ├── script.js               # Motion engine & interactions (~985 LOC)
+│   ├── dev-server.mjs          # Dev server with API proxy
+│   └── assets/                  # Images, video, Lottie, icon
+│       ├── hero-demo-full.mp4  # Product demo video
+│       ├── notin-icon-*.png    # 3D logos & favicons
+│       └── ...
+│
+├── backend/                    # ⚙️ REST API
+│   ├── src/
+│   │   ├── server.js           # Express app entry (port 5000)
+│   │   ├── config/             # Database (db.js), Sentry (sentry.js)
+│   │   ├── controllers/        # account, ai, attachment, auth,
+│   │   │                        # note, notebook, share, tag, user
+│   │   ├── routes/             # attachment, auth, note, notebook,
+│   │   │                        # publicShare, tag, user
+│   │   ├── middleware/         # JWT auth middleware
+│   │   ├── lib/               # JWT, httpSecurity, AI provider/prompts
+│   │   └── db/                 # Data migrations (migrate.js)
+│   ├── prisma/                # Schema declaration (mirrors migrates)
+│   ├── tests/e2e/             # Playwright E2E tests (9 smoke specs)
+│   ├── package.json
+│   └── playwright.config.js
+│
+├── authentication/            # 🔐 AUTH & EDITOR APP
+│   ├── app.html / app.js / app.css   # TipTap rich-text editor
+│   ├── index.html / login.html       # Sign-up / Sign-in
+│   ├── script.js                     # Auth client logic
+│   ├── server.js                     # Legacy standalone server (deprecated)
+│   ├── sw.js                         # Service worker (PWA)
+│   ├── manifest.webmanifest          # PWA manifest
+│   ├── share.html / share.js         # Read-only share renderer
+│   ├── icons/                        # PWA icons
+│   └── package.json
+│
+├── ci/                         # 🔁 CI/CD
+│   ├── e2e.yml                 # GitHub Actions workflow (E2E + fail-closed
+│   │                            #   smokes + Postgres rehearsal)
+│   └── README.md               # How to activate
+│
+└── .gitignore
+```
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js 20+
+- npm
+- Chromium (for E2E tests)
+
+### 1. Marketing Site (standalone)
+```bash
+cd frontend
+npm install
+
+# Open the landing pages directly (no build — pre-compiled)
+open index.html       # Green Edition
+open index-neon.html  # Neon Edition
+
+# Or run the dev server with API proxy
+node dev-server.mjs   # http://localhost:3000
+```
+
+### 2. Full App (API + Auth + Editor) — Unified on port 5000
+```bash
+# Install auth dependencies
+cd authentication
+npm ci
+
+# Install backend dependencies
+cd ../backend
+npm ci
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your PostgreSQL URL or leave blank for SQLite dev fallback
+
+# Run database migrations
+npm run db:migrate
+
+# Start the unified server
+npm start    # http://localhost:5000
+```
+
+### 3. Marketing Site with Live API
+```bash
+cd frontend
+PORT=3000 API_TARGET=http://localhost:5000 node dev-server.mjs
+```
+
+> **Demo mode:** When `NODE_ENV` is not `production` and SMTP is unset, the demo OTP `123456` is available for testing the full auth flow.
+
+---
+
+## 📡 API Endpoints
+
+### Health
+| Method | Path | Description |
+|---|---|---|
+| GET | `/health` | Server health (database type, uptime) |
+| GET | `/api/auth/health` | Auth health (demo mode status) |
+
+### Authentication (`/api/auth`)
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/auth/google` | Google OAuth — start flow |
+| GET | `/api/auth/google/callback` | Google OAuth — callback |
+| POST | `/api/auth/otp/verify` | Verify OTP code |
+| POST | `/api/auth/otp/resend` | Resend OTP |
+| POST | `/api/auth/otp/demo-request` | Request demo OTP (dev only) |
+| POST | `/api/auth/forgot-password` | Request password reset |
+| POST | `/api/auth/reset-password` | Reset password with token |
+| POST | `/api/auth/refresh` | Rotate refresh token |
+| POST | `/api/auth/logout` | Revoke refresh token (CSRF-guarded) |
+| GET | `/api/auth/health` | Auth health (demo mode status) |
+
+### Users (`/api/users`)
+| Method | Path | Description |
+|---|---|---|
+| POST | `/api/users/signup` | Create account |
+| POST | `/api/users/signin` | Sign in (returns JWT + refresh cookie) |
+| GET | `/api/users/me/export` | Export all user data (JSON, protected) |
+| DELETE | `/api/users/me` | Permanently delete account (protected) |
+
+### Notes (`/api/notes` — protected)
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/notes` | List notes (search `?q=`, notebook/tag filters) |
+| POST | `/api/notes` | Create note |
+| PUT / PATCH | `/api/notes/:id` | Update note |
+| POST | `/api/notes/:id/trash` | Move to trash |
+| POST | `/api/notes/:id/restore` | Restore from trash |
+| DELETE | `/api/notes/:id` | Delete from trash (permanent) |
+| POST | `/api/notes/:id/share` | Create/rotate public share link |
+| DELETE | `/api/notes/:id/share` | Revoke share link |
+
+### Notebooks & Tags (protected)
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/notebooks` | List notebooks |
+| POST | `/api/notebooks` | Create notebook |
+| PATCH | `/api/notebooks/:id` | Rename notebook |
+| DELETE | `/api/notebooks/:id` | Delete notebook |
+| GET | `/api/tags` | List tags |
+| POST | `/api/tags` | Create tag |
+| DELETE | `/api/tags/:id` | Delete tag |
+
+### Attachments (protected)
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/notes/:noteId/attachments` | List attachments |
+| POST | `/api/notes/:noteId/attachments` | Upload images (multipart `images`) |
+| GET | `/api/attachments/:id/file` | Download image |
+| DELETE | `/api/attachments/:id` | Delete attachment |
+
+### AI Features (protected)
+| Method | Path | Description |
+|---|---|---|
+| POST | `/api/notes/:id/summarize` | Summarize note |
+| POST | `/api/notes/:id/suggest-title` | Suggest title |
+| POST | `/api/notes/:id/suggest-tags` | Suggest tags |
+| POST | `/api/notes/:id/chat` | Chat about note (non-streaming) |
+| POST | `/api/notes/:id/chat/stream` | Streaming chat (SSE) |
+| POST | `/api/notes/:id/assist` | Writing assistant (continue/rephrase/shorten/expand) |
+
+### Public Sharing (no auth)
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/public/share/:token` | Read shared note (title + body + image metadata) |
+| GET | `/api/public/share/:token/files/:attachmentId` | Read shared image |
+
+---
+
+## 🧪 Testing
+
+The project includes a comprehensive Playwright E2E test suite:
+
+```bash
+cd backend
+npx playwright install chromium
+npm run test:e2e
+```
+
+**Test specs** (in `backend/tests/e2e/`):
+| File | Scope |
+|---|---|
+| `mvp-smoke.spec.js` | Full UI journey — signup → editor → notebooks → tags → attachments → shares → trash → export → logout |
+| `ai-smoke.spec.js` | AI endpoint availability |
+| `ai-chat-smoke.spec.js` | Note chat endpoint |
+| `ai-chat-stream-smoke.spec.js` | Streaming chat (SSE) |
+| `ai-assist-smoke.spec.js` | Writing assistant |
+| `ai-tags-smoke.spec.js` | Smart tag suggestions |
+| `ai-title-smoke.spec.js` | Title suggestions |
+| `auth-csrf.spec.js` | CSRF protection verification |
+| `auth-refresh-replay.spec.js` | Refresh token replay attack prevention |
+
+Tests use throwaway data on every run. Failure-only screenshots and retained traces are written to ignored artifact directories.
+
+---
+
+## 🔁 CI/CD
+
+The CI pipeline is defined in `ci/e2e.yml` (designed to be moved to `.github/workflows/`):
+
+- **E2E suite** — Full Playwright test run against Chromium
+- **Fail-closed smokes** — Verifies the server refuses to boot with placeholder secrets or non-`postgres://` URLs
+- **Postgres rehearsal** — Boots against a real `postgres:16-alpine` service and asserts `/health` reports PostgreSQL
+- **Backup/restore drill** — Documented and executed in the RUNBOOK
+
+---
+
+## 🔒 Security
+
+The project implements several security-hardening measures:
+
+| Measure | Implementation |
+|---|---|
+| **JWT authentication** | 15-minute access tokens (memory-only) + rotating HTTP-only refresh cookies (SHA-256, one-time use) |
+| **Password hashing** | bcryptjs with salt rounds |
+| **OTP security** | Hashed codes, 5-minute expiry, single-use, max 5 attempts |
+| **CSRF protection** | Signed origin validation via httpSecurity middleware |
+| **Fail-closed boot** | Production refuses to start with placeholder secrets or without a real PostgreSQL URL |
+| **CORS** | Locked to `APP_ORIGIN` in production; preview/localhost echo is dev-only |
+| **Rate limiting** | IP-based rate limits on auth endpoints and public share reads |
+| **Share tokens** | 32-byte cryptographically random tokens; only SHA-256 hashes stored |
+| **Input sanitization** | SQL injection prevention via parameterized queries; XSS prevention in editor output |
+| **Attachment validation** | File type whitelist (PNG/JPEG/WebP/GIF), size limits, random filenames |
+| **Sentry privacy** | Request data, users, extras, and breadcrumbs intentionally stripped |
+
+---
+
+## 🧠 Key Learnings & Challenges
+
+### Architecture Decisions
+- **Unified server on port 5000** — Combined the API, auth, and static app hosting into a single Express process rather than maintaining separate services, simplifying deployment and reducing surface area.
+- **SQLite dev fallback** — Local development works without PostgreSQL, but production hard-fails on non-`postgres://` URLs (no silent fallback to prevent data loss).
+- **Prisma as documentation only** — The ORM schema mirrors the raw SQL migration tool; migrations are applied via `migrate.js`, keeping control over the exact SQL.
+
+### Frontend Highlights
+- **100% vanilla JS** — No framework. Built a custom motion engine with `requestAnimationFrame`, `IntersectionObserver`, touch/pointer event normalization, and `prefers-reduced-motion` support — demonstrating strong DOM and browser API knowledge.
+- **Pixel-perfect replica** — Reverse-engineered Evernote's landing page to achieve 100/100 design match score, including exact card titles, colors, spacing, and interactions.
+- **Dual theme architecture** — Two complete themes (Green/Neon) sharing the same HTML structure via CSS custom properties and separate input files.
+
+### Backend Highlights
+- **Full CRUD with data integrity** — Trash-first delete pattern, notebook/tag referential integrity, cascade deletes on account removal.
+- **AI integration** — Built a provider abstraction layer that supports both Groq API and deterministic keyless mocks for development, with per-action rate limiting and streaming SSE support.
+- **Authentication from scratch** — JWT access/refresh token rotation, bcrypt password hashing, OTP generation/verification (with demo mode), Google OAuth scaffolding.
+
+### Security-First Design
+- **Fail-closed philosophy** — The server won't boot in production unless all critical secrets are properly configured.
+- **Share token hashing** — Raw share secrets are never stored; only SHA-256 hashes, preventing token theft via DB dump.
+- **Defense in depth** — CSRF signed origins, CORS restriction, HTTP-only cookies (vs. localStorage), and separate auth concerns.
 
 ---
 
 ## 📄 License
 
 © Notin. Personal / portfolio project. The Evernote Lottie asset is the property of Evernote and is used here for design reference only.
-
----
-
-<div align="center">
-
-<!-- 3D animated footer -->
-<img src="https://readme-typing-svg.demolab.com?font=IBM+Plex+Sans&size=20&duration=3000&color=8FE333&center=true&width=450&lines=Made+with+💚+by+the+Notin+team;Green+🌿+%26+Neon+⚡+editions;Thanks+for+visiting+✨" alt="footer" />
-
-</div>
