@@ -18999,7 +18999,7 @@ function loadCachedNotes() {
     updateEditorForSelection(null);
   }
 }
-async function bootstrapToken() {
+async function bootstrapTokenCore() {
   try {
     const r = await fetch(API_BASE2 + "/api/auth/refresh", { method: "POST", credentials: "include" });
     if (r.ok) {
@@ -19019,6 +19019,15 @@ async function bootstrapToken() {
   } catch {
   }
   return null;
+}
+var refreshFlight = null;
+function bootstrapToken() {
+  if (!refreshFlight) {
+    refreshFlight = bootstrapTokenCore().finally(() => {
+      refreshFlight = null;
+    });
+  }
+  return refreshFlight;
 }
 async function fetchWithAuth(url, opts = {}) {
   const headers = { ...opts.headers || {} };

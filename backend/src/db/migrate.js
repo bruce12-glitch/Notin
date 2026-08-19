@@ -187,6 +187,13 @@ async function migratePostgres(pool) {
     );
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS refresh_tokens_user_id_idx ON refresh_tokens(user_id);`);
+  // WP-SEC-001 — refresh-token rotation families + replay detection
+  await pool.query(`ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS family_id TEXT;`);
+  await pool.query(`ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS revoke_reason TEXT;`);
+  // Legacy rows: one family per user. A legacy replay then revokes that user's
+  // remaining legacy sessions — fail-closed by design.
+  await pool.query(`UPDATE refresh_tokens SET family_id = user_id WHERE family_id IS NULL;`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS refresh_tokens_family_idx ON refresh_tokens(family_id);`);
 
   // WP-AUTH-003 — password reset tokens (HASH only; single-use; ~60 min TTL)
   await pool.query(`
@@ -347,6 +354,13 @@ function migrateSqlite(dbPath) {
     );
   `);
   db.exec(`CREATE INDEX IF NOT EXISTS refresh_tokens_user_id_idx ON refresh_tokens(user_id);`);
+  // WP-SEC-001 — refresh-token rotation families + replay detection
+  try{ db.exec(`ALTER TABLE refresh_tokens ADD COLUMN family_id TEXT`); }catch(e){ if(!String(e.message).includes('duplicate column')) throw e; }
+  try{ db.exec(`ALTER TABLE refresh_tokens ADD COLUMN revoke_reason TEXT`); }catch(e){ if(!String(e.message).includes('duplicate column')) throw e; }
+  // Legacy rows: one family per user. A legacy replay then revokes that user's
+  // remaining legacy sessions — fail-closed by design.
+  db.exec(`UPDATE refresh_tokens SET family_id = user_id WHERE family_id IS NULL;`);
+  db.exec(`CREATE INDEX IF NOT EXISTS refresh_tokens_family_idx ON refresh_tokens(family_id);`);
 
   // WP-AUTH-003 — password reset tokens (HASH only; single-use; ~60 min TTL)
   db.exec(`

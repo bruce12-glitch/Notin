@@ -400,7 +400,7 @@ function loadCachedNotes(){
   }
 }
 
-async function bootstrapToken(){
+async function bootstrapTokenCore(){
   try{
     const r = await fetch(API_BASE + '/api/auth/refresh', {method:'POST', credentials:'include'});
     if(r.ok){
@@ -418,6 +418,16 @@ async function bootstrapToken(){
     }
   }catch{}
   return null;
+}
+// WP-SEC-001 — single-flight refresh: parallel 401s share ONE rotation call.
+// Without this, same-tab bursts replay a consumed cookie into the new
+// server-side family detection and sign the user out for no reason.
+let refreshFlight = null;
+function bootstrapToken(){
+  if(!refreshFlight){
+    refreshFlight = bootstrapTokenCore().finally(()=>{ refreshFlight = null; });
+  }
+  return refreshFlight;
 }
 async function fetchWithAuth(url, opts={}){
   const headers = {...(opts.headers || {})};
