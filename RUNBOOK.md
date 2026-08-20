@@ -100,7 +100,7 @@ The full journey requires development demo OTP conditions. If demo OTP is disabl
 
 - [ ] Set `NODE_ENV=production` and expose only the unified port 5000 behind HTTPS/reverse proxy.
 - [ ] Use strong, independent `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, and `OTP_PEPPER` values; remove placeholder/legacy secrets.
-- [ ] Configure a real PostgreSQL `DATABASE_URL`, run `npm run db:migrate`, and verify `/health` reports PostgreSQL.
+- [ ] Configure a real PostgreSQL `DATABASE_URL`, run `npm run db:migrate`, and verify `/api/health` returns 200 with `"driver":"PostgreSQL"` and `"reachable":true`. Point the load balancer at `/api/health` (readiness), not `/health` (liveness).
 - [ ] Configure SMTP (`SMTP_HOST`, port, user, password, sender) so OTP and reset mail can be delivered. Verify demo OTP is disabled.
 - [ ] Configure Google OAuth client credentials and an exact HTTPS `GOOGLE_REDIRECT_URI` if Google sign-in is offered.
 - [ ] Set the public HTTPS `APP_ORIGIN`; verify secure HTTP-only refresh cookies through the proxy.
@@ -110,14 +110,64 @@ The full journey requires development demo OTP conditions. If demo OTP is disabl
 - [ ] Run `npm run test:e2e` against the release URL.
 - [ ] Do not deploy or route traffic to the old port 8787 authentication server.
 
+## Liveness vs readiness (load balancer)
+
+Two health URLs exist on purpose. Do not point a load balancer at the wrong one.
+
+| Probe | URL | What it proves | Failure |
+|---|---|---|---|
+| **Liveness** (container / process) | `GET /health` | The Node process is up. **Never queries the database.** | HTTP 200 while the process lives. A Postgres blip must **not** restart the container. |
+| **Readiness** (load balancer) | `GET /api/health` | A real `SELECT 1` against the active driver, 2-second timeout. | **200** `{ "status": "ok", "database": { "driver", "reachable": true, "latencyMs" }, "uptimeSeconds", "version" }` — **503** `{ "status": "degraded", "database": { "reachable": false, … } }` with **no** error detail. |
+| **Deep** (operator, optional) | `GET /api/health/deep` | Readiness plus `UPLOAD_DIR` writability. | Same 200/503 contract, plus `"uploads": { "writable": true\|false }`. |
+
+**The load balancer / target-group health check must poll `GET /api/health`.** Use `GET /health` only as a Kubernetes/Docker **liveness** probe (restart the process if it hangs). Polling liveness for traffic routing would keep sending users to an instance whose database is down.
+
+```bash
+curl -fsS -D- http://127.0.0.1:5000/health
+curl -fsS -D- http://127.0.0.1:5000/api/health
+curl -fsS -D- http://127.0.0.1:5000/api/health/deep
+```
+
+### What a 503 from `/api/health` means
+
+The process is alive but **not ready for traffic**. The JSON `status` is `"degraded"` and `database.reachable` is `false`. No connection string, host, or stack is returned.
+
+First three things to check:
+
+1. **Can this instance still reach Postgres?** From the same host: `psql "$DATABASE_URL" -c 'SELECT 1'` (or the provider's console). A timeout here matches a 2s probe timeout.
+2. **Is `DATABASE_URL` the database you think it is?** Wrong host/db/user after a rotate, or a proxy that stopped accepting connections. Production never falls back to SQLite — a 503 is not "it's on SQLite now".
+3. **Pool exhaustion / lock storm?** `latencyMs` near 2000 means the probe timed out. Check active connections, long transactions, and disk on the database host.
+
+Liveness (`GET /health`) will still return 200 during that 503. That is correct: do not kill the process; stop routing to it until readiness recovers.
+
+### Tracing a user-reported error via `X-Request-Id`
+
+Every response (including 4xx/5xx and static files) carries `X-Request-Id`.
+
+- If the client sends a sane id (`≤128` chars, `[A-Za-z0-9_-]` only) it is echoed.
+- Anything else (too long, spaces, slashes, control characters) is **replaced** with a server-generated UUID — never reflected.
+- Unhandled 500 bodies keep `{ "message": "Internal Server Error" }` and may add `"requestId"` so the user can quote it. Product 500s from controllers keep their existing `{ message }` / `{ error }` shape.
+
+Ask the user for the `X-Request-Id` header (or the `requestId` field on a 500). Grep application logs for that exact token; every `console.error` from a controller is prefixed `[<id>]` via `logError`. Do **not** expect emails, tokens, passwords, or note content in those lines.
+
+```bash
+# Example: confirm echo
+curl -sS -D- -H 'X-Request-Id: support-ticket-123' http://127.0.0.1:5000/api/health
+```
+
+### Graceful shutdown
+
+`SIGTERM` / `SIGINT` stop accepting new connections (`server.close()`), wait up to **10 seconds** for in-flight requests, then `db.$disconnect()` and exit 0. A second signal is ignored (teardown is single-flight). If the grace period expires the process force-exits 1. Rolling deploys should therefore SIGTERM and wait ≥10s before SIGKILL so in-flight note saves can finish.
+
 ## Basic operational checks
 
 ```bash
 curl -fsS http://127.0.0.1:5000/health
+curl -fsS http://127.0.0.1:5000/api/health
 curl -fsS http://127.0.0.1:5000/api/auth/health
 ```
 
-A healthy deployment returns HTTP 200. Check application logs for migration/database failures, SMTP delivery problems, unexpected SQLite fallback, and Sentry initialization warnings. Roll back application code and schema-compatible changes together; restore database/uploads from the same backup point when data recovery is required.
+A healthy deployment returns HTTP 200 from liveness and readiness. Check application logs for migration/database failures, SMTP delivery problems, unexpected SQLite fallback, and Sentry initialization warnings. Roll back application code and schema-compatible changes together; restore database/uploads from the same backup point when data recovery is required.
 
 ## Backup & restore
 
