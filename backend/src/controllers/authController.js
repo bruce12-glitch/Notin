@@ -5,6 +5,7 @@ import { OAuth2Client } from 'google-auth-library';
 import db from '../config/db.js';
 import { createAccessToken, hashToken, randomToken, mintCsrfToken } from '../lib/jwt.js';
 import { otpRequestAllowed } from '../lib/throttle.js';
+import { logError } from '../lib/logging.js';
 
 const env = process.env;
 const origin = env.APP_ORIGIN || 'http://localhost:4173';
@@ -156,7 +157,7 @@ export async function googleCallback(req, res) {
       throw otpErr;
     }
   } catch (e) {
-    console.error('googleCallback error', e);
+    logError(req, e, 'googleCallback error');
     res.status(401).send('Google authentication failed');
   }
 }
@@ -196,7 +197,7 @@ export async function otpResend(req, res) {
     }
     res.json({ ok: true, message: 'If the account exists, a new code was sent.' });
   } catch (e) {
-    console.error('otpResend', e);
+    logError(req, e, 'otpResend');
     res.status(500).json({ error: 'Could not resend code' });
   }
 }
@@ -437,7 +438,7 @@ export async function forgotPassword(req, res) {
     console.error(`[RESET] SMTP is not configured; reset email to ${user.email} could not be delivered`);
     return res.json(generic);
   } catch (e) {
-    console.error('forgotPassword', e);
+    logError(req, e, 'forgotPassword');
     res.status(500).json({ error: 'Could not process reset request' });
   }
 }
@@ -469,7 +470,7 @@ export async function resetPassword(req, res) {
     await db.query(`UPDATE refresh_tokens SET revoked_at = $1, revoke_reason = 'password-reset' WHERE user_id = $2 AND revoked_at IS NULL`, [now, user.id]);
     res.json({ ok: true, message: 'Password updated. Sign in with your new password.' });
   } catch (e) {
-    console.error('resetPassword', e);
+    logError(req, e, 'resetPassword');
     res.status(500).json({ error: 'Could not reset password' });
   }
 }
