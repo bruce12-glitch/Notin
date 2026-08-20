@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import multer from 'multer';
 import db from '../config/db.js';
+import { logError } from '../lib/logging.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const uploadDir = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads'));
@@ -70,7 +71,7 @@ export async function ensureAttachmentCapacity(req, res, next) {
     req.attachmentCount = Number(rows[0]?.count || 0);
     next();
   } catch (error) {
-    console.error(error);
+    logError(req, error);
     res.status(500).json({ message: 'Could not prepare image upload' });
   }
 }
@@ -103,7 +104,7 @@ export async function uploadImages(req, res) {
   } catch (error) {
     for (const id of createdIds) await db.query(`DELETE FROM "Attachment" WHERE id = $1`, [id]).catch(() => {});
     await removeFiles(files);
-    console.error(error);
+    logError(req, error);
     res.status(500).json({ message: 'Image upload failed' });
   }
 }
@@ -119,7 +120,7 @@ export async function listAttachments(req, res) {
     );
     res.json(rows.map(publicAttachment));
   } catch (error) {
-    console.error(error);
+    logError(req, error);
     res.status(500).json({ message: 'Could not load images' });
   }
 }
@@ -143,7 +144,7 @@ export async function getAttachmentFile(req, res) {
     res.setHeader('Cache-Control', 'private, max-age=3600');
     res.sendFile(filePath);
   } catch (error) {
-    console.error(error);
+    logError(req, error);
     res.status(500).json({ message: 'Could not load image' });
   }
 }
@@ -156,7 +157,7 @@ export async function deleteAttachment(req, res) {
     await fs.promises.unlink(path.join(uploadDir, path.basename(attachment.path))).catch(() => {});
     res.status(204).end();
   } catch (error) {
-    console.error(error);
+    logError(req, error);
     res.status(500).json({ message: 'Could not remove image' });
   }
 }
