@@ -1,5 +1,6 @@
 import prisma from '../config/db.js';
 import { deleteAttachmentsForNote } from './attachmentController.js';
+import { logError } from '../lib/logging.js';
 
 export const createNote = async (req, res) => {
   const { title, description, contentJson, contentText, notebookId } = req.body;
@@ -18,7 +19,7 @@ export const createNote = async (req, res) => {
     });
     res.status(201).json(note);
   } catch (error) {
-    console.error(error);
+    logError(req, error);
     res.status(500).json({ message: 'Failed to create note' });
   }
 };
@@ -71,7 +72,7 @@ export const getNotes = async (req, res) => {
     });
     res.status(200).json(notes);
   } catch (error) {
-    console.error(error);
+    logError(req, error);
     res.status(500).json({ message: 'Failed to fetch notes' });
   }
 };
@@ -146,7 +147,7 @@ export const updateNote = async (req, res) => {
 
     res.status(200).json(updated);
   } catch (error) {
-    console.error(error);
+    logError(req, error);
     res.status(500).json({ message: 'Failed to update note' });
   }
 };
@@ -165,7 +166,7 @@ export const trashNote = async (req, res) => {
     });
     res.status(200).json(updated);
   } catch (error) {
-    console.error(error);
+    logError(req, error);
     res.status(500).json({ message: 'Failed to trash note' });
   }
 };
@@ -184,7 +185,7 @@ export const restoreNote = async (req, res) => {
     });
     res.status(200).json(updated);
   } catch (error) {
-    console.error(error);
+    logError(req, error);
     res.status(500).json({ message: 'Failed to restore note' });
   }
 };
@@ -211,7 +212,7 @@ export const deleteNote = async (req, res) => {
     await prisma.note.delete({ where: { id } });
     res.status(200).json({ message: 'Note deleted successfully' });
   } catch (error) {
-    console.error(error);
+    logError(req, error);
     res.status(500).json({ message: 'Failed to delete note' });
   }
 };
