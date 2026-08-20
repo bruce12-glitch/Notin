@@ -10,10 +10,24 @@
 
 | Field | Value |
 |---|---|
-| **Last Updated** | 2026-08-19 (WP-SEC-002 signed CSRF + trusted-origin enforcement) |
+| **Last Updated** | 2026-08-20 (CTO live audit — runtime verification of every Phase-2 claim; **one critical defect found**, see WP-AI-005) |
 | **Current Phase** | Phase 2 (AI Layer) **complete — WP-AI-001/002/002b/003/003b/004/004b**; WP-SCHEMA-001 mirror, WP-DEPLOY-001 gates, WP-FUNNEL-001, and **WP-LEFTOVERS-001** complete |
-| **MVP Completion** | ~81% |
-| **Production readiness** | ~85% — fail-closed boot, CORS lock, CI + Chromium, and a rehearsed backup/restore drill all landed (WP-DEPLOY-001). Remaining: a human runs `RUNBOOK.md` against real infrastructure with real secrets. |
+| **MVP Completion** | ~81% (unchanged — audit found no missing features, one broken one) |
+| **Production readiness** | **~70%, revised down from ~85%** — fail-closed boot, CORS lock, CSRF/origin guards and the backup/restore drill are all real and were re-verified live on 2026-08-20. But **AI rate limiting is keyed by IP, so a new user's first AI call can return 429** (WP-AI-005). That is a multi-user launch blocker: it must be fixed before anyone but the developer uses the product. CI is still inactive (`ci/e2e.yml` not yet moved by a human). |
+
+### 2026-08-20 live audit — what was actually executed
+
+Not a doc review. The API was booted on SQLite against a freshly migrated database and exercised with real HTTP:
+
+- ✅ **Verified working:** signup → JWT; note CRUD; search `?q=`; notebooks; tags; share-link mint; account export; owner scoping (another user gets **404**, not 403 — correct, no existence leak); unauthenticated `GET /api/notes` → **401**.
+- ✅ **All five AI endpoints verified live in mock mode:** `summarize`, `suggest-title`, `suggest-tags`, `chat`, `chat/stream` (SSE), `assist` (`continue`/`rephrase`/`shorten`/`expand`). Phase 2 is genuinely complete, not aspirational.
+- ✅ **Fail-closed boot re-proven, all three ways:** no env → `FATAL: DATABASE_URL must be a postgres:// URL`; `.env.example` placeholder secrets → three `FATAL:` lines + refusal; real secrets with a non-postgres URL → refusal.
+- ✅ **Security guards re-proven live:** bad `Origin` on refresh → `403 {"error":"Invalid origin"}`; missing CSRF header → `403`; HSTS + `X-Content-Type-Options: nosniff` present.
+- ✅ **8/8 request-only E2E pass** against a clean DB (all six AI specs + `auth-csrf` + `auth-refresh-replay`).
+- ❌ **DEFECT FOUND — see technical debt / WP-AI-005.**
+- ⚠️ **Unverifiable here:** `mvp-smoke.spec.js` browser journey — Playwright Chromium binary genuinely cannot be installed in the Arena sandbox. Confirms the standing blocker; needs CI or a dev machine.
+- 📝 **API contract note for anyone writing tests or clients:** create-note takes **`contentText`** (not `content`); chat takes **`question`** (not `message`); assist takes **`{action, text}`** (not `selection`). Wrong field names save an empty note and then trip the length guards — looks like an AI bug, isn't one.
+- 📝 **Doc drift corrected:** the Bible listed `docs/` and `screenshots/` as technical debt. **Neither directory exists** in this checkout (`git ls-files` top level = `authentication`, `backend`, `ci`, `frontend`, 5 markdown files, `index.html`). Those debt items are removed below.
 
 ---
 
@@ -78,8 +92,9 @@
 - → ~~Dev fallback JWT secrets + permissive CORS~~ **FIXED 2026-08-18** by WP-DEPLOY-001: production boot refuses missing/placeholder secrets and non-postgres URLs; CORS echoes only `APP_ORIGIN` allowlist entries. Dev keeps the permissive behavior deliberately. **Resolved**
 - → ~~Postgres→SQLite silent failover in `db.js`~~ **FIXED 2026-08-18** by WP-DEPLOY-001: refused in production at import, at `$connect()`, and mid-flight in `query()`. Still available in dev. **Resolved**
 - → Legacy `authentication/server.js` package: 3 advisories (1 high nodemailer CRLF, 2 moderate) — dead code path; retire the package or pin deps. **Low** (unified backend audit = 0 vulns)
-- → `docs/package.json` and `docs/package-lock.json` remain stale artifacts (not part of the GitHub Pages mirror; cleanup deferred). **Low**
-- → `screenshots/` ~20 MB. Consolidate when touching marketing. **Low**
+- → 🚨 **AI rate limiters are keyed by IP, not by user — CRITICAL, fix before any multi-user deployment.** All five `rateLimit(...)` instances in `backend/src/routes/noteRoutes.js` (lines ~35–51) omit `keyGenerator`, so express-rate-limit v8 falls back to client IP. Reproduced live 2026-08-20 on a clean DB: user A burns the summarize budget (`200 200 429 429 429`), then a **brand-new user's first ever AI call returns 429**. Behind a proxy, NAT, campus, or mobile carrier, five requests lock out every other customer on that egress IP for 15 minutes. It also makes the E2E suite order-dependent (re-running the AI specs inside one window fails four of them; `ai-assist-smoke.spec.js:53` documents the workaround instead of catching the bug). Fix = one shared `keyGenerator` on `req.userId` — `auth` already runs before every limiter on that router. **Full agent instruction ready at `AGENT_INSTRUCTION_WP-AI-005.md`.** **Critical**
+- → In-memory rate-limit store is single-instance only. Correct for the MVP; if the API is ever scaled to more than one process/dyno the budgets fork per instance. Revisit only at that point (Upstash Redis is the free-tier option). **Low — do not build now**
+- → ~~`docs/` stale artifacts~~ and ~~`screenshots/` ~20 MB~~ — **both directories do not exist in this checkout** (verified 2026-08-20 via `git ls-files`). Stale Bible entries; removed. **Resolved / not applicable**
 - → Legacy `jsonwebtoken` fallback verification path — retire after token migration window. **Low**
 - → No unit tests; no deployment manifest. CI is written but **not yet active**: `ci/e2e.yml` must be moved to `.github/workflows/e2e.yml` by a human (agent tokens cannot push workflow files). Until then no run is enforced on PRs. **Medium**
 - → Single ~2,400-line `app.js` — acceptable while E2E-guarded. **Low**
@@ -121,6 +136,8 @@
 
 ## NEXT 3 PRIORITIES
 
-1. **Hosting** — human follows `RUNBOOK.md` with real secrets (Phase 2 AI layer is now complete).
-2. **CI activation** — `git mv ci/e2e.yml .github/workflows/e2e.yml` by the owner (agent tokens cannot push workflow files); until then no run is enforced on PRs.
-3. **PR #2 follow-up** — repo owner opens the security-follow-ups issue (salvage list recorded in the PR #2 closing comment).
+1. 🚨 **WP-AI-005 — per-user AI rate limiting.** Now ahead of hosting: deploying today ships a product where a second user on the same IP is locked out of every AI feature. One route file + one new E2E spec, no new dependency. Instruction ready at `AGENT_INSTRUCTION_WP-AI-005.md`.
+2. **CI activation** — `git mv ci/e2e.yml .github/workflows/e2e.yml` by the owner (agent tokens cannot push workflow files). Promoted above hosting because the browser journey is the one thing that **cannot** be verified in this sandbox, and it is the only guard on the app-shell UI.
+3. **Hosting** — human follows `RUNBOOK.md` with real secrets. Do this **after** 1 and 2: the fail-closed boot, CORS lock, and CSRF guards are verified and ready, so the only thing standing between this repo and a real deployment is the rate-limit defect and an active CI signal.
+
+> Deferred, deliberately: PR #2 salvage items 3–7 (lockout, token-versioning, device inventory, password policy, Express 5). All are real, none block launch. Do not start them before priority 1.
