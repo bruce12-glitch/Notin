@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import db from '../config/db.js';
 import { uploadDir } from './attachmentController.js';
+import { logError } from '../lib/logging.js';
 
 const isTrue = (value) => value === true || value === 1 || value === '1' || value === 't';
 
@@ -102,7 +103,7 @@ export async function exportAccount(req, res) {
     res.setHeader('Cache-Control', 'no-store');
     res.status(200).send(JSON.stringify(payload, null, 2));
   } catch (error) {
-    console.error('account export failed', error);
+    logError(req, error, 'account export failed');
     res.status(500).json({ message: 'Could not export account data' });
   }
 }
@@ -149,7 +150,7 @@ export async function deleteAccount(req, res) {
     clearSessionCookies(res);
     res.status(204).end();
   } catch (error) {
-    console.error('account deletion failed', error);
+    logError(req, error, 'account deletion failed');
     res.status(500).json({ message: 'Could not delete account' });
   }
 }
