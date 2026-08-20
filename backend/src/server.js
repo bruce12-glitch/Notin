@@ -5,7 +5,9 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
+import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import db from './config/db.js';
 
@@ -17,7 +19,10 @@ import authRoutes from './routes/authRoutes.js';
 import attachmentRoutes from './routes/attachmentRoutes.js';
 import publicShareRoutes from './routes/publicShareRoutes.js';
 import { signup, signin } from './controllers/userController.js';
+import { uploadDir } from './controllers/attachmentController.js';
 import { allowList, canonicalOrigin, isOriginAllowed } from './lib/httpSecurity.js';
+import { logError } from './lib/logging.js';
+import requestId from './middleware/requestId.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,6 +67,52 @@ export function assertProductionEnv(env = process.env) {
 
 app.set('trust proxy', 1);
 
+// WP-OPS-001 — correlation id: after trust proxy, before helmet/CORS/routers
+// so every response (health, static, errors) carries X-Request-Id.
+app.use(requestId);
+
+function resolveAppVersion() {
+  const fromEnv = String(process.env.GIT_SHA || process.env.SOURCE_VERSION || '').trim();
+  if (fromEnv) return fromEnv.slice(0, 64);
+  try {
+    const sha = execFileSync('git', ['rev-parse', '--short', 'HEAD'], {
+      cwd: path.join(__dirname, '../..'),
+      encoding: 'utf8',
+      timeout: 1000,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    if (sha) return sha;
+  } catch { /* git unavailable in some deploy images */ }
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
+    if (pkg.version) return String(pkg.version);
+  } catch { /* package.json unreadable */ }
+  return 'unknown';
+}
+
+const APP_VERSION = resolveAppVersion();
+
+function healthPayload(database, extra = {}) {
+  return {
+    status: database.reachable ? 'ok' : 'degraded',
+    database,
+    uptimeSeconds: Math.floor(process.uptime()),
+    version: APP_VERSION,
+    ...extra,
+  };
+}
+
+async function probeUploadsWritable() {
+  const probePath = path.join(uploadDir, `.healthwrite-${process.pid}`);
+  try {
+    await fs.promises.writeFile(probePath, 'ok');
+    await fs.promises.unlink(probePath).catch(() => {});
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // Allow Arena/e2b preview iframes
 app.use(
   helmet({
@@ -87,7 +138,8 @@ app.use((req, res, next) => {
   }
   res.setHeader('Access-Control-Allow-Origin', allowOrigin);
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Notin-CSRF');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Notin-CSRF, X-Request-Id');
+  res.setHeader('Access-Control-Expose-Headers', 'X-Request-Id');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   res.setHeader('Vary', 'Origin');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
@@ -102,12 +154,26 @@ app.use(express.static(authStaticPath, { extensions: ['html'] }));
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
-// Health at root and api
+// WP-OPS-001 — liveness vs readiness.
+// GET /health is the container liveness probe: process-only, never queries the
+// DB, so a dependency blip cannot flap the process.
 app.get('/health', (req, res) => {
   res.json({ ok: true, service: 'notin-api', database: db.usePostgres ? 'PostgreSQL' : 'SQLite-fallback', time: new Date().toISOString() });
 });
-app.get('/api/health', (req, res) => {
-  res.json({ ok: true, service: 'notin-api', database: db.usePostgres ? 'PostgreSQL' : 'SQLite-fallback', time: new Date().toISOString() });
+// GET /api/health is the load-balancer readiness probe: real SELECT 1 with a
+// 2s timeout. 503 means "stop sending traffic"; it never leaks driver errors.
+app.get('/api/health', async (req, res) => {
+  const database = await db.probeHealth(2000);
+  const body = healthPayload(database);
+  res.status(database.reachable ? 200 : 503).json(body);
+});
+// Deep check — same readiness plus upload-directory writability (no new deps).
+app.get('/api/health/deep', async (req, res) => {
+  const database = await db.probeHealth(2000);
+  const uploadsWritable = await probeUploadsWritable();
+  const ok = database.reachable && uploadsWritable;
+  const body = healthPayload(database, { uploads: { writable: uploadsWritable } });
+  res.status(ok ? 200 : 503).json(body);
 });
 
 // Auth routes — unified identity (OTP/Google + password via /api/users)
@@ -152,9 +218,14 @@ app.get('/login.html', (req, res) => res.sendFile(path.join(authStaticPath, 'log
 app.use((err, req, res, next) => {
   // Capture only the Error object. Sentry's beforeSend strips request/user/extras.
   captureExpressError(err);
-  console.error(err.stack || err);
-  res.status(500).json({ message: 'Internal Server Error' });
+  logError(req, err.stack || err, 'unhandled');
+  // Additive requestId only — `message` stays the public contract.
+  res.status(500).json({ message: 'Internal Server Error', requestId: req.id });
 });
+
+const SHUTDOWN_GRACE_MS = 10_000;
+let httpServer = null;
+let shuttingDown = false;
 
 const start = async () => {
   // WP-DEPLOY-001 — gate before anything touches the database or a socket.
@@ -171,13 +242,14 @@ const start = async () => {
     if (!db.usePostgres) {
       console.log(`📁 Using SQLite fallback at ${db.sqlitePath} (set DATABASE_URL=postgresql://... for Postgres)`);
     }
-    app.listen(PORT, '0.0.0.0', () => {
+    httpServer = app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Notin Unified API listening on http://0.0.0.0:${PORT}`);
       console.log(`   API:        http://0.0.0.0:${PORT}/api`);
       console.log(`   Auth:       http://0.0.0.0:${PORT}/api/auth ( + /auth legacy)`);
       console.log(`   Users:      http://0.0.0.0:${PORT}/api/users`);
       console.log(`   Notes:      http://0.0.0.0:${PORT}/api/notes`);
-      console.log(`   Health:     http://0.0.0.0:${PORT}/health`);
+      console.log(`   Health:     http://0.0.0.0:${PORT}/health (liveness)`);
+      console.log(`   Readiness:  http://0.0.0.0:${PORT}/api/health`);
       console.log(`   Auth UI:    http://0.0.0.0:${PORT}/ (index.html) + /login.html`);
     });
   } catch (error) {
@@ -186,13 +258,46 @@ const start = async () => {
   }
 };
 
+function requestShutdown(signal) {
+  if (shuttingDown) {
+    console.log(`[shutdown] ${signal} ignored — already shutting down`);
+    return;
+  }
+  shuttingDown = true;
+  console.log(`[shutdown] ${signal} received — stopping new connections`);
+
+  const forceTimer = setTimeout(() => {
+    console.error('[shutdown] grace period expired — forcing exit');
+    process.exit(1);
+  }, SHUTDOWN_GRACE_MS);
+
+  const finish = async () => {
+    console.log('[shutdown] HTTP server closed');
+    try {
+      await db.$disconnect();
+    } catch { /* leaving anyway */ }
+    console.log('[shutdown] database disconnected');
+    clearTimeout(forceTimer);
+    process.exit(0);
+  };
+
+  if (!httpServer) {
+    finish();
+    return;
+  }
+
+  // Drop keep-alive idlers so server.close() waits only on in-flight requests.
+  if (typeof httpServer.closeIdleConnections === 'function') {
+    httpServer.closeIdleConnections();
+  }
+
+  httpServer.close((err) => {
+    if (err) console.error('[shutdown] error closing HTTP server');
+    finish();
+  });
+}
+
 start();
 
-process.on('SIGINT', async () => {
-  await db.$disconnect();
-  process.exit(0);
-});
-process.on('SIGTERM', async () => {
-  await db.$disconnect();
-  process.exit(0);
-});
+process.on('SIGINT', () => requestShutdown('SIGINT'));
+process.on('SIGTERM', () => requestShutdown('SIGTERM'));
