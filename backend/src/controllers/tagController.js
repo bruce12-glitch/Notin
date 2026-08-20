@@ -1,4 +1,5 @@
 import prisma from '../config/db.js';
+import { logError } from '../lib/logging.js';
 
 // WP-APP-006 — Tags (minimal): list / create / delete (deleting detaches from notes; notes are kept)
 // How tags are set on notes: PUT/PATCH /api/notes/:id accepts { tagIds: string[] } — an ATOMIC
@@ -16,7 +17,7 @@ export const getTags = async (req, res) => {
     const tags = await prisma.tag.findMany({ where: { userId: req.userId } });
     res.status(200).json(tags);
   } catch (error) {
-    console.error(error);
+    logError(req, error);
     res.status(500).json({ message: 'Failed to fetch tags' });
   }
 };
@@ -34,7 +35,7 @@ export const createTag = async (req, res) => {
     const tag = await prisma.tag.create({ data: { name, userId } });
     res.status(201).json({ ...tag, noteCount: 0 });
   } catch (error) {
-    console.error(error);
+    logError(req, error);
     res.status(500).json({ message: 'Failed to create tag' });
   }
 };
@@ -52,7 +53,7 @@ export const deleteTag = async (req, res) => {
     await prisma.tag.delete({ where: { id } });
     res.status(200).json({ message: 'Tag deleted. Notes were kept (tag removed from them).', detachedNotes: detached });
   } catch (error) {
-    console.error(error);
+    logError(req, error);
     res.status(500).json({ message: 'Failed to delete tag' });
   }
 };
