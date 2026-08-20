@@ -1,4 +1,5 @@
 import prisma from '../config/db.js';
+import { logError } from '../lib/logging.js';
 
 // WP-APP-005 — Notebooks (minimal): create / list / rename / delete (notes unfied, never deleted)
 
@@ -14,7 +15,7 @@ export const getNotebooks = async (req, res) => {
     const notebooks = await prisma.notebook.findMany({ where: { userId: req.userId } });
     res.status(200).json(notebooks);
   } catch (error) {
-    console.error(error);
+    logError(req, error);
     res.status(500).json({ message: 'Failed to fetch notebooks' });
   }
 };
@@ -32,7 +33,7 @@ export const createNotebook = async (req, res) => {
     const notebook = await prisma.notebook.create({ data: { name, userId } });
     res.status(201).json({ ...notebook, noteCount: 0 });
   } catch (error) {
-    console.error(error);
+    logError(req, error);
     res.status(500).json({ message: 'Failed to create notebook' });
   }
 };
@@ -55,7 +56,7 @@ export const updateNotebook = async (req, res) => {
     const updated = await prisma.notebook.update({ where: { id }, data: { name } });
     res.status(200).json(updated);
   } catch (error) {
-    console.error(error);
+    logError(req, error);
     res.status(500).json({ message: 'Failed to update notebook' });
   }
 };
@@ -73,7 +74,7 @@ export const deleteNotebook = async (req, res) => {
     await prisma.notebook.delete({ where: { id } });
     res.status(200).json({ message: 'Notebook deleted. Its notes were kept and are now unfiled.', unfiledNotes: unfiled });
   } catch (error) {
-    console.error(error);
+    logError(req, error);
     res.status(500).json({ message: 'Failed to delete notebook' });
   }
 };
