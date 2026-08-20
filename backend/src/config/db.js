@@ -139,6 +139,56 @@ async function setNoteTags(noteId, tagIds) {
   }
 }
 
+const HEALTH_PROBE_TIMEOUT_MS = 2000;
+
+function withTimeout(promise, ms) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      const err = new Error('HEALTH_TIMEOUT');
+      err.code = 'HEALTH_TIMEOUT';
+      reject(err);
+    }, ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+function activeDriverName() {
+  return usePostgres ? 'PostgreSQL' : 'SQLite-fallback';
+}
+
+// WP-OPS-001 — readiness probe. MUST NOT call query(): that wrapper silently
+// flips `usePostgres` to false on connection errors in development. Hitting the
+// live driver handle (pool.query / sqliteDb.prepare) means a failed probe
+// cannot mutate which database this process is using. This function never
+// assigns `usePostgres` and never opens a SQLite file.
+async function probeHealth(timeoutMs = HEALTH_PROBE_TIMEOUT_MS) {
+  const driver = activeDriverName();
+  const started = Date.now();
+  try {
+    if (usePostgres) {
+      if (!pool) throw new Error('HEALTH_NO_POOL');
+      await withTimeout(pool.query('SELECT 1'), timeoutMs);
+    } else {
+      if (!sqliteDb) throw new Error('HEALTH_NO_SQLITE');
+      await withTimeout(Promise.resolve().then(() => sqliteDb.prepare('SELECT 1').get()), timeoutMs);
+    }
+    return {
+      driver,
+      reachable: true,
+      latencyMs: Math.max(0, Date.now() - started),
+    };
+  } catch {
+    // Swallow every driver/timeout error — callers must not leak connection
+    // strings, host:port, or stack frames to the client.
+    return {
+      driver,
+      reachable: false,
+      latencyMs: Math.max(0, Date.now() - started),
+    };
+  }
+}
+
 const db = {
   async $connect() {
     if (usePostgres && pool) {
@@ -187,6 +237,10 @@ const db = {
   },
   async query(text, params) {
     return query(text, params);
+  },
+  // WP-OPS-001 — readiness only. See probeHealth() above: never the query() wrapper.
+  async probeHealth(timeoutMs) {
+    return probeHealth(timeoutMs);
   },
   async $transaction(callback) {
     if (usePostgres && pool) {
