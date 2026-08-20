@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import db from '../config/db.js';
 import { uploadDir } from './attachmentController.js';
+import { logError } from '../lib/logging.js';
 
 const TOKEN_BYTES = 32;
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
@@ -47,7 +48,7 @@ export async function createShare(req, res) {
     const url = `${publicBaseUrl(req)}/share.html?token=${encodeURIComponent(token)}`;
     res.status(201).json({ url, token });
   } catch (error) {
-    console.error(error);
+    logError(req, error);
     res.status(500).json({ message: 'Could not create share link' });
   }
 }
@@ -62,7 +63,7 @@ export async function revokeShare(req, res) {
     );
     res.status(204).end();
   } catch (error) {
-    console.error(error);
+    logError(req, error);
     res.status(500).json({ message: 'Could not revoke share link' });
   }
 }
@@ -107,7 +108,7 @@ export async function getPublicShare(req, res) {
       })),
     });
   } catch (error) {
-    console.error(error);
+    logError(req, error);
     res.status(500).json({ message: 'Could not load shared note' });
   }
 }
@@ -128,7 +129,7 @@ export async function getPublicShareFile(req, res) {
     res.setHeader('Cache-Control', 'no-store');
     res.sendFile(filePath);
   } catch (error) {
-    console.error(error);
+    logError(req, error);
     res.status(500).json({ message: 'Could not load shared image' });
   }
 }
