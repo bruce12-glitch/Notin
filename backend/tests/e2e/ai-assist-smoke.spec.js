@@ -8,8 +8,17 @@ const noteBody = [
   'Onboarding drop-off continues at notebook creation, so the team will prototype a template gallery.',
 ].join(' ');
 
-function withIp(authHeaders, ip) {
-  return { ...authHeaders, 'X-Forwarded-For': ip };
+// WP-AI-005 — the assist limiter keys on the authenticated user, not the client IP,
+// so spoofing X-Forwarded-For no longer buys a fresh 5-per-15-minute budget. Guard
+// assertions that would overflow the owner's budget run as additional signed-up
+// users instead. `budgetHolder(...)` makes that intent explicit at each call site.
+async function signUpProbe(api, email, username) {
+  const response = await api.post('/api/users/signup', {
+    data: { email, password, username },
+  });
+  expect(response.status()).toBe(201);
+  const { accessToken } = await response.json();
+  return { Authorization: `Bearer ${accessToken}` };
 }
 
 async function expectSuggestion(response, action) {
@@ -27,6 +36,8 @@ test('Writing assistant validates all actions and guards while never writing the
   const foreignApi = await requestFactory.newContext({ baseURL });
   const ownerEmail = `ai-assist-owner-${runId}@example.test`;
   const foreignEmail = `ai-assist-foreign-${runId}@example.test`;
+  let guardApi;
+  let stateApi;
 
   try {
     const signup = await ownerApi.post('/api/users/signup', {
@@ -49,18 +60,19 @@ test('Writing assistant validates all actions and guards while never writing the
     });
     expect(unauthenticated.status()).toBe(401);
 
-    // All three supported actions return bounded suggestions. These five calls
-    // deliberately use one IP and stay at the endpoint's 5-per-15-minute limit.
+    // All three supported actions return bounded suggestions. The owner spends
+    // exactly 5 of its own 5-per-15-minute budget here (4 suggestions + 1 guard);
+    // every later guard runs as a different signed-up user with its own budget.
     const continuePayload = await expectSuggestion(await ownerApi.post(`/api/notes/${note.id}/assist`, {
-      headers: withIp(ownerHeaders, '198.51.100.11'),
+      headers: ownerHeaders,
       data: { action: 'continue' },
     }), 'continue');
     const rephrasePayload = await expectSuggestion(await ownerApi.post(`/api/notes/${note.id}/assist`, {
-      headers: withIp(ownerHeaders, '198.51.100.11'),
+      headers: ownerHeaders,
       data: { action: 'rephrase', text: 'The checklist is clear. The rehearsal happens Friday.' },
     }), 'rephrase');
     const shortenPayload = await expectSuggestion(await ownerApi.post(`/api/notes/${note.id}/assist`, {
-      headers: withIp(ownerHeaders, '198.51.100.11'),
+      headers: ownerHeaders,
       data: { action: 'shorten', text: 'The checklist is clear. The rehearsal happens Friday. The owner will publish results.' },
     }), 'shorten');
     if (continuePayload.provider === 'mock') {
@@ -69,25 +81,36 @@ test('Writing assistant validates all actions and guards while never writing the
       expect(shortenPayload.suggestion).toBe('The checklist is clear.');
     }
 
-    // WP-AI-004b — expand action (own limiter IP so the block above keeps its
-    // exact 5-of-5 budget on 198.51.100.11).
+    // WP-AI-004b — expand action. Fourth of the owner's five allowed calls.
     const expandPayload = await expectSuggestion(await ownerApi.post(`/api/notes/${note.id}/assist`, {
-      headers: withIp(ownerHeaders, '198.51.100.14'),
+      headers: ownerHeaders,
       data: { action: 'expand', text: 'The checklist is clear. The rehearsal happens Friday.' },
     }), 'expand');
     if (expandPayload.provider === 'mock') {
       expect(expandPayload.suggestion).toBe('The checklist is clear. Because it anchors the plan, restate it in your own words, add one concrete detail, and give it an owner and a date.');
     }
-    const expandEmpty = await ownerApi.post(`/api/notes/${note.id}/assist`, {
-      headers: withIp(ownerHeaders, '198.51.100.14'),
+
+    // Remaining selection/length guards run as a second account with its own note,
+    // so they neither consume nor depend on the owner's remaining budget.
+    guardApi = await requestFactory.newContext({ baseURL });
+    const guardHeaders = await signUpProbe(guardApi, `ai-assist-guard-${runId}@example.test`, 'Assist Guard');
+    const guardNoteResponse = await guardApi.post('/api/notes', {
+      headers: guardHeaders,
+      data: { title: 'Guard note', contentText: noteBody, description: noteBody },
+    });
+    expect(guardNoteResponse.status()).toBe(201);
+    const guardNote = await guardNoteResponse.json();
+
+    const expandEmpty = await guardApi.post(`/api/notes/${guardNote.id}/assist`, {
+      headers: guardHeaders,
       data: { action: 'expand', text: '   ' },
     });
     expect(expandEmpty.status()).toBe(400);
     await expect(expandEmpty.json()).resolves.toMatchObject({
       message: 'Select some text first (1–2000 characters)',
     });
-    const expandTooLong = await ownerApi.post(`/api/notes/${note.id}/assist`, {
-      headers: withIp(ownerHeaders, '198.51.100.14'),
+    const expandTooLong = await guardApi.post(`/api/notes/${guardNote.id}/assist`, {
+      headers: guardHeaders,
       data: { action: 'expand', text: 'x'.repeat(2001) },
     });
     expect(expandTooLong.status()).toBe(400);
@@ -97,15 +120,16 @@ test('Writing assistant validates all actions and guards while never writing the
 
     // 'expand' became a real action in WP-AI-004b, so the unknown-action guard
     // now uses a genuinely unsupported verb.
+    // Fifth and final call on the owner's budget.
     const invalidAction = await ownerApi.post(`/api/notes/${note.id}/assist`, {
-      headers: withIp(ownerHeaders, '198.51.100.11'),
+      headers: ownerHeaders,
       data: { action: 'translate', text: 'Do not support queued actions.' },
     });
     expect(invalidAction.status()).toBe(400);
     await expect(invalidAction.json()).resolves.toMatchObject({ message: 'Unknown assist action' });
 
-    const emptySelection = await ownerApi.post(`/api/notes/${note.id}/assist`, {
-      headers: withIp(ownerHeaders, '198.51.100.11'),
+    const emptySelection = await guardApi.post(`/api/notes/${guardNote.id}/assist`, {
+      headers: guardHeaders,
       data: { action: 'rephrase', text: '   ' },
     });
     expect(emptySelection.status()).toBe(400);
@@ -113,9 +137,8 @@ test('Writing assistant validates all actions and guards while never writing the
       message: 'Select some text first (1–2000 characters)',
     });
 
-    // A second IP keeps the remaining independent guards below the same limiter.
-    const tooLongSelection = await ownerApi.post(`/api/notes/${note.id}/assist`, {
-      headers: withIp(ownerHeaders, '198.51.100.12'),
+    const tooLongSelection = await guardApi.post(`/api/notes/${guardNote.id}/assist`, {
+      headers: guardHeaders,
       data: { action: 'shorten', text: 'x'.repeat(2001) },
     });
     expect(tooLongSelection.status()).toBe(400);
@@ -123,15 +146,20 @@ test('Writing assistant validates all actions and guards while never writing the
       message: 'Select some text first (1–2000 characters)',
     });
 
+    // Third account: the note-state guards (too short, trashed) get a clean budget
+    // rather than crowding the selection-validation guards above.
+    stateApi = await requestFactory.newContext({ baseURL });
+    const stateHeaders = await signUpProbe(stateApi, `ai-assist-state-${runId}@example.test`, 'Assist State');
+
     const shortText = 'This note is much too short.';
-    const shortResponse = await ownerApi.post('/api/notes', {
-      headers: ownerHeaders,
+    const shortResponse = await stateApi.post('/api/notes', {
+      headers: stateHeaders,
       data: { title: 'Short', contentText: shortText, description: shortText },
     });
     expect(shortResponse.status()).toBe(201);
     const shortNote = await shortResponse.json();
-    const shortContinue = await ownerApi.post(`/api/notes/${shortNote.id}/assist`, {
-      headers: withIp(ownerHeaders, '198.51.100.12'),
+    const shortContinue = await stateApi.post(`/api/notes/${shortNote.id}/assist`, {
+      headers: stateHeaders,
       data: { action: 'continue' },
     });
     expect(shortContinue.status()).toBe(400);
@@ -139,16 +167,16 @@ test('Writing assistant validates all actions and guards while never writing the
       message: 'Note is too short to continue (needs at least 40 characters)',
     });
 
-    const trashResponse = await ownerApi.post('/api/notes', {
-      headers: ownerHeaders,
+    const trashResponse = await stateApi.post('/api/notes', {
+      headers: stateHeaders,
       data: { title: 'Trash guard', contentText: noteBody, description: noteBody },
     });
     expect(trashResponse.status()).toBe(201);
     const trashNote = await trashResponse.json();
-    const moved = await ownerApi.post(`/api/notes/${trashNote.id}/trash`, { headers: ownerHeaders });
+    const moved = await stateApi.post(`/api/notes/${trashNote.id}/trash`, { headers: stateHeaders });
     expect([200, 204]).toContain(moved.status());
-    const trashedAssist = await ownerApi.post(`/api/notes/${trashNote.id}/assist`, {
-      headers: withIp(ownerHeaders, '198.51.100.12'),
+    const trashedAssist = await stateApi.post(`/api/notes/${trashNote.id}/assist`, {
+      headers: stateHeaders,
       data: { action: 'continue' },
     });
     expect(trashedAssist.status()).toBe(400);
@@ -161,7 +189,7 @@ test('Writing assistant validates all actions and guards while never writing the
     expect(foreignSignup.status()).toBe(201);
     const foreignAuth = await foreignSignup.json();
     const foreignAssist = await foreignApi.post(`/api/notes/${note.id}/assist`, {
-      headers: withIp({ Authorization: `Bearer ${foreignAuth.accessToken}` }, '198.51.100.13'),
+      headers: { Authorization: `Bearer ${foreignAuth.accessToken}` },
       data: { action: 'expand' },
     });
     expect(foreignAssist.status()).toBe(404);
@@ -178,5 +206,7 @@ test('Writing assistant validates all actions and guards while never writing the
   } finally {
     await ownerApi.dispose();
     await foreignApi.dispose();
+    if (guardApi) await guardApi.dispose();
+    if (stateApi) await stateApi.dispose();
   }
 });
