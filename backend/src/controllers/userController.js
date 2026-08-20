@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import db from '../config/db.js';
 import { createAccessToken, randomToken, hashToken, mintCsrfToken } from '../lib/jwt.js';
 import { signinLockState, recordSigninFail, clearThrottle } from '../lib/throttle.js';
+import { logError } from '../lib/logging.js';
 
 function publicUser(u) {
   if (!u) return null;
@@ -81,7 +82,7 @@ export const signup = async (req, res) => {
     const pub = publicUser(user);
     res.status(201).json({ user: pub, token: accessToken, accessToken });
   } catch (error) {
-    console.error('signup error', error);
+    logError(req, error, 'signup error');
     res.status(500).json({ message: 'Something went wrong during signup' });
   }
 };
@@ -155,7 +156,7 @@ export const signin = async (req, res) => {
     const pub = publicUser(user);
     res.status(200).json({ user: pub, token: accessToken, accessToken });
   } catch (error) {
-    console.error('signin error', error);
+    logError(req, error, 'signin error');
     res.status(500).json({ message: 'Something went wrong during signin' });
   }
 };
