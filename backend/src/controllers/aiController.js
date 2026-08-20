@@ -1,4 +1,5 @@
 import db from '../config/db.js';
+import { logError } from '../lib/logging.js';
 import {
   summarizeText,
   suggestTitle,
@@ -46,7 +47,7 @@ export async function summarizeNote(req, res) {
     if (error?.message === 'AI_PROVIDER_ERROR') {
       return res.status(503).json({ message: 'AI is busy right now — try again in a moment' });
     }
-    console.error(error);
+    logError(req, error);
     return res.status(500).json({ message: 'Could not summarize this note' });
   }
 }
@@ -82,7 +83,7 @@ export async function suggestNoteTitle(req, res) {
     if (error?.message === 'AI_PROVIDER_ERROR') {
       return res.status(503).json({ message: 'AI is busy right now — try again in a moment' });
     }
-    console.error(error);
+    logError(req, error);
     return res.status(500).json({ message: 'Could not generate a title' });
   }
 }
@@ -128,7 +129,7 @@ export async function suggestNoteTags(req, res) {
     if (error?.message === 'AI_PROVIDER_ERROR') {
       return res.status(503).json({ message: 'AI is busy right now — try again in a moment' });
     }
-    console.error(error);
+    logError(req, error);
     return res.status(500).json({ message: 'Could not suggest tags' });
   }
 }
@@ -166,7 +167,7 @@ export async function chatWithNoteController(req, res) {
     if (error?.message === 'AI_PROVIDER_ERROR') {
       return res.status(503).json({ message: 'AI is busy right now — try again in a moment' });
     }
-    console.error(error);
+    logError(req, error);
     return res.status(500).json({ message: 'Could not answer that question' });
   }
 }
@@ -231,13 +232,13 @@ export async function chatWithNoteStreamController(req, res) {
       if (error?.message === 'AI_PROVIDER_ERROR') {
         return res.status(503).json({ message: 'AI is busy right now — try again in a moment' });
       }
-      console.error(error);
+      logError(req, error);
       return res.status(500).json({ message: 'Could not answer that question' });
     }
     // Failure mid-stream: in-band error frame + [DONE], never res.status()
     // after headers. Expected provider failures stay silent; anything else
     // gets one console.error. No content is ever logged.
-    if (error?.message !== 'AI_PROVIDER_ERROR') console.error(error);
+    if (error?.message !== 'AI_PROVIDER_ERROR') logError(req, error);
     if (!clientGone) {
       res.write(`data: ${JSON.stringify({ error: 'AI is busy right now — try again in a moment' })}\n\n`);
       res.write('data: [DONE]\n\n');
@@ -287,7 +288,7 @@ export async function assistNoteController(req, res) {
     if (error?.message === 'AI_PROVIDER_ERROR') {
       return res.status(503).json({ message: 'AI is busy right now — try again in a moment' });
     }
-    console.error(error);
+    logError(req, error);
     return res.status(500).json({ message: 'Could not assist with that text' });
   }
 }
