@@ -12,6 +12,7 @@ function cleanName(raw) {
 }
 
 // GET /api/tags — user's tags with non-trashed note counts
+// WP-API-001 — counts now come from a single grouped LEFT JOIN in db.js, not per-row correlated subquery nor loop
 export const getTags = async (req, res) => {
   try {
     const tags = await prisma.tag.findMany({ where: { userId: req.userId } });
