@@ -10,8 +10,8 @@
 
 | Field | Value |
 |---|---|
-| **Last Updated** | 2026-08-20 (WP-OPS-001 deep health + request ids + graceful shutdown) |
-| **Current Phase** | Phase 2 (AI Layer) **complete — WP-AI-001/002/002b/003/003b/004/004b**; WP-SCHEMA-001 mirror, WP-DEPLOY-001 gates, WP-FUNNEL-001, WP-LEFTOVERS-001, WP-SEC-001/002/003, and **WP-OPS-001** complete |
+| **Last Updated** | 2026-08-20 (WP-API-001 cursor pagination + N+1 elimination + WP-OPS-001 deep health) |
+| **Current Phase** | Phase 2 (AI Layer) **complete — WP-AI-001/002/002b/003/003b/004/004b**; WP-SCHEMA-001 mirror, WP-DEPLOY-001 gates, WP-FUNNEL-001, WP-LEFTOVERS-001, WP-SEC-001/002/003, and **WP-OPS-001 + WP-API-001** complete |
 | **MVP Completion** | ~81% |
 | **Production readiness** | ~90% — fail-closed boot, CORS lock, CI + Chromium, backup/restore drill (WP-DEPLOY-001), plus readiness vs liveness, request correlation ids, and 10s drain on SIGTERM (WP-OPS-001). Remaining: a human runs `RUNBOOK.md` against real infrastructure with real secrets. |
 
@@ -28,7 +28,7 @@
 | **Auth** | Custom JWT (jose): 15-min access in memory + rotating httpOnly refresh cookie · bcrypt passwords · email OTP (demo `123456` when no SMTP) · Google OAuth stub |
 | **AI Layer** | ✅ **Phase 2 = 7/7 (complete).** WP-AI-001 summarizes notes; WP-AI-002 suggests titles; WP-AI-002b suggests smart tags; WP-AI-003 adds session-only note chat; **WP-AI-003b** streams that chat over SSE with the JSON endpoint intact as fallback (one shared rate budget); WP-AI-004 adds non-streaming continue/rephrase/shorten suggestions; **WP-AI-004b** widens the assistant to four actions with `expand` plus a zero-dependency selection bubble menu. The assist endpoint is read-only; only explicit Apply mutates TipTap and enters the existing autosave path. Dedicated request-only E2E coverage exists for every AI work package. |
 | **Storage** | Local disk `backend/uploads/` (PNG/JPEG/WebP/GIF ≤5 MB × 10/note) |
-| **Search** | LIKE/ILIKE substring (`GET /api/notes?q=`), escaped wildcards, 100-row cap |
+| **Search** | LIKE/ILIKE substring (`GET /api/notes?q=`), escaped wildcards, cursor pagination (limit/cursor, keyset, pinned-first) — legacy bare array when no pagination params, capped at 100 |
 | **E2E** | Playwright `backend/tests/e2e/mvp-smoke.spec.js` (3 scenarios incl. full UI journey) + API-level account test |
 | **Monitoring** | Sentry no-op unless `SENTRY_DSN` set |
 
@@ -89,12 +89,27 @@
 ## DATABASE SCHEMA VERSION
 
 - → `migrate.js` is the real source of truth. Tables: `User, Note(+notebookId,+isPinned), Notebook, Tag, NoteTag, Attachment, NoteShare, otp_challenges, refresh_tokens, password_reset_tokens, auth_throttle`.
-- → Latest migration applied: `CREATE TABLE auth_throttle` (WP-SEC-003, both dialects, idempotent — verified by double run).
-- → `prisma/schema.prisma` is a **documented mirror** of that schema (synced by WP-SCHEMA-001); `migrate.js` remains the only applicator. The repo does not run `prisma generate` and has no `@prisma/client` dependency — keep the mirror updated by hand whenever migrate.js gains a column.
+- → Latest migration applied: `CREATE INDEX "Note_userId_isPinned_createdAt_idx" + "Note_userId_isPinned_updatedAt_idx"` (WP-API-001, both dialects, IF NOT EXISTS, idempotent — verified by double run) for cursor pagination (`userId, isPinned DESC, createdAt/updatedAt DESC, id DESC`). Previous: `auth_throttle` table (WP-SEC-003).
+- → `prisma/schema.prisma` is a **documented mirror** of that schema (synced by WP-SCHEMA-001; WP-API-001 adds `@@index([userId, isPinned, createdAt])` and `@@index([userId, isPinned, updatedAt])` mirrors); `migrate.js` remains the only applicator. The repo does not run `prisma generate` and has no `@prisma/client` dependency — keep the mirror updated by hand whenever migrate.js gains a column.
+
+## API CONTRACT — WP-API-001 (cursor pagination, deliberate dual shape)
+
+- → `GET /api/notes` — **dual contract, intentional, temporary, owned by future client WP**:
+  - No pagination params → legacy bare JSON array (capped at 100, unchanged). App shell consumes this; E2E asserts it.
+  - When `limit` or `cursor` is present → new shape `{ items: Note[], nextCursor: string|null, hasMore: boolean }`.
+  - `limit`: default **20** when paginated, max **100**, clamp non-numeric/<1/>100 to default/max — never error.
+  - `cursor`: opaque `base64url(JSON.stringify({ v:1, p: bool isPinned, k: createdAt ISO, id }))` of last row plus tiebreaker id. `Buffer.from(...).toString('base64url')` built-in, no dep.
+  - Invalid cursor → `400 {message:'Invalid cursor'}` (never silent fallback — prevents infinite loops).
+  - Keyset, not OFFSET: `AND ("isPinned" < $n OR ("isPinned" = $n2 AND "createdAt" < $n3) OR ("isPinned" = $n4 AND "createdAt" = $n5 AND id < $n6))` — 6 distinct `$n`, matches `ORDER BY "isPinned" DESC, "createdAt" DESC, id DESC`. Pinned-first preserved; cursor carries pin flag. `hasMore` via `limit+1` trim, no COUNT(*).
+  - Search (`q`), notebook (`notebookId`), tag (`tagId`), trash (`filter`) compose with pagination unchanged; tags hydrated via single batched `IN (...)` query.
+  - Notebook/tag counts: single grouped `LEFT JOIN (SELECT ... GROUP BY)` query, not per-row correlated nor loop (1 query vs N before).
+- → Pinned-first keyset held cleanly for current server sort (`createdAt DESC`). App's client-side Updated/Created/Title sorts remain client-side; server only guarantees pinned-first + createdAt. If a future server-side sort mode (e.g. title) is added, its cursor expressibility must be re-evaluated explicitly — this implementation keeps title/updatedAt client-side per existing behavior, so no compromise shipped.
+- → Indexes: `Note_userId_isPinned_createdAt_idx` and `Note_userId_isPinned_updatedAt_idx` in both dialects, IF NOT EXISTS, preserve existing indexes.
 
 ## API ENDPOINTS BUILT
 
-- → Notes: `GET/POST /api/notes` · `GET/PUT/PATCH/DELETE /api/notes/:id` · `POST :id/trash` · `POST :id/restore` · `POST/DELETE :id/share` ✅
+- → Notes: `GET/POST /api/notes` (cursor pagination `?limit=&cursor=` → `{items,nextCursor,hasMore}`; legacy bare array when no pagination params) · `GET/PUT/PATCH/DELETE /api/notes/:id` · `POST :id/trash` · `POST :id/restore` · `POST/DELETE :id/share` ✅
+- → WP-API-001 pagination + N+1 kill: keyset cursor (base64url, pinned flag + sort value + id tiebreaker, 6 distinct placeholders, limit+1 trim, no OFFSET/COUNT(*)), notebook/tag counts via single grouped LEFT JOIN, tag hydration via single IN query ✅
 - → AI: `POST /api/notes/:id/summarize` · `POST :id/suggest-title` · `POST :id/suggest-tags` · `POST :id/chat` · `POST :id/chat/stream` (SSE) · `POST :id/assist` (continue/rephrase/shorten/expand) ✅
 - → Public: `GET /api/public/share/:token(+/files/:id)` ✅
 - → `GET/POST/PATCH/DELETE /api/notebooks(/:id)` · `GET/POST/DELETE /api/tags(/:id)` ✅

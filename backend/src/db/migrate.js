@@ -85,6 +85,9 @@ async function migratePostgres(pool) {
   await pool.query(`CREATE INDEX IF NOT EXISTS "Note_isPinned_idx" ON "Note" ("isPinned");`);
   await pool.query(`CREATE INDEX IF NOT EXISTS "Note_userId_idx" ON "Note" ("userId");`);
   await pool.query(`CREATE INDEX IF NOT EXISTS "Note_isTrashed_idx" ON "Note" ("isTrashed");`);
+  // WP-API-001 — cursor pagination: composite indexes for pinned-first ORDER BY + keyset comparisons
+  await pool.query(`CREATE INDEX IF NOT EXISTS "Note_userId_isPinned_createdAt_idx" ON "Note" ("userId", "isPinned" DESC, "createdAt" DESC, id DESC);`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "Note_userId_isPinned_updatedAt_idx" ON "Note" ("userId", "isPinned" DESC, "updatedAt" DESC, id DESC);`);
 
   // WP-AI-001 — AI summary column on Note
   await pool.query(`ALTER TABLE "Note" ADD COLUMN IF NOT EXISTS summary TEXT;`);
@@ -273,6 +276,9 @@ function migrateSqlite(dbPath) {
   try{ db.exec(`CREATE INDEX IF NOT EXISTS "Note_isPinned_idx" ON "Note" ("isPinned")`); }catch{}
   db.exec(`CREATE INDEX IF NOT EXISTS "Note_userId_idx" ON "Note" ("userId");`);
   try{ db.exec(`CREATE INDEX IF NOT EXISTS "Note_isTrashed_idx" ON "Note" ("isTrashed")`); }catch{}
+  // WP-API-001 — cursor pagination: composite indexes for pinned-first ORDER BY + keyset comparisons
+  try{ db.exec(`CREATE INDEX IF NOT EXISTS "Note_userId_isPinned_createdAt_idx" ON "Note" ("userId", "isPinned" DESC, "createdAt" DESC, id DESC)`); }catch{}
+  try{ db.exec(`CREATE INDEX IF NOT EXISTS "Note_userId_isPinned_updatedAt_idx" ON "Note" ("userId", "isPinned" DESC, "updatedAt" DESC, id DESC)`); }catch{}
 
   // WP-AI-001 — AI summary column on Note
   try { db.exec(`ALTER TABLE "Note" ADD COLUMN summary TEXT`); } catch (e) { if (!String(e.message).includes('duplicate column')) throw e; }

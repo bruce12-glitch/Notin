@@ -308,12 +308,18 @@ const db = {
   // WP-APP-005 — Notebooks (minimal)
   notebook: {
     async findMany({ where: { userId } }) {
-      // Include a count of non-trashed notes per notebook for the sidebar badge
+      // WP-API-001 — batched counts via grouped LEFT JOIN, single query, no N+1 / correlated per-row subquery
       const { rows } = await query(
         `SELECT nb.id, nb."userId", nb.name, nb."createdAt", nb."updatedAt",
-                (SELECT COUNT(*) FROM "Note" n WHERE n."notebookId" = nb.id AND n."isTrashed" = ${usePostgres ? 'FALSE' : '0'}) AS "noteCount"
-         FROM "Notebook" nb WHERE nb."userId" = $1 ORDER BY nb.name ASC`,
-        [userId]
+                COALESCE(cnt.c, 0) AS "noteCount"
+         FROM "Notebook" nb
+         LEFT JOIN (
+           SELECT "notebookId", COUNT(*) AS c FROM "Note"
+           WHERE "userId" = $2 AND "isTrashed" = ${usePostgres ? 'FALSE' : '0'}
+           GROUP BY "notebookId"
+         ) cnt ON cnt."notebookId" = nb.id
+         WHERE nb."userId" = $1 ORDER BY nb.name ASC`,
+        [userId, userId]
       );
       return rows.map(r => ({ ...r, noteCount: Number(r.noteCount) || 0 }));
     },
@@ -367,13 +373,19 @@ const db = {
   // WP-APP-006 — Tags (minimal)
   tag: {
     async findMany({ where: { userId } }) {
-      // Include a count of non-trashed notes carrying each tag (sidebar badge)
+      // WP-API-001 — batched tag counts via grouped LEFT JOIN, single query, no N+1 / correlated per-row subquery
       const { rows } = await query(
         `SELECT t.id, t."userId", t.name, t."createdAt",
-                (SELECT COUNT(*) FROM "NoteTag" nt JOIN "Note" n ON n.id = nt."noteId"
-                  WHERE nt."tagId" = t.id AND n."isTrashed" = ${usePostgres ? 'FALSE' : '0'}) AS "noteCount"
-         FROM "Tag" t WHERE t."userId" = $1 ORDER BY t.name ASC`,
-        [userId]
+                COALESCE(cnt.c, 0) AS "noteCount"
+         FROM "Tag" t
+         LEFT JOIN (
+           SELECT nt."tagId" AS "tagId", COUNT(*) AS c
+           FROM "NoteTag" nt JOIN "Note" n ON n.id = nt."noteId"
+           WHERE n."userId" = $2 AND n."isTrashed" = ${usePostgres ? 'FALSE' : '0'}
+           GROUP BY nt."tagId"
+         ) cnt ON cnt."tagId" = t.id
+         WHERE t."userId" = $1 ORDER BY t.name ASC`,
+        [userId, userId]
       );
       return rows.map(r => ({ ...r, noteCount: Number(r.noteCount) || 0 }));
     },
@@ -443,11 +455,12 @@ const db = {
       }
       return row;
     },
-    async findMany({ where: { userId, isTrashed, q, notebookId, tagId }, orderBy, limit } = {}) {
+    async findMany({ where: { userId, isTrashed, q, notebookId, tagId } = {}, orderBy, limit, cursor } = {}) {
       // WP-APP-007 — pinned notes always float to the top of whatever filtered list is
       // returned (active, trash, search, notebook, tag); date keeps the requested direction.
+      // WP-API-001 — keyset pagination, cursor carries pinned flag + sort value + id tiebreaker, no OFFSET
       const dir = orderBy?.createdAt === 'asc' ? 'ASC' : 'DESC';
-      const order = `"isPinned" DESC, "createdAt" ${dir}`;
+      const order = `"isPinned" DESC, "createdAt" ${dir}, id ${dir}`;
       let sql = `SELECT id, title, description, "contentJson", "contentText", summary, "isTrashed", "isPinned", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt" FROM "Note" WHERE "userId" = $1`;
       const params = [userId];
       let idx = 2;
@@ -494,6 +507,24 @@ const db = {
         )`;
         params.push(pattern, pattern, pattern);
         idx += 3;
+      }
+      // WP-API-001 — cursor: keyset, not OFFSET. Comparison must match ORDER BY exactly.
+      // ORDER BY is "isPinned" DESC, "createdAt" {dir}, id {dir}
+      // Cursor payload: { v:1, p: bool isPinned, k: createdAt string, id: string }
+      // We carry the pin flag to preserve pinned-first ordering in the cursor.
+      if (cursor && typeof cursor === 'object' && cursor.k && cursor.id) {
+        const cursorPinnedRaw = cursor.p ? 1 : 0;
+        const cursorPinned = usePostgres ? !!cursor.p : cursorPinnedRaw;
+        const cursorCreatedAt = cursor.k;
+        const cursorId = cursor.id;
+        const op = dir === 'ASC' ? '>' : '<';
+        // Three separate placeholders per slot, never reused — pgToSqliteQuery rewrites each $n to ?
+        sql += ` AND (
+          "isPinned" < $${idx++}
+          OR ("isPinned" = $${idx++} AND "createdAt" ${op} $${idx++})
+          OR ("isPinned" = $${idx++} AND "createdAt" = $${idx++} AND id ${op} $${idx++})
+        )`;
+        params.push(cursorPinned, cursorPinned, cursorCreatedAt, cursorPinned, cursorCreatedAt, cursorId);
       }
       sql += ` ORDER BY ${order}`;
       // Result cap (spec: e.g. 100) — always applied, with a hard ceiling
