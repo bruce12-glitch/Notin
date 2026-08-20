@@ -195,6 +195,20 @@ async function migratePostgres(pool) {
   await pool.query(`UPDATE refresh_tokens SET family_id = user_id WHERE family_id IS NULL;`);
   await pool.query(`CREATE INDEX IF NOT EXISTS refresh_tokens_family_idx ON refresh_tokens(family_id);`);
 
+  // WP-SEC-003 — account lockout / OTP issue throttle (per-email, scoped)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS auth_throttle (
+      email TEXT NOT NULL,
+      scope TEXT NOT NULL,
+      count INTEGER NOT NULL DEFAULT 0,
+      window_start TIMESTAMPTZ,
+      lock_level INTEGER NOT NULL DEFAULT 0,
+      locked_until TIMESTAMPTZ,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (email, scope)
+    );
+  `);
+
   // WP-AUTH-003 — password reset tokens (HASH only; single-use; ~60 min TTL)
   await pool.query(`
     CREATE TABLE IF NOT EXISTS password_reset_tokens (
@@ -361,6 +375,20 @@ function migrateSqlite(dbPath) {
   // remaining legacy sessions — fail-closed by design.
   db.exec(`UPDATE refresh_tokens SET family_id = user_id WHERE family_id IS NULL;`);
   db.exec(`CREATE INDEX IF NOT EXISTS refresh_tokens_family_idx ON refresh_tokens(family_id);`);
+
+  // WP-SEC-003 — account lockout / OTP issue throttle (per-email, scoped)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS auth_throttle (
+      email TEXT NOT NULL,
+      scope TEXT NOT NULL,
+      count INTEGER NOT NULL DEFAULT 0,
+      window_start TEXT,
+      lock_level INTEGER NOT NULL DEFAULT 0,
+      locked_until TEXT,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (email, scope)
+    );
+  `);
 
   // WP-AUTH-003 — password reset tokens (HASH only; single-use; ~60 min TTL)
   db.exec(`
