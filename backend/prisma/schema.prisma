@@ -180,3 +180,17 @@ model PasswordResetToken {
   @@index([tokenHash])
   @@map("password_reset_tokens")
 }
+
+// WP-SEC-003 mirror — migrate.js is authoritative
+model AuthThrottle {
+  email       String
+  scope       String
+  count       Int       @default(0)
+  windowStart DateTime? @map("window_start")
+  lockLevel   Int       @default(0) @map("lock_level")
+  lockedUntil DateTime? @map("locked_until")
+  updatedAt   DateTime  @default(now()) @map("updated_at")
+
+  @@id([email, scope])
+  @@map("auth_throttle")
+}

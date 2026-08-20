@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import db from '../config/db.js';
 import { createAccessToken, randomToken, hashToken, mintCsrfToken } from '../lib/jwt.js';
+import { signinLockState, recordSigninFail, clearThrottle } from '../lib/throttle.js';
 
 function publicUser(u) {
   if (!u) return null;
@@ -102,10 +103,20 @@ export const signin = async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials — please use Google sign-in for this account' });
     }
 
-    const isValid = await bcrypt.compare(password, user.password);
+    // WP-SEC-003 — availability-preserving: even locked, a CORRECT password
+    // passes (and clears the row); only misses see the 429.
+    const lockState = await signinLockState(normEmail);
+    const isValid = await bcrypt.compare(String(password), user.password);
     if (!isValid) {
+      const fail = await recordSigninFail(normEmail);
+      if (lockState.locked || fail.locked) {
+        const secs = fail.retryAfterSec || lockState.retryAfterSec || 60;
+        res.setHeader('Retry-After', String(secs));
+        return res.status(429).json({ message: 'Too many failed attempts — try again later' });
+      }
       return res.status(401).json({ message: 'Invalid credentials' });
     }
+    await clearThrottle(normEmail, 'signin'); // any success resets the ladder
 
     const accessToken = await createAccessToken(user, 15);
     const refreshRaw = randomToken(48);

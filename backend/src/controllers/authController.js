@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { OAuth2Client } from 'google-auth-library';
 import db from '../config/db.js';
 import { createAccessToken, hashToken, randomToken, mintCsrfToken } from '../lib/jwt.js';
+import { otpRequestAllowed } from '../lib/throttle.js';
 
 const env = process.env;
 const origin = env.APP_ORIGIN || 'http://localhost:4173';
@@ -169,6 +170,13 @@ export async function otpResend(req, res) {
     const user = await db.user.findUnique({ where: { email } });
     // Anti-enumeration: always return ok, but only send if user exists
     if (user) {
+      // WP-SEC-003 — per-email issue throttle (per-challenge caps cannot
+      // accumulate: issueOtp deletes prior challenges)
+      const gate = await otpRequestAllowed(email);
+      if (!gate.allowed) {
+        res.setHeader('Retry-After', String(gate.retryAfterSec || 900));
+        return res.status(429).json({ error: 'Too many codes requested — try again later' });
+      }
       try {
         await issueOtp(user);
       } catch (e) {
@@ -204,6 +212,13 @@ export async function otpDemoRequest(req, res) {
   const email = String(req.body.email || '').trim().toLowerCase();
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'Valid email required' });
+  }
+  // WP-SEC-003 — per-email issue throttle (per-challenge caps cannot
+  // accumulate: issueOtp deletes prior challenges)
+  const gate = await otpRequestAllowed(email);
+  if (!gate.allowed) {
+    res.setHeader('Retry-After', String(gate.retryAfterSec || 900));
+    return res.status(429).json({ error: 'Too many codes requested — try again later' });
   }
   let user = await db.user.findUnique({ where: { email } });
   if (!user) {
