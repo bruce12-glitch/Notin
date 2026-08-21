@@ -6,6 +6,8 @@ import db from '../config/db.js';
 import { createAccessToken, hashToken, randomToken, mintCsrfToken } from '../lib/jwt.js';
 import { otpRequestAllowed } from '../lib/throttle.js';
 import { logError } from '../lib/logging.js';
+import { otpEmailSchema, otpVerifySchema, forgotPasswordSchema, resetPasswordSchema, EMAIL_RE } from '../lib/validation.js';
+import { sendInternalError } from '../lib/apiResponse.js';
 
 const env = process.env;
 const origin = env.APP_ORIGIN || 'http://localhost:4173';
@@ -164,10 +166,12 @@ export async function googleCallback(req, res) {
 
 export async function otpResend(req, res) {
   try {
-    const email = String(req.body.email || '').trim().toLowerCase();
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+    const parsed = otpEmailSchema.safeParse(body);
+    if (!parsed.success) {
       return res.status(400).json({ error: 'Valid email required' });
     }
+    const email = parsed.data.email;
     const user = await db.user.findUnique({ where: { email } });
     // Anti-enumeration: always return ok, but only send if user exists
     if (user) {
@@ -197,8 +201,7 @@ export async function otpResend(req, res) {
     }
     res.json({ ok: true, message: 'If the account exists, a new code was sent.' });
   } catch (e) {
-    logError(req, e, 'otpResend');
-    res.status(500).json({ error: 'Could not resend code' });
+    return sendInternalError(req, res, e, 'Could not resend code', 'otpResend');
   }
 }
 
@@ -210,10 +213,12 @@ export async function otpDemoRequest(req, res) {
   if (mailer) {
     return res.status(403).json({ error: 'Demo OTP disabled when SMTP is configured. Check your email for the real code.' });
   }
-  const email = String(req.body.email || '').trim().toLowerCase();
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+  const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  const parsed = otpEmailSchema.safeParse(body);
+  if (!parsed.success) {
     return res.status(400).json({ error: 'Valid email required' });
   }
+  const email = parsed.data.email;
   // WP-SEC-003 — per-email issue throttle (per-challenge caps cannot
   // accumulate: issueOtp deletes prior challenges)
   const gate = await otpRequestAllowed(email);
@@ -241,10 +246,12 @@ export async function otpDemoRequest(req, res) {
 }
 
 export async function otpVerify(req, res) {
-  const { challenge, code } = req.body || {};
-  if (typeof challenge !== 'string' || !/^[0-9]{6}$/.test(String(code))) {
+  const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  const parsed = otpVerifySchema.safeParse(body);
+  if (!parsed.success) {
     return res.status(400).json({ error: 'Invalid code' });
   }
+  const { challenge, code } = parsed.data;
   const now = nowIso();
   const { rows } = await db.query(`SELECT * FROM otp_challenges WHERE id = $1 LIMIT 1`, [challenge]);
   const c = rows[0];
@@ -398,9 +405,16 @@ const resetLinkFor = (token) => `${origin}/login.html?token=${encodeURIComponent
 
 export async function forgotPassword(req, res) {
   try {
-    const email = String(req.body?.email || '').trim().toLowerCase();
     const generic = { ok: true, message: GENERIC_RESET_MSG };
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+    const parsed = forgotPasswordSchema.safeParse(body);
+    // WP-HARDEN-001 — anti-enumeration is preserved verbatim: schema failures
+    // and malformed addresses all receive the identical generic response.
+    if (!parsed.success) {
+      return res.json(generic);
+    }
+    const email = parsed.data.email.trim().toLowerCase();
+    if (!EMAIL_RE.test(email)) {
       return res.json(generic); // anti-enumeration: same response for malformed input
     }
     const user = await db.user.findUnique({ where: { email } });
@@ -438,20 +452,23 @@ export async function forgotPassword(req, res) {
     console.error(`[RESET] SMTP is not configured; reset email to ${user.email} could not be delivered`);
     return res.json(generic);
   } catch (e) {
-    logError(req, e, 'forgotPassword');
-    res.status(500).json({ error: 'Could not process reset request' });
+    return sendInternalError(req, res, e, 'Could not process reset request', 'forgotPassword');
   }
 }
 
 export async function resetPassword(req, res) {
   try {
-    const { token, password } = req.body || {};
-    if (typeof token !== 'string' || !token.trim()) {
+    const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+    const parsed = resetPasswordSchema.safeParse(body);
+    if (!parsed.success) {
+      // Legacy exact bodies are part of the reset contract.
+      const field = parsed.error.issues[0]?.path?.[0];
+      if (field === 'password') {
+        return res.status(400).json({ error: 'Password must be at least 8 characters' });
+      }
       return res.status(400).json({ error: 'Reset token required' });
     }
-    if (typeof password !== 'string' || password.length < 8) {
-      return res.status(400).json({ error: 'Password must be at least 8 characters' });
-    }
+    const { token, password } = parsed.data;
     const now = nowIso();
     const { rows } = await db.query(
       `SELECT * FROM password_reset_tokens WHERE token_hash = $1 LIMIT 1`,
@@ -470,8 +487,7 @@ export async function resetPassword(req, res) {
     await db.query(`UPDATE refresh_tokens SET revoked_at = $1, revoke_reason = 'password-reset' WHERE user_id = $2 AND revoked_at IS NULL`, [now, user.id]);
     res.json({ ok: true, message: 'Password updated. Sign in with your new password.' });
   } catch (e) {
-    logError(req, e, 'resetPassword');
-    res.status(500).json({ error: 'Could not reset password' });
+    return sendInternalError(req, res, e, 'Could not reset password', 'resetPassword');
   }
 }
 

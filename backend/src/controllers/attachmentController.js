@@ -5,11 +5,19 @@ import { fileURLToPath } from 'node:url';
 import multer from 'multer';
 import db from '../config/db.js';
 import { logError } from '../lib/logging.js';
+import { ID_RE } from '../lib/validation.js';
+import { sendInternalError } from '../lib/apiResponse.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const uploadDir = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads'));
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 export const MAX_IMAGES_PER_NOTE = 10;
+// WP-HARDEN-001 — route params are user input too: reject ids that cannot
+// possibly exist before any DB/file work.
+function invalidId(value) {
+  return typeof value !== 'string' || !ID_RE.test(value);
+}
+
 const allowedMimes = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
 const extensionByMime = {
   'image/png': '.png',
@@ -60,6 +68,7 @@ async function removeFiles(files = []) {
 
 export async function ensureAttachmentCapacity(req, res, next) {
   try {
+    if (invalidId(req.params.noteId)) return res.status(400).json({ message: 'Invalid note id' });
     const note = await ownedNote(req.params.noteId, req.userId);
     if (!note) return res.status(404).json({ message: 'Note not found' });
     const trashed = note.isTrashed === true || note.isTrashed === 1 || note.isTrashed === '1' || note.isTrashed === 't';
@@ -71,8 +80,7 @@ export async function ensureAttachmentCapacity(req, res, next) {
     req.attachmentCount = Number(rows[0]?.count || 0);
     next();
   } catch (error) {
-    logError(req, error);
-    res.status(500).json({ message: 'Could not prepare image upload' });
+    return sendInternalError(req, res, error, 'Could not prepare image upload', 'ensureAttachmentCapacity');
   }
 }
 
@@ -104,13 +112,13 @@ export async function uploadImages(req, res) {
   } catch (error) {
     for (const id of createdIds) await db.query(`DELETE FROM "Attachment" WHERE id = $1`, [id]).catch(() => {});
     await removeFiles(files);
-    logError(req, error);
-    res.status(500).json({ message: 'Image upload failed' });
+    return sendInternalError(req, res, error, 'Image upload failed', 'uploadImages');
   }
 }
 
 export async function listAttachments(req, res) {
   try {
+    if (invalidId(req.params.noteId)) return res.status(400).json({ message: 'Invalid note id' });
     const note = await ownedNote(req.params.noteId, req.userId);
     if (!note) return res.status(404).json({ message: 'Note not found' });
     const { rows } = await db.query(
@@ -120,8 +128,7 @@ export async function listAttachments(req, res) {
     );
     res.json(rows.map(publicAttachment));
   } catch (error) {
-    logError(req, error);
-    res.status(500).json({ message: 'Could not load images' });
+    return sendInternalError(req, res, error, 'Could not load images', 'listAttachments');
   }
 }
 
@@ -136,6 +143,7 @@ async function ownedAttachment(id, userId) {
 
 export async function getAttachmentFile(req, res) {
   try {
+    if (invalidId(req.params.id)) return res.status(400).json({ message: 'Invalid attachment id' });
     const attachment = await ownedAttachment(req.params.id, req.userId);
     if (!attachment) return res.status(404).json({ message: 'Image not found' });
     const filePath = path.join(uploadDir, path.basename(attachment.path));
@@ -144,21 +152,20 @@ export async function getAttachmentFile(req, res) {
     res.setHeader('Cache-Control', 'private, max-age=3600');
     res.sendFile(filePath);
   } catch (error) {
-    logError(req, error);
-    res.status(500).json({ message: 'Could not load image' });
+    return sendInternalError(req, res, error, 'Could not load image', 'getAttachmentFile');
   }
 }
 
 export async function deleteAttachment(req, res) {
   try {
+    if (invalidId(req.params.id)) return res.status(400).json({ message: 'Invalid attachment id' });
     const attachment = await ownedAttachment(req.params.id, req.userId);
     if (!attachment) return res.status(404).json({ message: 'Image not found' });
     await db.query(`DELETE FROM "Attachment" WHERE id = $1 AND "userId" = $2`, [attachment.id, req.userId]);
     await fs.promises.unlink(path.join(uploadDir, path.basename(attachment.path))).catch(() => {});
     res.status(204).end();
   } catch (error) {
-    logError(req, error);
-    res.status(500).json({ message: 'Could not remove image' });
+    return sendInternalError(req, res, error, 'Could not remove image', 'deleteAttachment');
   }
 }
 

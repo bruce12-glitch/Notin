@@ -31,6 +31,15 @@ model User {
   passwordResetTokens PasswordResetToken[]
 }
 
+// WP-HARDEN-001 — PostgreSQL additionally creates three GIN *expression*
+// indexes (applied by src/db/migrate.js; not expressible in Prisma's schema
+// syntax, so they are documented here instead):
+//   Note_title_fts_idx       GIN (to_tsvector('simple', title))
+//   Note_content_fts_idx     GIN (to_tsvector('simple', COALESCE("contentText", '')))
+//   Note_description_fts_idx GIN (to_tsvector('simple', COALESCE(description, '')))
+// They back GET /api/notes?q= full-text search (websearch_to_tsquery +
+// ts_rank_cd). The SQLite dev fallback uses the same query shape via
+// escaped-LIKE and intentionally has no FTS tables.
 model Note {
   id          String    @id @default(cuid())
   title       String

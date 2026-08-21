@@ -15,9 +15,31 @@ import {
   MAX_ASSIST_INPUT_CHARS,
   MIN_ASSIST_NOTE_CHARS,
 } from '../lib/ai/prompts.js';
+import { chatBodySchema, zodDetails } from '../lib/validation.js';
+import { sendValidationError, sendInternalError } from '../lib/apiResponse.js';
 
 function isTrashed(value) {
   return value === true || value === 1 || value === '1' || value === 't' || value === 'true';
+}
+
+// WP-HARDEN-001 — chat body validation shared by the JSON and SSE endpoints so
+// their outward behavior stays byte-identical. Returns the validated body, or
+// null after sending the response (controllers must return when null).
+function validateChatBody(req, res) {
+  const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  const result = chatBodySchema.safeParse(body);
+  if (!result.success) {
+    const issue = result.error.issues[0];
+    // Question type errors keep the legacy guard message; everything else
+    // (history shape, unknown fields) uses the standard validation envelope.
+    if (issue && issue.path[0] === 'question') {
+      res.status(400).json({ message: `Ask a question (1\u2013${MAX_CHAT_QUESTION_CHARS} characters)` });
+      return null;
+    }
+    sendValidationError(res, zodDetails(result.error));
+    return null;
+  }
+  return result.data;
 }
 
 export async function summarizeNote(req, res) {
@@ -47,8 +69,7 @@ export async function summarizeNote(req, res) {
     if (error?.message === 'AI_PROVIDER_ERROR') {
       return res.status(503).json({ message: 'AI is busy right now — try again in a moment' });
     }
-    logError(req, error);
-    return res.status(500).json({ message: 'Could not summarize this note' });
+    return sendInternalError(req, res, error, 'Could not summarize this note', 'summarizeNote');
   }
 }
 
@@ -83,8 +104,7 @@ export async function suggestNoteTitle(req, res) {
     if (error?.message === 'AI_PROVIDER_ERROR') {
       return res.status(503).json({ message: 'AI is busy right now — try again in a moment' });
     }
-    logError(req, error);
-    return res.status(500).json({ message: 'Could not generate a title' });
+    return sendInternalError(req, res, error, 'Could not generate a title', 'suggestNoteTitle');
   }
 }
 
@@ -129,8 +149,7 @@ export async function suggestNoteTags(req, res) {
     if (error?.message === 'AI_PROVIDER_ERROR') {
       return res.status(503).json({ message: 'AI is busy right now — try again in a moment' });
     }
-    logError(req, error);
-    return res.status(500).json({ message: 'Could not suggest tags' });
+    return sendInternalError(req, res, error, 'Could not suggest tags', 'suggestNoteTags');
   }
 }
 
@@ -147,9 +166,11 @@ export async function chatWithNoteController(req, res) {
     if (!note) return res.status(404).json({ message: 'Note not found' });
     if (isTrashed(note.isTrashed)) return res.status(400).json({ message: 'Restore the note before chatting' });
 
-    const rawQuestion = typeof req.body?.question === 'string' ? req.body.question.trim() : '';
+    const body = validateChatBody(req, res);
+    if (!body) return;
+    const rawQuestion = typeof body.question === 'string' ? body.question.trim() : '';
     if (!rawQuestion || rawQuestion.length > MAX_CHAT_QUESTION_CHARS) {
-      return res.status(400).json({ message: 'Ask a question (1–500 characters)' });
+      return res.status(400).json({ message: `Ask a question (1\u2013${MAX_CHAT_QUESTION_CHARS} characters)` });
     }
 
     const contentText = typeof note.contentText === 'string' ? note.contentText : '';
@@ -161,14 +182,13 @@ export async function chatWithNoteController(req, res) {
 
     // Deliberate: nothing is written here. The transcript lives only in the
     // caller's tab for the session — no note UPDATE, no chat table.
-    const { answer, provider } = await chatWithNote(sourceText, rawQuestion, req.body?.history);
+    const { answer, provider } = await chatWithNote(sourceText, rawQuestion, body.history);
     return res.status(200).json({ answer, provider });
   } catch (error) {
     if (error?.message === 'AI_PROVIDER_ERROR') {
       return res.status(503).json({ message: 'AI is busy right now — try again in a moment' });
     }
-    logError(req, error);
-    return res.status(500).json({ message: 'Could not answer that question' });
+    return sendInternalError(req, res, error, 'Could not answer that question', 'chatWithNoteController');
   }
 }
 
@@ -197,9 +217,11 @@ export async function chatWithNoteStreamController(req, res) {
     if (!note) return res.status(404).json({ message: 'Note not found' });
     if (isTrashed(note.isTrashed)) return res.status(400).json({ message: 'Restore the note before chatting' });
 
-    const rawQuestion = typeof req.body?.question === 'string' ? req.body.question.trim() : '';
+    const body = validateChatBody(req, res);
+    if (!body) return;
+    const rawQuestion = typeof body.question === 'string' ? body.question.trim() : '';
     if (!rawQuestion || rawQuestion.length > MAX_CHAT_QUESTION_CHARS) {
-      return res.status(400).json({ message: 'Ask a question (1–500 characters)' });
+      return res.status(400).json({ message: `Ask a question (1\u2013${MAX_CHAT_QUESTION_CHARS} characters)` });
     }
 
     const contentText = typeof note.contentText === 'string' ? note.contentText : '';
@@ -218,7 +240,7 @@ export async function chatWithNoteStreamController(req, res) {
 
     // Deliberate: nothing is written anywhere — no note UPDATE, no transcript
     // rows. Deltas go straight to the wire; history stays client-side only.
-    const { stream } = await chatWithNoteStream(sourceText, rawQuestion, req.body?.history);
+    const { stream } = await chatWithNoteStream(sourceText, rawQuestion, body.history);
     for await (const delta of stream) {
       if (clientGone) break; // abandoned client — stop before writing again
       res.write(`data: ${JSON.stringify({ delta })}\n\n`);
@@ -232,8 +254,7 @@ export async function chatWithNoteStreamController(req, res) {
       if (error?.message === 'AI_PROVIDER_ERROR') {
         return res.status(503).json({ message: 'AI is busy right now — try again in a moment' });
       }
-      logError(req, error);
-      return res.status(500).json({ message: 'Could not answer that question' });
+      return sendInternalError(req, res, error, 'Could not answer that question', 'chatWithNoteStreamController');
     }
     // Failure mid-stream: in-band error frame + [DONE], never res.status()
     // after headers. Expected provider failures stay silent; anything else
@@ -288,7 +309,6 @@ export async function assistNoteController(req, res) {
     if (error?.message === 'AI_PROVIDER_ERROR') {
       return res.status(503).json({ message: 'AI is busy right now — try again in a moment' });
     }
-    logError(req, error);
-    return res.status(500).json({ message: 'Could not assist with that text' });
+    return sendInternalError(req, res, error, 'Could not assist with that text', 'assistNoteController');
   }
 }

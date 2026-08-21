@@ -9,15 +9,14 @@ const chatBody = [
   'Onboarding drop-off continues at the notebook creation step, so the team will prototype a template gallery.',
 ].join(' ');
 
-// WP-AI-003b shares ONE chatLimit budget (5 requests / 15 min / IP) with the
-// JSON chat endpoint AND with ai-chat-smoke.spec.js, which runs in the same
-// server process and already spends that spec's full budget from 127.0.0.1.
-// This spec needs 6 limiter-counted calls (stream 200, JSON parity 200, and
-// four guard 4xx/404s), so it isolates its buckets the documented way: the
-// backend sets `trust proxy: 1`, so a single-entry X-Forwarded-For is exactly
-// what one client IP looks like behind the production proxy hop. Owner calls
-// stay at 5 hits (stream, parity, empty-question, short-note, trashed); the
-// foreign 404 runs on its own address. No production behavior is relaxed.
+// WP-AI-003b shares ONE chatLimit budget (5 requests / 15 min) between the
+// JSON chat endpoint and the SSE transport — per authenticated USER since the
+// hardening release, so budgets are isolated per account even when the whole
+// suite shares one server process. This spec's owner needs exactly 5
+// limiter-counted calls (stream 200, JSON parity 200, empty-question,
+// short-note, trashed) and the foreign 404 uses its own user; the
+// X-Forwarded-For headers are harmless leftovers from the old per-IP keys and
+// are ignored now. No production behavior is relaxed.
 function pseudoIp(seed) {
   let hash = 0;
   for (const ch of seed) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
@@ -138,7 +137,7 @@ test('Note chat stream is SSE with auth, ownership, guards, and JSON parity', as
     });
     expect(emptyQuestion.status()).toBe(400);
     expect(emptyQuestion.headers()['content-type']).toContain('application/json');
-    await expect(emptyQuestion.json()).resolves.toMatchObject({ message: 'Ask a question (1–500 characters)' });
+    await expect(emptyQuestion.json()).resolves.toMatchObject({ message: 'Ask a question (1–2000 characters)' });
 
     // Too-short note → 400
     const shortText = 'Twenty char note yes.';

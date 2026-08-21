@@ -28,7 +28,7 @@ export function chatUserPrompt(noteText, question) {
   return `NOTE:\n${noteText}\n\nQUESTION:\n${question}`;
 }
 export const MAX_CHAT_NOTE_CHARS = 6000;
-export const MAX_CHAT_QUESTION_CHARS = 500;
+export const MAX_CHAT_QUESTION_CHARS = 2000;
 export const MAX_CHAT_ANSWER_CHARS = 800;
 export const MAX_CHAT_HISTORY = 6; // client+server: last N {role,content} turns
 

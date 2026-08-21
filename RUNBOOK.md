@@ -9,7 +9,7 @@ This runbook is the source of truth for running and deploying the current MVP.
 - **Database:** PostgreSQL in production; local development can use the ignored SQLite fallback at `backend/prisma/notin.sqlite`.
 - **Files:** image attachment metadata is in the database; image bytes are in `backend/uploads/` by default.
 
-Do **not** run the standalone authentication service on port 8787 as a source of truth. The unified process on port 5000 owns authentication, users, notes, attachments, and shares.
+The legacy standalone authentication service (previously port 8787) has been **retired** — its package and `server.js` were removed in the backend hardening release. Always start the unified process on port 5000; it owns authentication, users, notes, attachments, and shares.
 
 ## Local setup
 
@@ -21,8 +21,10 @@ cd authentication
 npm ci
 # Only needed after editing app.js:
 npm run build:app
+# `npm run dev:app` starts the unified backend from here:
+npm --prefix ../backend run dev   # http://127.0.0.1:5000
 
-# Unified API and app
+# Unified API and app (recommended: start from backend/)
 cd ../backend
 npm ci
 cp .env.example .env       # edit values; never commit .env
@@ -108,7 +110,7 @@ The full journey requires development demo OTP conditions. If demo OTP is disabl
 - [ ] Schedule and test restores for PostgreSQL and `UPLOAD_DIR` (or SQLite + uploads for non-production installations).
 - [ ] Optionally set and verify `SENTRY_DSN`; leave it unset to disable monitoring.
 - [ ] Run `npm run test:e2e` against the release URL.
-- [ ] Do not deploy or route traffic to the old port 8787 authentication server.
+- [ ] Do not deploy or route traffic to the old port 8787 authentication server (package retired; unified port 5000 is the only server).
 
 ## Liveness vs readiness (load balancer)
 

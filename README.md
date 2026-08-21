@@ -109,6 +109,7 @@ The entire frontend is built with **vanilla JavaScript** (no React/Angular/Vue) 
 | **JWT (jose)** | Access + refresh token auth |
 | **bcryptjs** | Password hashing |
 | **Multer** | File upload handling |
+| **Zod** | Runtime request validation |
 | **Sentry** | Error monitoring (optional) |
 | **Groq API** | AI features (summarize, chat, assist) |
 
@@ -126,7 +127,7 @@ The entire frontend is built with **vanilla JavaScript** (no React/Angular/Vue) 
 | Technology | Purpose |
 |---|---|
 | **Playwright** | E2E smoke tests (Chromium) |
-| **GitHub Actions** | CI pipeline (`ci/e2e.yml`) |
+| **GitHub Actions** | CI pipeline staged at `ci/e2e.yml` (one manual `git mv` to `.github/workflows/` — see `ci/README.md`) |
 | **pg_dump / SQLite** | Backup & restore |
 
 ---
@@ -145,7 +146,7 @@ The entire frontend is built with **vanilla JavaScript** (no React/Angular/Vue) 
 ### Note-Taking App (Post-Auth)
 - **Rich-text editor** — TipTap with bold, italic, underline, headings, bullet/ordered/checklist lists, code blocks, blockquotes
 - **Organize** — Notebooks (create/rename/delete) + Tags (create/delete, replace-set on notes) + sidebar counts
-- **Search** — Title/body substring search with notebook and tag filters
+- **Search** — Title/body search with notebook and tag filters (PostgreSQL full-text with relevance ranking in production; safe escaped-LIKE substring fallback on the SQLite dev database), plus `?page`/`?limit`/`?includeMeta` pagination
 - **Attachments** — Upload PNG/JPEG/WebP/GIF (≤5 MB, ≤10 per note), owner-only access
 - **Public sharing** — Cryptographically secure share links (32-byte random tokens, SHA-256 at rest), scoped to note
 - **Trash management** — Trash → restore → delete-forever (trash-first guard)
@@ -159,7 +160,7 @@ The entire frontend is built with **vanilla JavaScript** (no React/Angular/Vue) 
 - **Smart tags** — Suggested tags mapped to existing tags
 - **Note chat** — Session-only Q&A about a note (no transcript stored)
 - **Writing assistant** — Continue, rephrase, shorten, and expand actions with selection bubble menu
-- **Streaming chat** — SSE streaming for chat responses (with JSON fallback, shared rate budget)
+- **Streaming chat** — SSE streaming for chat responses (with JSON fallback, shared per-user rate budget)
 
 ### PWA & Offline
 - **Service worker** — Caches static shell assets; app.html reads last-known data from IndexedDB when offline
@@ -207,7 +208,7 @@ notin/
 │   │   ├── lib/               # JWT, httpSecurity, AI provider/prompts
 │   │   └── db/                 # Data migrations (migrate.js)
 │   ├── prisma/                # Schema declaration (mirrors migrates)
-│   ├── tests/e2e/             # Playwright E2E tests (9 smoke specs)
+│   ├── tests/e2e/             # Playwright E2E tests (request + UI specs)
 │   ├── package.json
 │   └── playwright.config.js
 │
@@ -215,16 +216,15 @@ notin/
 │   ├── app.html / app.js / app.css   # TipTap rich-text editor
 │   ├── index.html / login.html       # Sign-up / Sign-in
 │   ├── script.js                     # Auth client logic
-│   ├── server.js                     # Legacy standalone server (deprecated)
 │   ├── sw.js                         # Service worker (PWA)
 │   ├── manifest.webmanifest          # PWA manifest
 │   ├── share.html / share.js         # Read-only share renderer
 │   ├── icons/                        # PWA icons
 │   └── package.json
 │
-├── ci/                         # 🔁 CI/CD
-│   ├── e2e.yml                 # GitHub Actions workflow (E2E + fail-closed
-│   │                            #   smokes + Postgres rehearsal)
+├── ci/                         # 🔁 CI/CD (GitHub Actions)
+│   ├── e2e.yml                 # E2E + fail-closed smokes + Postgres rehearsal
+│   │                            #   (staged; activate with one git mv — see README)
 │   └── README.md               # How to activate
 │
 └── .gitignore
@@ -316,7 +316,7 @@ PORT=3000 API_TARGET=http://localhost:5000 node dev-server.mjs
 ### Notes (`/api/notes` — protected)
 | Method | Path | Description |
 |---|---|---|
-| GET | `/api/notes` | List notes (search `?q=`, notebook/tag filters) |
+| GET | `/api/notes` | List notes (search `?q=`, notebook/tag filters, `?page`/`?limit` pagination, `?includeMeta=true` for `{ items, meta }`, `?includeRank=true` for FTS rank) |
 | POST | `/api/notes` | Create note |
 | PUT / PATCH | `/api/notes/:id` | Update note |
 | POST | `/api/notes/:id/trash` | Move to trash |

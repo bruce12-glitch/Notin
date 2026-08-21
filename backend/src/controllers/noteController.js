@@ -1,26 +1,104 @@
 import prisma from '../config/db.js';
 import { deleteAttachmentsForNote } from './attachmentController.js';
 import { logError } from '../lib/logging.js';
+import {
+  noteCreateSchema,
+  noteUpdateSchema,
+  validateBody,
+  NOTE_QUERY_MAX,
+} from '../lib/validation.js';
+import { sendValidationError, sendInternalError } from '../lib/apiResponse.js';
+
+const DEFAULT_LIMIT = 100;
+
+// WP-HARDEN-001 — pagination query parsing for GET /api/notes.
+// Returns null after sending a 400 when any argument is invalid.
+function parsePagination(query, res) {
+  const { page, limit, includeMeta, includeRank, q } = query;
+  const details = [];
+
+  const pageNum = page === undefined ? 1 : parsePositiveInt(page, 'page', details);
+  const limitNum = limit === undefined ? DEFAULT_LIMIT : parseBoundedInt(limit, 'limit', 1, DEFAULT_LIMIT, details);
+  const metaRequested = includeMeta === 'true';
+  const rankRequested = includeRank === 'true';
+
+  if (includeMeta !== undefined && includeMeta !== 'true') {
+    details.push({ field: 'includeMeta', message: 'includeMeta must be "true"' });
+  }
+  if (includeRank !== undefined && includeRank !== 'true') {
+    details.push({ field: 'includeRank', message: 'includeRank must be "true"' });
+  }
+  if (rankRequested) {
+    const needle = typeof q === 'string' ? q.trim() : '';
+    if (!needle) {
+      details.push({ field: 'includeRank', message: 'includeRank requires a search query (?q=)' });
+    } else if (!prisma.usePostgres) {
+      details.push({ field: 'includeRank', message: 'includeRank is only available on the PostgreSQL search path' });
+    }
+  }
+
+  if (details.length) {
+    sendValidationError(res, details);
+    return null;
+  }
+  return { pageNum, limitNum, metaRequested, rankRequested };
+}
+
+function parsePositiveInt(raw, field, details) {
+  const value = String(raw);
+  if (!/^[1-9]\d*$/.test(value)) {
+    details.push({ field, message: `${field} must be a positive integer` });
+    return 1;
+  }
+  const num = Number(value);
+  if (!Number.isSafeInteger(num)) {
+    details.push({ field, message: `${field} must be a positive integer` });
+    return 1;
+  }
+  return num;
+}
+
+function parseBoundedInt(raw, field, min, max, details) {
+  const value = String(raw);
+  if (!/^\d+$/.test(value)) {
+    details.push({ field, message: `${field} must be an integer between ${min} and ${max}` });
+    return max;
+  }
+  const num = Number(value);
+  if (!Number.isSafeInteger(num) || num < min || num > max) {
+    details.push({ field, message: `${field} must be an integer between ${min} and ${max}` });
+    return max;
+  }
+  return num;
+}
 
 export const createNote = async (req, res) => {
-  const { title, description, contentJson, contentText, notebookId } = req.body;
   const userId = req.userId;
+
+  const body = validateBody(noteCreateSchema, req, res);
+  if (!body) return;
 
   try {
     // WP-APP-005: optional notebook assignment on create (ownership-checked)
     let nbId = null;
-    if (notebookId !== undefined && notebookId !== null && notebookId !== '') {
-      const nb = await prisma.notebook.findFirst({ where: { id: String(notebookId), userId } });
+    if (body.notebookId !== undefined && body.notebookId !== null && body.notebookId !== '') {
+      const nb = await prisma.notebook.findFirst({ where: { id: String(body.notebookId), userId } });
       if (!nb) return res.status(400).json({ message: 'Unknown notebook' });
       nbId = nb.id;
     }
     const note = await prisma.note.create({
-      data: { title: title || 'Untitled', description: description || contentText || '', contentJson, contentText: contentText || description || '', notebookId: nbId, userId },
+      data: {
+        title: body.title || 'Untitled',
+        description: body.description || body.contentText || '',
+        contentJson: body.contentJson,
+        contentText: body.contentText || body.description || '',
+        notebookId: nbId,
+        userId,
+      },
     });
     res.status(201).json(note);
   } catch (error) {
-    logError(req, error);
-    res.status(500).json({ message: 'Failed to create note' });
+    return sendInternalError(req, res, error, 'Failed to create note', 'createNote');
   }
 };
 
@@ -30,6 +108,7 @@ export const getNotes = async (req, res) => {
   // WP-APP-004: optional ?q=<string> — full-text search (title / contentText / description)
   // WP-APP-005: optional ?notebookId=<id|none> — 'none'/'unfiled' = notebookId IS NULL
   // WP-APP-006: optional ?tagId=<id> — notes carrying that tag (AND with other filters)
+  // WP-HARDEN-001: optional page / limit / includeMeta / includeRank
   const { filter, trash, trashed, isTrashed: isTrashedQ, q, notebookId: nbParam, tagId: tagParam } = req.query;
   let isTrashed;
   if (filter === 'trash') isTrashed = true;
@@ -42,6 +121,18 @@ export const getNotes = async (req, res) => {
 
   // Empty/missing q → same list behavior as today (no search clause)
   const needle = typeof q === 'string' ? q.trim() : '';
+
+  // WP-HARDEN-001 — query-length cap keeps tsquery parsing and LIKE scanning
+  // bounded (defense in depth on top of the parameterized statements).
+  if (needle.length > NOTE_QUERY_MAX) {
+    return sendValidationError(res, [
+      { field: 'q', message: `Search query must be ${NOTE_QUERY_MAX} characters or fewer` },
+    ]);
+  }
+
+  const pagination = parsePagination(req.query, res);
+  if (!pagination) return;
+  const { pageNum, limitNum, metaRequested, rankRequested } = pagination;
 
   // Notebook filter (omitted = all notebooks; ownership enforced)
   try {
@@ -65,22 +156,47 @@ export const getNotes = async (req, res) => {
       tagFilter = tg.id;
     }
 
+    const where = {
+      userId,
+      ...(isTrashed !== undefined ? { isTrashed } : {}),
+      ...(needle ? { q: needle } : {}),
+      ...(nbFilter !== undefined ? { notebookId: nbFilter } : {}),
+      ...(tagFilter !== undefined ? { tagId: tagFilter } : {}),
+    };
+
     const notes = await prisma.note.findMany({
-      where: { userId, ...(isTrashed !== undefined ? { isTrashed } : {}), ...(needle ? { q: needle } : {}), ...(nbFilter !== undefined ? { notebookId: nbFilter } : {}), ...(tagFilter !== undefined ? { tagId: tagFilter } : {}) },
+      where,
       orderBy: { createdAt: 'desc' },
-      limit: 100, // WP-APP-004 result cap
+      limit: limitNum,
+      offset: (pageNum - 1) * limitNum,
+      includeRank: rankRequested,
     });
+
+    // WP-HARDEN-001 — pagination metadata (only when explicitly requested).
+    if (metaRequested) {
+      const total = await prisma.note.count({ where });
+      return res.status(200).json({
+        items: notes,
+        meta: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          totalPages: Math.ceil(total / limitNum),
+        },
+      });
+    }
     res.status(200).json(notes);
   } catch (error) {
-    logError(req, error);
-    res.status(500).json({ message: 'Failed to fetch notes' });
+    return sendInternalError(req, res, error, 'Failed to fetch notes', 'getNotes');
   }
 };
 
 export const updateNote = async (req, res) => {
   const { id } = req.params;
-  const { title, description, contentJson, contentText, isTrashed, trashedAt, notebookId, tagIds, isPinned } = req.body;
   const userId = req.userId;
+
+  const body = validateBody(noteUpdateSchema, req, res);
+  if (!body) return;
 
   try {
     const existing = await prisma.note.findFirst({ where: { id, userId } });
@@ -90,36 +206,33 @@ export const updateNote = async (req, res) => {
     }
 
     const data = {};
-    if (title !== undefined) data.title = title || 'Untitled';
-    if (contentJson !== undefined) data.contentJson = contentJson;
-    if (contentText !== undefined) {
-      data.contentText = String(contentText);
-      if (description === undefined) data.description = String(contentText);
+    if (body.title !== undefined) data.title = body.title || 'Untitled';
+    if (body.contentJson !== undefined) data.contentJson = body.contentJson;
+    if (body.contentText !== undefined) {
+      data.contentText = String(body.contentText);
+      if (body.description === undefined) data.description = String(body.contentText);
     }
-    if (description !== undefined) data.description = String(description);
-    if (isTrashed !== undefined) {
-      data.isTrashed = !!isTrashed;
-      data.trashedAt = data.isTrashed ? (trashedAt || new Date().toISOString()) : null;
-    } else if (trashedAt !== undefined) {
-      data.trashedAt = trashedAt;
+    if (body.description !== undefined) data.description = String(body.description);
+    if (body.isTrashed !== undefined) {
+      data.isTrashed = !!body.isTrashed;
+      // WP-HARDEN-001 — server timestamps are authoritative; the client can
+      // never supply trashedAt.
+      data.trashedAt = data.isTrashed ? new Date().toISOString() : null;
     }
     // WP-APP-005: notebookId may be set ('' / null = move to unfiled)
-    if (notebookId !== undefined) {
-      if (notebookId === null || notebookId === '') {
+    if (body.notebookId !== undefined) {
+      if (body.notebookId === null || body.notebookId === '') {
         data.notebookId = null;
       } else {
-        const nb = await prisma.notebook.findFirst({ where: { id: String(notebookId), userId } });
+        const nb = await prisma.notebook.findFirst({ where: { id: String(body.notebookId), userId } });
         if (!nb) return res.status(400).json({ message: 'Unknown notebook' });
         data.notebookId = nb.id;
       }
     }
     // WP-APP-006: tagIds replace-set (string[] — replaces the note's whole tag set; [] clears).
     // Every id must belong to the user → 400 otherwise.
-    if (tagIds !== undefined) {
-      if (!Array.isArray(tagIds) || tagIds.some(t => typeof t !== 'string' || !t)) {
-        return res.status(400).json({ message: 'tagIds must be an array of tag id strings' });
-      }
-      const unique = [...new Set(tagIds)];
+    if (body.tagIds !== undefined) {
+      const unique = [...new Set(body.tagIds)];
       const owned = await prisma.tag.findManyByIds(userId, unique);
       if (owned.length !== unique.length) {
         return res.status(400).json({ message: 'Unknown tag id' });
@@ -127,12 +240,8 @@ export const updateNote = async (req, res) => {
       data.tagIds = unique;
     }
     // WP-APP-007: pin/unpin — strict boolean; composes with any other fields in one PUT.
-    // Pinned notes sort to the top of every list (respecting filter/trash/search scoping).
-    if (isPinned !== undefined) {
-      if (typeof isPinned !== 'boolean') {
-        return res.status(400).json({ message: 'isPinned must be a boolean' });
-      }
-      data.isPinned = isPinned;
+    if (body.isPinned !== undefined) {
+      data.isPinned = body.isPinned;
     }
 
     // If no fields to update, return existing
@@ -147,8 +256,7 @@ export const updateNote = async (req, res) => {
 
     res.status(200).json(updated);
   } catch (error) {
-    logError(req, error);
-    res.status(500).json({ message: 'Failed to update note' });
+    return sendInternalError(req, res, error, 'Failed to update note', 'updateNote');
   }
 };
 
@@ -166,8 +274,7 @@ export const trashNote = async (req, res) => {
     });
     res.status(200).json(updated);
   } catch (error) {
-    logError(req, error);
-    res.status(500).json({ message: 'Failed to trash note' });
+    return sendInternalError(req, res, error, 'Failed to trash note', 'trashNote');
   }
 };
 
@@ -185,8 +292,7 @@ export const restoreNote = async (req, res) => {
     });
     res.status(200).json(updated);
   } catch (error) {
-    logError(req, error);
-    res.status(500).json({ message: 'Failed to restore note' });
+    return sendInternalError(req, res, error, 'Failed to restore note', 'restoreNote');
   }
 };
 
@@ -212,7 +318,6 @@ export const deleteNote = async (req, res) => {
     await prisma.note.delete({ where: { id } });
     res.status(200).json({ message: 'Note deleted successfully' });
   } catch (error) {
-    logError(req, error);
-    res.status(500).json({ message: 'Failed to delete note' });
+    return sendInternalError(req, res, error, 'Failed to delete note', 'deleteNote');
   }
 };

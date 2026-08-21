@@ -3,6 +3,8 @@ import db from '../config/db.js';
 import { createAccessToken, randomToken, hashToken, mintCsrfToken } from '../lib/jwt.js';
 import { signinLockState, recordSigninFail, clearThrottle } from '../lib/throttle.js';
 import { logError } from '../lib/logging.js';
+import { signupSchema, signinSchema, validateBody, zodDetails } from '../lib/validation.js';
+import { sendValidationError, sendInternalError } from '../lib/apiResponse.js';
 
 function publicUser(u) {
   if (!u) return null;
@@ -11,19 +13,26 @@ function publicUser(u) {
   return { id: u.id, email: u.email, username: u.username || null, googleSub: u.googleSub || u.google_sub || null, createdAt: u.createdAt || u.created_at, updatedAt: u.updatedAt || u.updated_at };
 }
 
+// WP-HARDEN-001 — signup validation. Legacy exact messages are preserved for
+// the checks the frontend already surfaced; new checks (username shape, unknown
+// fields, wrong types) use the standard VALIDATION_ERROR envelope.
 export const signup = async (req, res) => {
-  const { username, email, password } = req.body;
+  const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  const { email, password } = body;
 
   if (!email || !password) {
     return res.status(400).json({ message: 'Email and password are required' });
   }
-  const normEmail = String(email).trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normEmail)) {
-    return res.status(400).json({ message: 'Invalid email' });
+
+  const parsed = signupSchema.safeParse(body);
+  if (!parsed.success) {
+    const first = parsed.error.issues[0];
+    if (first.path[0] === 'email') return res.status(400).json({ message: 'Invalid email' });
+    if (first.path[0] === 'password') return res.status(400).json({ message: 'Password must be at least 8 characters' });
+    return sendValidationError(res, zodDetails(parsed.error));
   }
-  if (String(password).length < 8) {
-    return res.status(400).json({ message: 'Password must be at least 8 characters' });
-  }
+  const { username } = parsed.data;
+  const normEmail = parsed.data.email;
 
   try {
     const existing = await db.user.findUnique({ where: { email: normEmail } });
@@ -36,7 +45,7 @@ export const signup = async (req, res) => {
       data: {
         email: normEmail,
         password: hashed,
-        username: username ? String(username).trim() : null,
+        username: username || null,
         googleSub: null,
       },
     });
@@ -82,18 +91,25 @@ export const signup = async (req, res) => {
     const pub = publicUser(user);
     res.status(201).json({ user: pub, token: accessToken, accessToken });
   } catch (error) {
-    logError(req, error, 'signup error');
-    res.status(500).json({ message: 'Something went wrong during signup' });
+    return sendInternalError(req, res, error, 'Something went wrong during signup', 'signup');
   }
 };
 
 export const signin = async (req, res) => {
-  const { email, password } = req.body;
+  const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  const { email, password } = body;
 
   if (!email || !password) {
     return res.status(400).json({ message: 'Email and password are required' });
   }
-  const normEmail = String(email).trim().toLowerCase();
+
+  // WP-HARDEN-001 — shape/type guard only. The 404/401/429 signin contract is
+  // intentionally untouched (unknown accounts keep their legacy behavior).
+  const parsed = signinSchema.safeParse(body);
+  if (!parsed.success) {
+    return res.status(400).json({ message: 'Email and password are required' });
+  }
+  const normEmail = String(parsed.data.email).trim().toLowerCase();
 
   try {
     const user = await db.user.findUnique({ where: { email: normEmail } });
@@ -156,7 +172,6 @@ export const signin = async (req, res) => {
     const pub = publicUser(user);
     res.status(200).json({ user: pub, token: accessToken, accessToken });
   } catch (error) {
-    logError(req, error, 'signin error');
-    res.status(500).json({ message: 'Something went wrong during signin' });
+    return sendInternalError(req, res, error, 'Something went wrong during signin', 'signin');
   }
 };

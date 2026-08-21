@@ -18,9 +18,21 @@ function rawCookie(response, name) {
 const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const password = 'SmokePassword-123!';
 
+// Suite isolation: each spec draws from its own /api/auth strict limiter
+// bucket (30 / 15 min / IP). The backend sets `trust proxy: 1`, so a
+// single-entry X-Forwarded-For is exactly what one client IP looks like behind
+// the production proxy hop — same pattern as ai-chat-stream-smoke.spec.js and
+// auth-lockout.spec.js. No production behavior is relaxed.
+function pseudoIp(seed) {
+  let hash = 0;
+  for (const ch of seed) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return `203.0.113.${(hash % 200) + 10}`; // TEST-NET-3, never routed
+}
+const specIp = pseudoIp(`csrf-${runId}`);
+
 test('Origin guard + signed double-submit CSRF on refresh/logout', async ({ baseURL }) => {
-  const ctx = await requestFactory.newContext({ baseURL });
-  const cookieless = await requestFactory.newContext({ baseURL });
+  const ctx = await requestFactory.newContext({ baseURL, extraHTTPHeaders: { 'X-Forwarded-For': specIp } });
+  const cookieless = await requestFactory.newContext({ baseURL, extraHTTPHeaders: { 'X-Forwarded-For': specIp } });
 
   try {
     const signup = await ctx.post('/api/users/signup', {
