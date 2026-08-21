@@ -139,6 +139,73 @@ async function setNoteTags(noteId, tagIds) {
   }
 }
 
+// WP-HARDEN-001 — shared WHERE builder for note list + count queries so
+// pagination metadata and the page itself can never disagree on filters.
+// Returns { sql, params, nextIdx, tsqueryParam } where tsqueryParam is the
+// $n of the search tsquery on PostgreSQL (undefined when not searching or on
+// SQLite). Every value is parameterized — user input never lands in SQL text.
+function noteWhereClause({ userId, isTrashed, q, notebookId, tagId }) {
+  const params = [userId];
+  let sql = `"userId" = $1`;
+  let idx = 2;
+  if (isTrashed !== undefined) {
+    if (usePostgres) {
+      sql += ` AND "isTrashed" = $${idx++}`;
+      params.push(isTrashed);
+    } else {
+      sql += ` AND "isTrashed" = $${idx++}`;
+      params.push(isTrashed ? 1 : 0);
+    }
+  }
+  // WP-APP-005 — notebook filter: null = unfiled only, string = that notebook
+  if (notebookId !== undefined) {
+    if (notebookId === null) {
+      sql += ` AND "notebookId" IS NULL`;
+    } else {
+      sql += ` AND "notebookId" = $${idx++}`;
+      params.push(notebookId);
+    }
+  }
+  // WP-APP-006 — tag filter: notes carrying this tag (AND with other filters)
+  if (tagId !== undefined) {
+    sql += ` AND EXISTS (SELECT 1 FROM "NoteTag" nt WHERE nt."noteId" = "Note".id AND nt."tagId" = $${idx++})`;
+    params.push(tagId);
+  }
+  const needle = typeof q === 'string' ? q.trim() : '';
+  let tsqueryParam;
+  if (needle) {
+    if (usePostgres) {
+      // WP-HARDEN-001 — PostgreSQL full-text search. websearch_to_tsquery keeps
+      // user input as data (parameterized, never concatenated) and the three
+      // to_tsvector expressions are covered by GIN expression indexes from
+      // migrate.js. Description stays a fallback for notes without contentText.
+      tsqueryParam = idx++;
+      params.push(needle);
+      sql += ` AND (
+        to_tsvector('simple', title) @@ websearch_to_tsquery('simple', $${tsqueryParam})
+        OR to_tsvector('simple', COALESCE("contentText", '')) @@ websearch_to_tsquery('simple', $${tsqueryParam})
+        OR (COALESCE("contentText", '') = '' AND to_tsvector('simple', COALESCE(description, '')) @@ websearch_to_tsquery('simple', $${tsqueryParam}))
+      )`;
+    } else {
+      // SQLite fallback — unchanged escaped-LIKE behavior (WP-APP-004). No FTS
+      // tables: LIKE stays fully migration-safe under node:sqlite.
+      const esc = needle.replace(/[\\%_]/g, (m) => '\\' + m);
+      const pattern = `%${esc}%`;
+      // NOTE: one placeholder per column (SQLite converts each $n to `?` — a
+      // placeholder may not be repeated or the bind count would mismatch).
+      // ESCAPE must follow EACH LIKE expression (SQL grammar binds it per-LIKE).
+      sql += ` AND (
+        title LIKE $${idx} ESCAPE '\\'
+        OR COALESCE("contentText", '') LIKE $${idx + 1} ESCAPE '\\'
+        OR (COALESCE("contentText", '') = '' AND COALESCE(description, '') LIKE $${idx + 2} ESCAPE '\\')
+      )`;
+      params.push(pattern, pattern, pattern);
+      idx += 3;
+    }
+  }
+  return { sql, params, nextIdx: idx, tsqueryParam };
+}
+
 const HEALTH_PROBE_TIMEOUT_MS = 2000;
 
 function withTimeout(promise, ms) {
@@ -443,71 +510,54 @@ const db = {
       }
       return row;
     },
-    async findMany({ where: { userId, isTrashed, q, notebookId, tagId }, orderBy, limit } = {}) {
+    async findMany({ where, orderBy, limit, offset, includeRank } = {}) {
       // WP-APP-007 — pinned notes always float to the top of whatever filtered list is
-      // returned (active, trash, search, notebook, tag); date keeps the requested direction.
+      // returned (active, trash, search, notebook, tag).
+      // WP-HARDEN-001 — PostgreSQL search orders by pinned → ts_rank_cd →
+      // updatedAt → id; everything else keeps the historical pinned → createdAt
+      // order plus a deterministic id tie-breaker.
       const dir = orderBy?.createdAt === 'asc' ? 'ASC' : 'DESC';
-      const order = `"isPinned" DESC, "createdAt" ${dir}`;
-      let sql = `SELECT id, title, description, "contentJson", "contentText", summary, "isTrashed", "isPinned", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt" FROM "Note" WHERE "userId" = $1`;
-      const params = [userId];
-      let idx = 2;
-      if(isTrashed !== undefined){
-        if(usePostgres){
-          sql += ` AND "isTrashed" = $${idx++}`;
-          params.push(isTrashed);
-        } else {
-          sql += ` AND "isTrashed" = $${idx++}`;
-          params.push(isTrashed ? 1 : 0);
-        }
+      const built = noteWhereClause(where);
+      const { params, nextIdx, tsqueryParam } = built;
+      let idx = nextIdx;
+      // PG-only rank expression (computed in the SELECT list, never after the
+      // WHERE clause). The tsquery placeholder is reused — PostgreSQL allows
+      // repeating $n; SQLite never executes this branch.
+      const selectList = tsqueryParam
+        ? `id, title, description, "contentJson", "contentText", summary, "isTrashed", "isPinned", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt", ts_rank_cd(to_tsvector('simple', title || ' ' || COALESCE("contentText", '')), websearch_to_tsquery('simple', $${tsqueryParam})) AS rank`
+        : `id, title, description, "contentJson", "contentText", summary, "isTrashed", "isPinned", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt"`;
+      let sql = `SELECT ${selectList} FROM "Note" WHERE ${built.sql}`;
+      if (tsqueryParam) {
+        sql += ` ORDER BY "isPinned" DESC, rank DESC, "updatedAt" DESC, id`;
+      } else {
+        sql += ` ORDER BY "isPinned" DESC, "createdAt" ${dir}, id`;
       }
-      // WP-APP-005 — notebook filter: null = unfiled only, string = that notebook
-      if (notebookId !== undefined) {
-        if (notebookId === null) {
-          sql += ` AND "notebookId" IS NULL`;
-        } else {
-          sql += ` AND "notebookId" = $${idx++}`;
-          params.push(notebookId);
-        }
-      }
-      // WP-APP-006 — tag filter: notes carrying this tag (AND with other filters)
-      if (tagId !== undefined) {
-        sql += ` AND EXISTS (SELECT 1 FROM "NoteTag" nt WHERE nt."noteId" = "Note".id AND nt."tagId" = $${idx++})`;
-        params.push(tagId);
-      }
-      // WP-APP-004 — full-text search only.
-      // Case-insensitive substring match on title / contentText / description,
-      // where description is only a fallback used when contentText is empty/null.
-      // Postgres uses ILIKE; SQLite fallback uses LIKE (case-insensitive for ASCII).
-      const needle = typeof q === 'string' ? q.trim() : '';
-      if (needle) {
-        // Escape LIKE wildcards so %, _ and \ in the user's query match literally
-        const esc = needle.replace(/[\\%_]/g, (m) => '\\' + m);
-        const pattern = `%${esc}%`;
-        const like = usePostgres ? 'ILIKE' : 'LIKE';
-        // NOTE: one placeholder per column (SQLite converts each $n to `?` — a
-        // placeholder may not be repeated or the bind count would mismatch).
-        // ESCAPE must follow EACH LIKE expression (SQL grammar binds it per-LIKE).
-        sql += ` AND (
-          title ${like} $${idx} ESCAPE '\\'
-          OR COALESCE("contentText", '') ${like} $${idx + 1} ESCAPE '\\'
-          OR (COALESCE("contentText", '') = '' AND COALESCE(description, '') ${like} $${idx + 2} ESCAPE '\\')
-        )`;
-        params.push(pattern, pattern, pattern);
-        idx += 3;
-      }
-      sql += ` ORDER BY ${order}`;
       // Result cap (spec: e.g. 100) — always applied, with a hard ceiling
       const lim = Number.isFinite(limit) ? Math.min(Math.max(1, Math.floor(limit)), 500) : 100;
       sql += ` LIMIT $${idx++}`;
       params.push(lim);
+      const off = Number.isFinite(offset) ? Math.max(0, Math.floor(offset)) : 0;
+      if (off > 0) {
+        sql += ` OFFSET $${idx++}`;
+        params.push(off);
+      }
       const { rows } = await query(sql, params);
       const mapped = rows.map(r=>{
         if(r.contentJson && typeof r.contentJson === 'string'){ try{ r.contentJson = JSON.parse(r.contentJson); }catch{} }
         r.isTrashed = !!(r.isTrashed === true || r.isTrashed === 1 || r.isTrashed === '1' || r.isTrashed === 't');
         r.isPinned = !!(r.isPinned === true || r.isPinned === 1 || r.isPinned === '1' || r.isPinned === 't'); // WP-APP-007
+        // WP-HARDEN-001 — rank is internal unless the client asked for it.
+        if (!includeRank && 'rank' in r) delete r.rank;
         return r;
       });
       return attachTags(mapped); // WP-APP-006 — every note row carries tags: [{id,name}]
+    },
+    // WP-HARDEN-001 — parameterized COUNT(*) over the exact same filters as
+    // findMany (used by ?includeMeta=true; no N+1, no tag lookups).
+    async count({ where } = {}) {
+      const built = noteWhereClause(where);
+      const { rows } = await query(`SELECT COUNT(*) AS total FROM "Note" WHERE ${built.sql}`, built.params);
+      return Number(rows[0]?.total || 0);
     },
     async findFirst({ where: { id, userId } }) {
       const { rows } = await query(
