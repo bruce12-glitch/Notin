@@ -1,13 +1,10 @@
 import prisma from '../config/db.js';
-import { logError } from '../lib/logging.js';
+import { notebookSchema, validateBody } from '../lib/validation.js';
+import { sendInternalError } from '../lib/apiResponse.js';
 
 // WP-APP-005 — Notebooks (minimal): create / list / rename / delete (notes unfied, never deleted)
-
-const NAME_MAX = 100;
-
-function cleanName(raw) {
-  return String(raw ?? '').trim().replace(/\s+/g, ' ');
-}
+// WP-HARDEN-001 — name validation is centralized in lib/validation.js; the
+// duplicate-name 409 contract is unchanged.
 
 // GET /api/notebooks — list user's notebooks (with non-trashed note counts)
 export const getNotebooks = async (req, res) => {
@@ -15,26 +12,24 @@ export const getNotebooks = async (req, res) => {
     const notebooks = await prisma.notebook.findMany({ where: { userId: req.userId } });
     res.status(200).json(notebooks);
   } catch (error) {
-    logError(req, error);
-    res.status(500).json({ message: 'Failed to fetch notebooks' });
+    return sendInternalError(req, res, error, 'Failed to fetch notebooks', 'getNotebooks');
   }
 };
 
 // POST /api/notebooks { name }
 export const createNotebook = async (req, res) => {
   const userId = req.userId;
-  const name = cleanName(req.body?.name);
-  if (!name) return res.status(400).json({ message: 'Notebook name is required' });
-  if (name.length > NAME_MAX) return res.status(400).json({ message: `Notebook name too long (max ${NAME_MAX} chars)` });
+  const body = validateBody(notebookSchema, req, res);
+  if (!body) return;
 
   try {
+    const name = body.name;
     const dup = await prisma.notebook.findByName(userId, name);
     if (dup) return res.status(409).json({ message: 'A notebook with this name already exists' });
     const notebook = await prisma.notebook.create({ data: { name, userId } });
     res.status(201).json({ ...notebook, noteCount: 0 });
   } catch (error) {
-    logError(req, error);
-    res.status(500).json({ message: 'Failed to create notebook' });
+    return sendInternalError(req, res, error, 'Failed to create notebook', 'createNotebook');
   }
 };
 
@@ -42,11 +37,11 @@ export const createNotebook = async (req, res) => {
 export const updateNotebook = async (req, res) => {
   const userId = req.userId;
   const { id } = req.params;
-  const name = cleanName(req.body?.name);
-  if (!name) return res.status(400).json({ message: 'Notebook name is required' });
-  if (name.length > NAME_MAX) return res.status(400).json({ message: `Notebook name too long (max ${NAME_MAX} chars)` });
+  const body = validateBody(notebookSchema, req, res);
+  if (!body) return;
 
   try {
+    const name = body.name;
     const existing = await prisma.notebook.findFirst({ where: { id, userId } });
     if (!existing) return res.status(404).json({ message: 'Notebook not found' });
 
@@ -56,8 +51,7 @@ export const updateNotebook = async (req, res) => {
     const updated = await prisma.notebook.update({ where: { id }, data: { name } });
     res.status(200).json(updated);
   } catch (error) {
-    logError(req, error);
-    res.status(500).json({ message: 'Failed to update notebook' });
+    return sendInternalError(req, res, error, 'Failed to update notebook', 'updateNotebook');
   }
 };
 
@@ -74,7 +68,6 @@ export const deleteNotebook = async (req, res) => {
     await prisma.notebook.delete({ where: { id } });
     res.status(200).json({ message: 'Notebook deleted. Its notes were kept and are now unfiled.', unfiledNotes: unfiled });
   } catch (error) {
-    logError(req, error);
-    res.status(500).json({ message: 'Failed to delete notebook' });
+    return sendInternalError(req, res, error, 'Failed to delete notebook', 'deleteNotebook');
   }
 };
