@@ -45,7 +45,8 @@ async function migratePostgres(pool) {
   await pool.query(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW();`);
   // Make existing NOT NULL constraints relaxed — postgres doesn't easily alter via IF NOT EXISTS, use DO block
   await pool.query(`
-    DO $$ BEGIN
+    DO $$
+    BEGIN
       BEGIN
         ALTER TABLE "User" ALTER COLUMN username DROP NOT NULL;
       EXCEPTION WHEN others THEN NULL;
@@ -54,6 +55,7 @@ async function migratePostgres(pool) {
         ALTER TABLE "User" ALTER COLUMN password DROP NOT NULL;
       EXCEPTION WHEN others THEN NULL;
       END;
+    END;
     $$;
   `);
   await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS "User_google_sub_key" ON "User"(google_sub);`);
@@ -86,6 +88,14 @@ async function migratePostgres(pool) {
   await pool.query(`CREATE INDEX IF NOT EXISTS "Note_userId_idx" ON "Note" ("userId");`);
   await pool.query(`CREATE INDEX IF NOT EXISTS "Note_isTrashed_idx" ON "Note" ("isTrashed");`);
 
+  // WP-HARDEN-001 — PostgreSQL full-text search: GIN expression indexes backing
+  // GET /api/notes?q= (title + contentText; description only as the existing
+  // fallback for notes without contentText). The expressions match the query
+  // side of src/config/db.js exactly, so the planner can use them. Idempotent.
+  await pool.query(`CREATE INDEX IF NOT EXISTS "Note_title_fts_idx" ON "Note" USING GIN (to_tsvector('simple', title));`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "Note_content_fts_idx" ON "Note" USING GIN (to_tsvector('simple', COALESCE("contentText", '')));`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "Note_description_fts_idx" ON "Note" USING GIN (to_tsvector('simple', COALESCE(description, '')));`);
+
   // WP-AI-001 — AI summary column on Note
   await pool.query(`ALTER TABLE "Note" ADD COLUMN IF NOT EXISTS summary TEXT;`);
 
@@ -101,11 +111,13 @@ async function migratePostgres(pool) {
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS "Notebook_userId_idx" ON "Notebook" ("userId");`);
   await pool.query(`
-    DO $$ BEGIN
+    DO $$
+    BEGIN
       BEGIN
         ALTER TABLE "Note" ADD COLUMN "notebookId" TEXT REFERENCES "Notebook"(id) ON DELETE SET NULL;
       EXCEPTION WHEN duplicate_column THEN NULL;
       END;
+    END;
     $$;
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS "Note_notebookId_idx" ON "Note" ("notebookId");`);
