@@ -19,13 +19,27 @@ const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const password = 'SmokePassword-123!';
 const exactInvalidSession = { error: 'Invalid session' };
 
+// Suite isolation: this spec draws from its own /api/auth strict limiter
+// bucket (30 / 15 min / IP) so the whole directory can run in one server
+// process. The backend sets `trust proxy: 1`, so a single-entry
+// X-Forwarded-For is exactly what one client IP looks like behind the
+// production proxy hop — same pattern as ai-chat-stream-smoke.spec.js and
+// auth-lockout.spec.js. No production behavior is relaxed.
+function pseudoIp(seed) {
+  let hash = 0;
+  for (const ch of seed) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return `203.0.113.${(hash % 200) + 10}`; // TEST-NET-3, never routed
+}
+const specIp = pseudoIp(`replay-${runId}`);
+const client = (baseURL, options = {}) => requestFactory.newContext({ baseURL, extraHTTPHeaders: { 'X-Forwarded-For': specIp }, ...options });
+
 test('Refresh rotation families: happy chain, grace sibling, logout nuke, isolation, concurrent burst', async ({ baseURL }) => {
   // §1 — Rotation chain happy path: T1 (signup) → T2 → T3, access token works.
-  const ctx1 = await requestFactory.newContext({ baseURL });
-  const ctx2 = await requestFactory.newContext({ baseURL });
-  const ctx3 = await requestFactory.newContext({ baseURL });
-  const main = await requestFactory.newContext({ baseURL }); // §2 long-lived family A
-  const clean = () => requestFactory.newContext({ baseURL }); // one-shot presenters (stolen-cookie role)
+  const ctx1 = await client(baseURL);
+  const ctx2 = await client(baseURL);
+  const ctx3 = await client(baseURL);
+  const main = await client(baseURL); // §2 long-lived family A
+  const clean = () => client(baseURL); // one-shot presenters (stolen-cookie role)
 
   try {
     const signup1 = await ctx1.post('/api/users/signup', {

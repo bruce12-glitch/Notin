@@ -70,7 +70,7 @@ test('Note chat enforces auth, ownership, and guards while never writing the not
       data: { question: '   ', history: [] },
     });
     expect(emptyQuestion.status()).toBe(400);
-    await expect(emptyQuestion.json()).resolves.toMatchObject({ message: 'Ask a question (1–500 characters)' });
+    await expect(emptyQuestion.json()).resolves.toMatchObject({ message: 'Ask a question (1–2000 characters)' });
 
     // Too-short note → 400
     const shortText = 'Twenty char note yes.';
