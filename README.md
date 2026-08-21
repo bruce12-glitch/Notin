@@ -127,7 +127,7 @@ The entire frontend is built with **vanilla JavaScript** (no React/Angular/Vue) 
 | Technology | Purpose |
 |---|---|
 | **Playwright** | E2E smoke tests (Chromium) |
-| **GitHub Actions** | CI pipeline (`.github/workflows/e2e.yml`) |
+| **GitHub Actions** | CI pipeline staged at `ci/e2e.yml` (one manual `git mv` to `.github/workflows/` — see `ci/README.md`) |
 | **pg_dump / SQLite** | Backup & restore |
 
 ---
@@ -222,11 +222,10 @@ notin/
 │   ├── icons/                        # PWA icons
 │   └── package.json
 │
-├── .github/workflows/          # 🔁 CI/CD (GitHub Actions)
-│   └── e2e.yml                 # E2E + fail-closed smokes + Postgres rehearsal
-│
-├── ci/                         # 🔁 CI notes
-│   └── README.md               # Workflow overview and activation history
+├── ci/                         # 🔁 CI/CD (GitHub Actions)
+│   ├── e2e.yml                 # E2E + fail-closed smokes + Postgres rehearsal
+│   │                            #   (staged; activate with one git mv — see README)
+│   └── README.md               # How to activate
 │
 └── .gitignore
 ```
