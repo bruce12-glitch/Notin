@@ -171,42 +171,32 @@ if(emailInput){
   });
 }
 
-// Helpers to request OTP (demo vs real)
+// Request a passwordless challenge. Production uses SMTP through /otp/request;
+// development falls back to the explicitly guarded 123456 demo endpoint.
 async function requestOtp(email){
-  // Try health to know demoMode, but try demo-request first then fallback to resend
-  // Backend guards demo: 404 in prod, 403 if SMTP configured
-  let res = await api('/api/auth/otp/demo-request', {method:'POST', body:{email}});
-  if(res.ok) {
-    const j = await res.json();
-    return { challenge: j.challenge, email: j.email };
+  let response = await api('/api/auth/otp/request', {method:'POST', body:{email}});
+  if(response.ok){
+    const payload = await response.json();
+    if(!payload.challenge) throw new Error('The server did not return a verification challenge');
+    return { challenge: payload.challenge, email: payload.email || email };
   }
-  // If demo blocked (prod or SMTP), try resend (real)
-  if(res.status===404 || res.status===403){
-    // try legacy path too
-    // fall through to resend
-  } else if(res.status===400){
-    const j = await res.json().catch(()=>({}));
-    throw new Error(j.error || 'Invalid email');
-  }
-  // Try resend on both prefixes
-  let r2 = await api('/api/auth/otp/resend', {method:'POST', body:{email}});
-  if(!r2.ok){
-    r2 = await api('/auth/otp/resend', {method:'POST', body:{email}});
-  }
-  if(r2.ok){
-    // resend doesn't return challenge (anti-enumeration), but for demo we need challenge
-    // In dev demoMode resend also creates challenge but doesn't return it. So we need challenge via demo
-    // As fallback, try demo legacy
-    let r3 = await api('/auth/otp/demo-request', {method:'POST', body:{email}});
-    if(r3.ok){
-      const j = await r3.json();
-      return { challenge: j.challenge, email: j.email };
+
+  // Demo mode is available only outside production and only without SMTP. The
+  // backend enforces both conditions; attempting it here cannot enable demo in
+  // a production process.
+  if(response.status===404 || response.status===503){
+    let demo = await api('/api/auth/otp/demo-request', {method:'POST', body:{email}});
+    if(!demo.ok && demo.status===404){
+      demo = await api('/auth/otp/demo-request', {method:'POST', body:{email}});
     }
-    // If still no challenge, throw generic
-    throw new Error('If the account exists, a new code was sent. Check email.');
+    if(demo.ok){
+      const payload = await demo.json();
+      return { challenge: payload.challenge, email: payload.email || email };
+    }
   }
-  const j = await r2.json().catch(()=>({}));
-  throw new Error(j.error || 'Could not send code');
+
+  const payload = await response.json().catch(()=>({}));
+  throw new Error(payload.error || 'Could not send code. Try again.');
 }
 
 // Email Continue → OTP (signup) or password (login)
@@ -245,7 +235,7 @@ if(authForm){
         const { challenge } = await requestOtp(email);
         currentChallenge = challenge;
         if(otpEmailMasked) otpEmailMasked.textContent = maskEmail(email);
-        if(otpMeta) otpMeta.textContent = 'Demo code is 123456 when SMTP is not configured';
+        if(otpMeta) otpMeta.textContent = 'The code expires in 5 minutes and works once';
         setOtpError('');
         showStep('otp');
         if(otpInput) { otpInput.value=''; otpInput.focus(); }
@@ -309,7 +299,7 @@ if(otpResendBtn){
       currentChallenge = challenge;
       setOtpError('');
       if(otpError) otpError.textContent = '';
-      if(otpMeta) otpMeta.textContent = 'New code sent. Demo is 123456';
+      if(otpMeta) otpMeta.textContent = 'A new code was sent';
       startCooldown(otpResendBtn, otpCooldown);
     } catch(err){
       setOtpError(err.message || 'Could not resend');
@@ -398,7 +388,7 @@ if(emailCodeBtn){
       const rc = document.getElementById('otpResendBtn2');
       const cd = document.getElementById('otpCooldown2');
       startCooldown(rc, cd);
-      if(otpMeta2) otpMeta2.textContent = 'Demo code is 123456';
+      if(otpMeta2) otpMeta2.textContent = 'The code expires in 5 minutes and works once';
     } catch(err){
       setPwdError(err.message || 'Could not send code');
     } finally {
@@ -456,7 +446,7 @@ if(otpResendBtnLogin){
       const { challenge } = await requestOtp(currentEmail);
       currentChallenge = challenge;
       const meta = document.getElementById('otpMeta2');
-      if(meta) meta.textContent='New code sent. Demo is 123456';
+      if(meta) meta.textContent='A new code was sent';
       startCooldown(otpResendBtnLogin, document.getElementById('otpCooldown2'));
     } catch(err){
       if(errEl) errEl.textContent = err.message;
@@ -671,8 +661,8 @@ if(loginLink){
     const masked2 = document.getElementById('otpEmailMasked2');
     if(masked2) masked2.textContent = masked;
     setOtpError('');
-    if(otpMeta) otpMeta.textContent = 'Demo code is 123456';
-    if(otpMeta2) otpMeta2.textContent = 'Demo code is 123456';
+    if(otpMeta) otpMeta.textContent = 'The code expires in 5 minutes and works once';
+    if(otpMeta2) otpMeta2.textContent = 'The code expires in 5 minutes and works once';
     showStep('otp');
     if(otpInput) otpInput.focus();
     const li = document.getElementById('otpInput');

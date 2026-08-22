@@ -19,6 +19,7 @@ function clearSessionCookies(res) {
   };
   res.clearCookie('notin_refresh', { ...common, path: '/api/auth' });
   res.clearCookie('notin_refresh', { ...common, path: '/auth' });
+  res.clearCookie('notin_csrf', { ...common, httpOnly: false, path: '/' });
 }
 
 export async function exportAccount(req, res) {
