@@ -187,6 +187,24 @@ test.describe('runtime validation', () => {
     expect(second.status()).toBe(409);
     await expect(second.json()).resolves.toMatchObject({ message: 'A notebook with this name already exists' });
   });
+
+  test('stale note updates are rejected instead of overwriting a newer edit', async () => {
+    const original = await createNote(api, headers, { title: `Conflict ${runId}` });
+    const first = await api.put(`/api/notes/${original.id}`, {
+      headers,
+      data: { title: 'First writer', expectedUpdatedAt: original.updatedAt },
+    });
+    expect(first.status()).toBe(200);
+    const stale = await api.put(`/api/notes/${original.id}`, {
+      headers,
+      data: { title: 'Stale writer', expectedUpdatedAt: original.updatedAt },
+    });
+    expect(stale.status()).toBe(409);
+    await expect(stale.json()).resolves.toEqual({
+      message: 'This note changed in another session. Reload it before saving again.',
+      code: 'NOTE_CONFLICT',
+    });
+  });
 });
 
 test.describe('note-list pagination', () => {

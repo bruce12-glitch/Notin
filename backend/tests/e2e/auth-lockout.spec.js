@@ -73,17 +73,12 @@ test('signin lockout is progressive, availability-preserving, and email-isolated
     const resetLock = await expectLockedSignin(api, email);
     expect(resetLock.retryAfter).toBeLessThanOrEqual(65);
 
-    // Existing signin enumeration is deliberately unchanged: unknown emails
-    // never create throttle rows; its future fix is deferred to a WSecurity WP.
-    for (let i = 0; i < 6; i += 1) {
-      const response = await api.post('/api/users/signin', {
-        data: { email: unknownEmail, password: 'WrongPassword-123!' },
-      });
-      expect(response.status()).toBe(404);
-      await expect(response.json()).resolves.toEqual({ message: 'User not found' });
-    }
+    // Unknown accounts run the same bcrypt/throttle path and expose the same
+    // response as a wrong password, preventing account enumeration.
+    for (let i = 0; i < 4; i += 1) await expectInvalidSignin(api, unknownEmail);
+    await expectLockedSignin(api, unknownEmail);
 
-    // User B remains on the old 401 contract while user A is locked.
+    // User B remains on the 401 contract while user A is locked.
     const otherSignup = await api.post('/api/users/signup', {
       data: { email: otherEmail, password, username: 'Lockout Other' },
     });
