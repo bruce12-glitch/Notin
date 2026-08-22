@@ -14,28 +14,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="app.css">
-  <script type="importmap">
-  {
-    "imports": {
-      "@tiptap/core": "/node_modules/@tiptap/core/dist/index.js",
-      "@tiptap/starter-kit": "/node_modules/@tiptap/starter-kit/dist/index.js",
-      "@tiptap/extension-underline": "/node_modules/@tiptap/extension-underline/dist/index.js",
-      "@tiptap/extension-task-list": "/node_modules/@tiptap/extension-task-list/dist/index.js",
-      "@tiptap/extension-task-item": "/node_modules/@tiptap/extension-task-item/dist/index.js",
-      "@tiptap/extension-placeholder": "/node_modules/@tiptap/extension-placeholder/dist/index.js",
-      "@tiptap/pm/": "/node_modules/@tiptap/pm/",
-      "@tiptap/extension-bold/": "/node_modules/@tiptap/extension-bold/",
-      "@tiptap/extension-italic/": "/node_modules/@tiptap/extension-italic/",
-      "@tiptap/extension-bullet-list/": "/node_modules/@tiptap/extension-bullet-list/",
-      "@tiptap/extension-ordered-list/": "/node_modules/@tiptap/extension-ordered-list/",
-      "@tiptap/extension-heading/": "/node_modules/@tiptap/extension-heading/",
-      "@tiptap/extension-paragraph/": "/node_modules/@tiptap/extension-paragraph/",
-      "@tiptap/extension-task-list/": "/node_modules/@tiptap/extension-task-list/",
-      "@tiptap/extension-task-item/": "/node_modules/@tiptap/extension-task-item/",
-      "@tiptap/extension-placeholder/": "/node_modules/@tiptap/extension-placeholder/"
-    }
-  }
-  </script>
 </head>
 <body>
   <div class="app-offline-banner" id="offlineBanner" role="status" aria-live="polite" hidden>
@@ -59,24 +37,16 @@
       </form>
       <div class="app-sidebar-actions">
         <button class="app-create-note" id="sidebarNewNote" type="button" title="New note"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Note</span></button>
-        <button class="app-icon-btn" type="button" data-soon="Sync" title="Sync" aria-label="Sync"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M16.5 10a6.5 6.5 0 11-1.9-4.6M16.5 3.5V7h-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        <button class="app-icon-btn" type="button" data-soon="AI assistant" title="AI assistant" aria-label="AI assistant"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2l1.6 4.4L16 8l-4.4 1.6L10 14l-1.6-4.4L4 8l4.4-1.6L10 2z" fill="currentColor"/><path d="M16.5 13.5l.7 1.9 1.9.7-1.9.7-.7 1.9-.7-1.9-1.9-.7 1.9-.7.7-1.9z" fill="currentColor" opacity=".65"/></svg></button>
-        <button class="app-icon-btn" type="button" data-soon="More options" title="More options" aria-label="More options"><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><circle cx="4" cy="10" r="1.4"/><circle cx="10" cy="10" r="1.4"/><circle cx="16" cy="10" r="1.4"/></svg></button>
+        <button class="app-icon-btn" type="button" id="syncNotesBtn" title="Refresh notes" aria-label="Refresh notes"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M16.5 10a6.5 6.5 0 11-1.9-4.6M16.5 3.5V7h-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <button class="app-icon-btn" type="button" id="openAiToolsBtn" title="Open note AI tools" aria-label="AI assistant"><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M10 2l1.6 4.4L16 8l-4.4 1.6L10 14l-1.6-4.4L4 8l4.4-1.6L10 2z" fill="currentColor"/><path d="M16.5 13.5l.7 1.9 1.9.7-1.9.7-.7 1.9-.7-1.9-1.9-.7 1.9-.7.7-1.9z" fill="currentColor" opacity=".65"/></svg></button>
       </div>
       <nav class="app-nav" aria-label="Workspace navigation">
         <button class="app-nav-item is-active" id="navHome" data-route="home"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M3.5 9.5L10 4l6.5 5.5V16a1 1 0 01-1 1h-3.8v-4.4H8.3V17H4.5a1 1 0 01-1-1V9.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span><span class="nav-label">Home</span></button>
         <button class="app-nav-item" id="navShortcuts" data-route="shortcuts"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M10 3l2.1 4.3 4.7.7-3.4 3.3.8 4.7L10 13.9l-4.2 2.1.8-4.7L3.2 8l4.7-.7L10 3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span><span class="nav-label">Shortcuts</span></button>
         <button class="app-nav-item" data-filter="active" id="navAllNotes" data-route="notes"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M5 3h8l3 3v11H5V3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M13 3v3h3M8 9h5M8 12h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="nav-label">Notes</span><span class="nav-count" id="countAll">0</span></button>
         <button class="app-nav-item" data-filter="trash" id="navTrash" data-route="trash"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M4 6h12M8 6V4h4v2M6.5 6l.6 10h5.8l.6-10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="nav-label">Trash</span><span class="nav-count" id="countTrash">0</span></button>
-        <button class="app-nav-item app-nav-stub" data-soon="Tasks"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M7 10l2 2 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="nav-label">Tasks</span></button>
-        <button class="app-nav-item app-nav-stub" data-soon="Files"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M6 17a2 2 0 01-2-2V5a2 2 0 012-2h4l4 4v8a2 2 0 01-2 2H6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 3v4h4" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span><span class="nav-label">Files</span></button>
-        <button class="app-nav-item app-nav-stub" data-soon="Calendar"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><rect x="3.5" y="4.5" width="13" height="12" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 8.5h13M7 3v3M13 3v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="nav-label">Calendar</span></button>
-        <button class="app-nav-item app-nav-stub" data-soon="Templates"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><rect x="3.5" y="3.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="11" y="3.5" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="3.5" y="11" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="11" y="11" width="5.5" height="5.5" rx="1" stroke="currentColor" stroke-width="1.5"/></svg></span><span class="nav-label">Templates</span></button>
         <button class="app-nav-item" id="navNotebooks" data-route="notebooks"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M4 4.5A1.5 1.5 0 015.5 3H16v12.5a1.5 1.5 0 01-1.5 1.5H5.5A1.5 1.5 0 014 15.5v-11z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M4 15.5A1.5 1.5 0 005.5 17H16M8 6.5h5M8 9.5h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="nav-label">Notebooks</span></button>
         <button class="app-nav-item" id="navTags" data-route="tags"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M3 4.5A1.5 1.5 0 014.5 3h5a1.5 1.5 0 011.1.4l6 6a1.5 1.5 0 010 2.1l-5 5a1.5 1.5 0 01-2.1 0l-6-6A1.5 1.5 0 013 9.5v-5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="7" cy="7" r="1.1" fill="currentColor"/></svg></span><span class="nav-label">Tags</span></button>
-        <button class="app-nav-item app-nav-stub" data-soon="Shared with me"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><circle cx="7.5" cy="7" r="2.5" stroke="currentColor" stroke-width="1.5"/><path d="M2.5 16.5c.6-2.6 2.5-4 5-4s4.4 1.4 5 4M13 4.7a2.5 2.5 0 010 4.6M14.8 12.7c1.8.6 2.9 1.9 3.2 3.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="nav-label">Shared with me</span></button>
-        <button class="app-nav-item app-nav-stub" data-soon="Spaces"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M10 3l6 3.5v7L10 17l-6-3.5v-7L10 3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M4 6.5l6 3.5 6-3.5M10 10v7" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span><span class="nav-label">Spaces</span></button>
-        <button class="app-nav-item app-nav-stub" data-soon="More"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="currentColor"><circle cx="4" cy="10" r="1.4"/><circle cx="10" cy="10" r="1.4"/><circle cx="16" cy="10" r="1.4"/></svg></span><span class="nav-label">More</span></button>
       </nav>
       <div class="app-organize-panel" id="notebookSection" hidden>
         <div class="app-nb-head"><span class="app-nb-title">Your notebooks</span><button type="button" class="app-nb-add" id="newNotebookBtn" title="New notebook" aria-label="New notebook">+</button></div>
@@ -89,7 +59,6 @@
         <div class="app-nb-list" id="tagList"></div>
       </div>
       <div class="app-sidebar-bottom">
-        <a class="app-upgrade" href="#" data-soon="Upgrade" title="Upgrade"><svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10.8 2L4 11h4.2l-1 7L14 9h-4.2l1-7z"/></svg><span>Upgrade</span></a>
         <button class="app-user" id="accountBtn" type="button">
           <span class="app-avatar" id="appAvatar">N</span><span class="app-user-copy"><strong id="appUserName">Account</strong><span class="app-email" id="appEmail" title="">—</span></span><span class="app-user-more" aria-hidden="true">⋯</span>
         </button>
@@ -121,7 +90,7 @@
         <div class="capture-band">
           <div class="capture-band-head">
             <span class="home-section-label">Recently captured</span>
-            <button type="button" class="capture-select" data-soon="Web clips"><span>Web clips</span><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <button type="button" class="capture-select" disabled title="Web clipper is planned"><span>Web clips</span><svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
           </div>
           <div class="capture-panel">
             <svg class="capture-illus" viewBox="0 0 128 84" fill="none" aria-hidden="true">
@@ -133,7 +102,7 @@
               <circle cx="101" cy="26" r="6" stroke="currentColor" stroke-width="1.5"/>
             </svg>
             <p>Save useful information from the web.</p>
-            <button type="button" class="capture-soon" data-soon="Web clipper">Clip web content</button>
+            <button type="button" class="capture-soon" disabled>Web clipper planned</button>
           </div>
         </div>
       </section>
@@ -183,6 +152,7 @@
         <button class="btn-new" id="newNoteBtn"><span>+</span> New note</button>
       </div>
       <div class="app-list-items" id="noteList"></div>
+      <button class="app-load-more" id="loadMoreNotes" type="button" hidden>Load more notes</button>
       <div class="app-empty" id="emptyState" hidden>
         <div style="font-weight:600; color:#111;">No notes yet</div>
         <div style="font-size:13px; margin-top:4px;">Create your first note to get started.</div>
@@ -344,7 +314,7 @@
       </div>
     </main>
       </div>
-      <button class="app-fab" type="button" data-soon="AI assistant" title="AI assistant" aria-label="AI assistant"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" fill="currentColor"/><path d="M19 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2z" fill="currentColor" opacity=".7"/></svg></button>
+      <button class="app-fab" type="button" id="openAiToolsFab" title="Open note AI tools" aria-label="AI assistant"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" fill="currentColor"/><path d="M19 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2z" fill="currentColor" opacity=".7"/></svg></button>
     </div>
   </div>
   <!-- WP-AUTH-004 — account export and permanent deletion -->

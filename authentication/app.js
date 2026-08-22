@@ -14,6 +14,7 @@ let notes = [];
 let selectedId = null;
 let saveTimer = null;
 let isSaving = false;
+let editRevision = 0;
 let editor = null;
 let currentFilter = 'active'; // 'active' | 'trash'
 let currentQuery = ''; // WP-APP-004 — active search string ('' = no search)
@@ -23,6 +24,10 @@ let currentNotebookId = null; // WP-APP-005 — null = All notes (no notebook fi
 let tags = []; // WP-APP-006 — user's tags
 let currentTagId = null; // WP-APP-006 — null = no tag filter
 let currentSort = 'updated'; // WP-APP-007 — list sort control ('updated' | 'created' | 'title'); pins always win
+const NOTES_PAGE_SIZE = 100;
+let notesPage = 1;
+let notesTotalPages = 1;
+let notesTotal = 0;
 // WP-UI-NOTES-3D-001 — motion state shared by list entrances, note-open
 // transitions, and the delegated pointer-tilt engine.
 const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -46,6 +51,7 @@ const countAllEl = document.getElementById('countAll');
 const countTrashEl = document.getElementById('countTrash');
 const listTitleEl = document.getElementById('listTitle');
 const listEl = document.getElementById('noteList');
+const loadMoreNotesBtn = document.getElementById('loadMoreNotes');
 const emptyEl = document.getElementById('emptyState');
 const emptyTrashEl = document.getElementById('emptyTrash');
 // WP-APP-004 — full-text search UI (title + body plain text)
@@ -175,6 +181,9 @@ const homeGreeting = document.getElementById('homeGreeting');
 const homeNewNoteTop = document.getElementById('homeNewNoteTop');
 const homeViewAll = document.getElementById('homeViewAll');
 const sidebarNewNote = document.getElementById('sidebarNewNote');
+const syncNotesBtn = document.getElementById('syncNotesBtn');
+const openAiToolsBtn = document.getElementById('openAiToolsBtn');
+const openAiToolsFab = document.getElementById('openAiToolsFab');
 const globalSearchForm = document.getElementById('globalSearchForm');
 const globalSearchInput = document.getElementById('globalSearchInput');
 const globalSearchClear = document.getElementById('globalSearchClear');
@@ -923,13 +932,9 @@ function openNoteFromHome(id){
   setRouteHash('notes', true);
   selectNote(id);
 }
-function showSoon(name){
-  if(name==='Web clipper'){
-    const capture=document.querySelector('.capture-soon');
-    if(capture){ capture.classList.add('is-coming'); capture.innerHTML='Coming soon <span>No clipper backend</span>'; }
-  }
+function showToast(message){
   if(!soonToast) return;
-  soonToast.textContent = `${name} is coming soon.`;
+  soonToast.textContent = message;
   soonToast.hidden = false;
   clearTimeout(soonToastTimer);
   soonToastTimer = setTimeout(()=>{ soonToast.hidden=true; }, 2200);
@@ -975,14 +980,16 @@ async function updateCounts(){
   }
   try{
     const [activeRes, trashRes] = await Promise.all([
-      fetchWithAuth(API_BASE + '/api/notes?filter=active', {method:'GET'}),
-      fetchWithAuth(API_BASE + '/api/notes?filter=trash', {method:'GET'})
+      fetchWithAuth(API_BASE + `/api/notes?filter=active&page=1&limit=${NOTES_PAGE_SIZE}&includeMeta=true`, {method:'GET'}),
+      fetchWithAuth(API_BASE + `/api/notes?filter=trash&page=1&limit=${NOTES_PAGE_SIZE}&includeMeta=true`, {method:'GET'})
     ]);
-    const a = activeRes.ok ? await activeRes.json() : [];
-    const t = trashRes.ok ? await trashRes.json() : [];
-    if(activeRes.ok && trashRes.ok) await updateOfflineSnapshot({notes:[...(Array.isArray(a)?a:[]), ...(Array.isArray(t)?t:[])]});
-    const aCount = Array.isArray(a) ? a.length : 0;
-    const tCount = Array.isArray(t) ? t.length : 0;
+    const a = activeRes.ok ? await activeRes.json() : {items:[],meta:{total:0}};
+    const t = trashRes.ok ? await trashRes.json() : {items:[],meta:{total:0}};
+    const aCount = Number(a?.meta?.total || 0);
+    const tCount = Number(t?.meta?.total || 0);
+    if(activeRes.ok && trashRes.ok) {
+      await updateOfflineSnapshot({notes:[...(a.items || []), ...(t.items || [])]});
+    }
     if(countAllEl) countAllEl.textContent = String(aCount);
     if(countTrashEl) countTrashEl.textContent = String(tCount);
     if(countEl) countEl.textContent = `${currentFilter==='trash'? tCount: aCount} ${ (currentFilter==='trash'? tCount: aCount)===1?'note':'notes'}`;
@@ -1062,31 +1069,46 @@ function updateToolbar(){
   });
 }
 
-async function loadNotes(){
+async function loadNotes({append=false}={}){
   setError('');
   if(offlineReadOnly){ loadCachedNotes(); return; }
+  const targetPage = append ? notesPage + 1 : 1;
+  if(loadMoreNotesBtn){ loadMoreNotesBtn.disabled = true; loadMoreNotesBtn.textContent = append ? 'Loading…' : 'Load more notes'; }
   try{
-    // WP-APP-004 — append q only when searching; empty q = today's list behavior
-    // WP-APP-005/006 — notebook + tag filters compose with search + trash
-    const qs = `/api/notes?filter=${currentFilter}`
+    // Search/notebook/tag filters compose with stable server pagination.
+    const qs = `/api/notes?filter=${currentFilter}&page=${targetPage}&limit=${NOTES_PAGE_SIZE}&includeMeta=true`
       + (currentQuery ? `&q=${encodeURIComponent(currentQuery)}` : '')
       + (currentNotebookId ? `&notebookId=${encodeURIComponent(currentNotebookId)}` : '')
       + (currentTagId ? `&tagId=${encodeURIComponent(currentTagId)}` : '');
     const res = await fetchWithAuth(API_BASE + qs, {method:'GET'});
     if(!res.ok){
-      const j = await res.json().catch(()=>({}));
+      const j=await res.json().catch(()=>({}));
       throw new Error(j.message || `Fetch failed ${res.status}`);
     }
     const data = await res.json();
-    notes = Array.isArray(data) ? data : [];
+    const incoming = Array.isArray(data?.items) ? data.items : [];
+    const meta = data?.meta || {page:targetPage,total:incoming.length,totalPages:1};
+    if(append){
+      const known = new Set(notes.map(note=>note.id));
+      notes.push(...incoming.filter(note=>!known.has(note.id)));
+    }else{
+      notes = incoming;
+    }
+    notesPage = Number(meta.page || targetPage);
+    notesTotalPages = Math.max(1, Number(meta.totalPages || 1));
+    notesTotal = Number(meta.total || notes.length);
     sortNotes(notes); // WP-APP-007 — pin-aware
     renderList();
+    if(loadMoreNotesBtn){
+      loadMoreNotesBtn.hidden = notesPage >= notesTotalPages || notes.length===0;
+      loadMoreNotesBtn.disabled = false;
+      loadMoreNotesBtn.textContent = `Load more (${Math.max(0, notesTotal-notes.length)} remaining)`;
+    }
     await updateCounts(); // refresh sidebar counts (totals, unfiltered)
     if(countEl && (currentQuery || currentNotebookId || currentTagId)){
-      // While filtering (search and/or notebook), the list-header counter shows what's listed
       countEl.textContent = currentQuery
-        ? `${notes.length} ${notes.length===1?'match':'matches'}`
-        : `${notes.length} ${notes.length===1?'note':'notes'}`;
+        ? `${notesTotal} ${notesTotal===1?'match':'matches'}`
+        : `${notesTotal} ${notesTotal===1?'note':'notes'}`;
     }
     if(notes.length===0){
       selectedId = null;
@@ -1094,17 +1116,18 @@ async function loadNotes(){
       if(editor) editor.commands.setContent(createEmptyDoc(), false);
       setSaveStatus('', '');
       updateEditorForSelection(null);
-    } else if(!selectedId || !notes.find(n=>n.id===selectedId)){
+    } else if(!append && (!selectedId || !notes.find(n=>n.id===selectedId))){
       selectNote(notes[0].id);
     } else {
       renderList();
-      // keep editor content but update toolbar state
       updateEditorForSelection(notes.find(n=>n.id===selectedId));
     }
   } catch(e){
+    if(loadMoreNotesBtn){ loadMoreNotesBtn.disabled=false; loadMoreNotesBtn.textContent='Try loading more'; }
     setError(e.message || 'Could not load notes');
   }
 }
+if(loadMoreNotesBtn) loadMoreNotesBtn.addEventListener('click', ()=> loadNotes({append:true}));
 function renderList(){
   if(!listEl) return;
   listEl.innerHTML = '';
@@ -1811,8 +1834,10 @@ async function createNote(){
 }
 async function saveNote(){
   if(offlineReadOnly){ setSaveStatus('Offline · read only','is-error'); return; }
-  if(!selectedId) return;
-  const cur = notes.find(n=>n.id===selectedId);
+  if(!selectedId || isSaving) return;
+  const noteId = selectedId;
+  const revisionAtStart = editRevision;
+  const cur = notes.find(n=>n.id===noteId);
   if(cur && cur.isTrashed){
     setError('Cannot save a trashed note. Restore it first.');
     return;
@@ -1824,28 +1849,43 @@ async function saveNote(){
   if(saveBtn) saveBtn.disabled = true;
   isSaving = true;
   try{
-    const res = await fetchWithAuth(API_BASE + `/api/notes/${selectedId}`, {
+    const res = await fetchWithAuth(API_BASE + `/api/notes/${noteId}`, {
       method:'PUT',
-      body: JSON.stringify({ title: title || 'Untitled', contentJson: json, contentText: text, description: text })
+      body: JSON.stringify({
+        title: title || 'Untitled',
+        contentJson: json,
+        contentText: text,
+        description: text,
+        ...(cur?.updatedAt ? {expectedUpdatedAt: cur.updatedAt} : {}),
+      })
     });
     if(!res.ok){
       const j = await res.json().catch(()=>({}));
       throw new Error(j.message || `Save failed ${res.status}`);
     }
     const updated = await res.json();
-    const idx = notes.findIndex(n=>n.id===selectedId);
+    const idx = notes.findIndex(n=>n.id===noteId);
     if(idx>=0) notes[idx] = updated;
+    dirty = editRevision !== revisionAtStart;
     sortNotes(notes); // WP-APP-007 — pin-aware
     renderList();
-    setSaveStatus('Saved', 'is-saved');
+    if(selectedId===noteId) setSaveStatus(dirty ? 'Unsaved' : 'Saved', dirty ? '' : 'is-saved');
     updateCounts();
-    setTimeout(()=>{ if(!isSaving) setSaveStatus('Saved','is-saved'); }, 1200);
   } catch(e){
-    setSaveStatus('Error', 'is-error');
-    setError(e.message || 'Save failed');
+    dirty = true;
+    if(selectedId===noteId){
+      setSaveStatus('Error', 'is-error');
+      setError(e.message || 'Save failed');
+    }
   } finally {
     isSaving = false;
     if(saveBtn) saveBtn.disabled = false;
+    // An edit that happened while the request was in flight gets its own save;
+    // the earlier response can never clear that newer dirty revision.
+    if(dirty && selectedId===noteId){
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(()=>saveNote(), 300);
+    }
   }
 }
 
@@ -1969,11 +2009,12 @@ function onEdit(){
   const cur = notes.find(n=>n.id===selectedId);
   if(cur && cur.isTrashed) return;
   dirty = true;
+  editRevision += 1;
   setSaveStatus('Unsaved', '');
   updateEditorMeta(cur); // WP-UI-NOTES-001 — live word count while typing
   clearTimeout(saveTimer);
   saveTimer = setTimeout(()=>{
-    if(dirty) saveNote().then(()=> dirty=false);
+    if(dirty) saveNote();
   }, 900);
 }
 function onEditorUpdate(){
@@ -1981,7 +2022,6 @@ function onEditorUpdate(){
 }
 if(titleInput) titleInput.addEventListener('input', onEdit);
 if(saveBtn) saveBtn.addEventListener('click', async ()=>{
-  dirty = false;
   clearTimeout(saveTimer);
   await saveNote();
 });
@@ -2020,13 +2060,24 @@ if(globalSearchForm) globalSearchForm.addEventListener('submit', (event)=>{
 if(globalSearchInput) globalSearchInput.addEventListener('input', ()=>{ if(globalSearchClear) globalSearchClear.hidden=!globalSearchInput.value; });
 if(globalSearchClear) globalSearchClear.addEventListener('click', ()=>{ clearSearchNow(); globalSearchInput?.focus(); });
 if(sidebarNewNote) sidebarNewNote.addEventListener('click', createNote);
+if(syncNotesBtn) syncNotesBtn.addEventListener('click', async ()=>{
+  syncNotesBtn.disabled=true;
+  await Promise.all([loadNotes(), loadNotebooks(), loadTags()]);
+  syncNotesBtn.disabled=false;
+  showToast('Notes refreshed from the server.');
+});
+const openAiTools = ()=>{
+  goToView('notes');
+  showToast(selectedId ? 'Use Summarize, Ask this note, or Assist in the editor.' : 'Create or select a note to use AI tools.');
+};
+if(openAiToolsBtn) openAiToolsBtn.addEventListener('click', openAiTools);
+if(openAiToolsFab) openAiToolsFab.addEventListener('click', openAiTools);
 if(homeNewNoteTop) homeNewNoteTop.addEventListener('click', createNote);
 if(homeViewAll) homeViewAll.addEventListener('click', ()=> goToView('notes'));
 if(shortcutsViewNotes) shortcutsViewNotes.addEventListener('click', ()=> goToView('notes'));
 if(organizeCreateBtn) organizeCreateBtn.addEventListener('click', showOrganizeCreate);
 if(organizeCreateForm) organizeCreateForm.addEventListener('submit', submitOrganizeCreate);
 if(organizeCreateCancel) organizeCreateCancel.addEventListener('click', hideOrganizeCreate);
-document.querySelectorAll('[data-soon]').forEach(button=> button.addEventListener('click', (event)=>{ event.preventDefault(); showSoon(button.dataset.soon); }));
 if(sidebarOpen) sidebarOpen.addEventListener('click', ()=>{ document.body.classList.add('sidebar-open'); if(sidebarScrim) sidebarScrim.hidden=false; });
 if(sidebarClose) sidebarClose.addEventListener('click', closeMobileSidebar);
 if(sidebarScrim) sidebarScrim.addEventListener('click', closeMobileSidebar);
