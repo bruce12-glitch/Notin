@@ -1,5 +1,8 @@
 # Notin — Gap Analysis: What's Built, What's Stubbed, What's Missing
 
+> **Superseded notice (2026-08-22):** This historical audit predates the market-hardening release. Production OTP onboarding, active CI, truthful beta marketing, legal/security pages, pagination UI, quotas, static-file allowlisting, OAuth PKCE/state binding, and optimistic note concurrency were addressed after this document was written. Use the current code and RUNBOOK for release decisions.
+
+
 **Date:** 2026-08-13 · **Branch:** `arena/019ffbcd-notin` · **Base commit:** `8e7545c` (WP-UI-HOME-PIXEL-001)
 **Method:** full-tree audit of the running code (backend + authentication + frontend), not doc-only. Every "stub / broken" item below was traced to its source file and line.
 

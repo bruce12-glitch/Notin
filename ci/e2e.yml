@@ -37,6 +37,7 @@ jobs:
           cache-dependency-path: |
             backend/package-lock.json
             authentication/package-lock.json
+            frontend/package-lock.json
 
       - name: Install authentication deps
         working-directory: authentication
@@ -45,6 +46,24 @@ jobs:
       - name: Install backend deps
         working-directory: backend
         run: npm ci
+
+      - name: Install marketing deps
+        working-directory: frontend
+        run: npm ci
+
+      - name: Syntax and production bundle checks
+        run: |
+          npm --prefix backend run check
+          npm --prefix authentication run check
+          npm --prefix authentication run build:app
+          git diff --exit-code -- authentication/app.bundle.js
+          npm --prefix frontend run check
+
+      - name: Dependency audit
+        run: |
+          npm --prefix backend audit --omit=dev --audit-level=high
+          npm --prefix authentication audit --omit=dev --audit-level=high
+          npm --prefix frontend audit --omit=dev --audit-level=high
 
       - name: Apply migrations (SQLite dev path)
         working-directory: backend
@@ -112,6 +131,9 @@ jobs:
           NODE_ENV: production
           DATABASE_URL: postgresql://notin:ci-throwaway-not-a-secret@localhost:5432/notin
           APP_ORIGIN: https://app.example.com
+          PUBLIC_APP_URL: https://app.example.com
+          AUTH_EMAIL_ENABLED: "false"
+          TRUST_PROXY: "1"
           PORT: 5000
         run: |
           # Random, non-placeholder secrets generated in-job; never printed.

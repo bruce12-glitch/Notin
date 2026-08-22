@@ -13,7 +13,7 @@ The legacy standalone authentication service (previously port 8787) has been **r
 
 ## Local setup
 
-Requirements: Node.js 20+, npm, and Chromium for E2E tests.
+Requirements: Node.js 22.5+, npm, and Chromium for E2E tests.
 
 ```bash
 # Browser-side TipTap dependencies / optional bundle rebuild tooling
@@ -52,7 +52,7 @@ PORT=3000 API_TARGET=http://127.0.0.1:5000 node dev-server.mjs
 - `UPLOAD_DIR` defaults to `backend/uploads/` when the backend is started normally. The directory is ignored by Git; never commit uploaded files.
 - Accepted images are PNG/JPEG/WebP/GIF, up to 5 MB each and 10 per note.
 - Back up the uploads directory together with the database. Permanent note deletion removes its local image files.
-- Share secrets are 32 random bytes; only SHA-256 hashes are stored. Public routes are `/api/public/share/:token` and `/api/public/share/:token/files/:attachmentId`.
+- Share secrets are 32 random bytes; only SHA-256 hashes are stored. Links expire after 30 days by default and can be revoked or rotated sooner. Public routes are `/api/public/share/:token` and `/api/public/share/:token/files/:attachmentId`.
 - Public share reads expose only title/body and safely scoped note images. Revoked/invalid shares return 404. Trashed notes also return 404 publicly; restoring an enabled share makes it readable again.
 
 ## Account export & delete
@@ -105,7 +105,9 @@ The full journey requires development demo OTP conditions. If demo OTP is disabl
 - [ ] Configure a real PostgreSQL `DATABASE_URL`, run `npm run db:migrate`, and verify `/api/health` returns 200 with `"driver":"PostgreSQL"` and `"reachable":true`. Point the load balancer at `/api/health` (readiness), not `/health` (liveness).
 - [ ] Configure SMTP (`SMTP_HOST`, port, user, password, sender) so OTP and reset mail can be delivered. Verify demo OTP is disabled.
 - [ ] Configure Google OAuth client credentials and an exact HTTPS `GOOGLE_REDIRECT_URI` if Google sign-in is offered.
-- [ ] Set the public HTTPS `APP_ORIGIN`; verify secure HTTP-only refresh cookies through the proxy.
+- [ ] Set the public HTTPS `APP_ORIGIN` and `PUBLIC_APP_URL`; verify secure HTTP-only refresh cookies through the proxy.
+- [ ] Configure the two-origin routing contract: marketing at `notin.app`, app/API at `app.notin.app` (see `deploy/nginx.conf.example`).
+- [ ] Keep `AUTH_EMAIL_ENABLED=true` only with working SMTP; production boot enforces this.
 - [ ] Put `UPLOAD_DIR` on durable storage with correct filesystem permissions; do not serve it as a public static directory.
 - [ ] Schedule and test restores for PostgreSQL and `UPLOAD_DIR` (or SQLite + uploads for non-production installations).
 - [ ] Optionally set and verify `SENTRY_DSN`; leave it unset to disable monitoring.
