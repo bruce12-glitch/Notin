@@ -127,7 +127,7 @@ The entire frontend is built with **vanilla JavaScript** (no React/Angular/Vue) 
 | Technology | Purpose |
 |---|---|
 | **Playwright** | E2E smoke tests (Chromium) |
-| **GitHub Actions** | CI pipeline staged at `ci/e2e.yml` (one manual `git mv` to `.github/workflows/` — see `ci/README.md`) |
+| **GitHub Actions** | Complete release workflow staged at `ci/e2e.yml`; owner activation required |
 | **pg_dump / SQLite** | Backup & restore |
 
 ---
@@ -222,10 +222,9 @@ notin/
 │   ├── icons/                        # PWA icons
 │   └── package.json
 │
-├── ci/                         # 🔁 CI/CD (GitHub Actions)
-│   ├── e2e.yml                 # E2E + fail-closed smokes + Postgres rehearsal
-│   │                            #   (staged; activate with one git mv — see README)
-│   └── README.md               # How to activate
+├── ci/e2e.yml                # Release gates; move to .github/workflows to activate
+├── Dockerfile                 # Production Node 22 container
+├── deploy/nginx.conf.example # Marketing/app two-origin reverse-proxy reference
 │
 └── .gitignore
 ```
@@ -235,7 +234,7 @@ notin/
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js 20+
+- Node.js 22.5+
 - npm
 - Chromium (for E2E tests)
 
@@ -296,8 +295,9 @@ PORT=3000 API_TARGET=http://localhost:5000 node dev-server.mjs
 |---|---|---|
 | GET | `/api/auth/google` | Google OAuth — start flow |
 | GET | `/api/auth/google/callback` | Google OAuth — callback |
-| POST | `/api/auth/otp/verify` | Verify OTP code |
-| POST | `/api/auth/otp/resend` | Resend OTP |
+| POST | `/api/auth/otp/request` | Request a production email OTP challenge (creates passwordless account when new) |
+| POST | `/api/auth/otp/verify` | Atomically verify and consume an OTP code |
+| POST | `/api/auth/otp/resend` | Resend OTP and return a replacement opaque challenge |
 | POST | `/api/auth/otp/demo-request` | Request demo OTP (dev only) |
 | POST | `/api/auth/forgot-password` | Request password reset |
 | POST | `/api/auth/reset-password` | Reset password with token |
@@ -391,7 +391,7 @@ Tests use throwaway data on every run. Failure-only screenshots and retained tra
 
 ## 🔁 CI/CD
 
-The CI pipeline is defined in `ci/e2e.yml` (designed to be moved to `.github/workflows/`):
+The complete CI pipeline is staged at `ci/e2e.yml`; a repository administrator must move it to `.github/workflows/e2e.yml` to activate it:
 
 - **E2E suite** — Full Playwright test run against Chromium
 - **Fail-closed smokes** — Verifies the server refuses to boot with placeholder secrets or non-`postgres://` URLs

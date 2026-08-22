@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Privacy — Notin</title><meta name="description" content="How the Notin web beta handles account and note data.">
+  <link rel="stylesheet" href="legal.css">
+</head>
+<body>
+<header><a class="brand" href="index.html"><img src="assets/notin-icon-nav.png" alt=""><span>Notin</span></a><a href="mailto:privacy@notin.app">privacy@notin.app</a></header>
+<main>
+  <p class="meta">Last updated: 22 August 2026</p><h1>Privacy notice</h1>
+  <div class="notice"><strong>Beta notice:</strong> This accurately describes the repository’s intended data flows, but the service operator must complete jurisdiction-specific legal review and identify the legal entity before public launch.</div>
+  <h2>Data we process</h2>
+  <ul><li>Account data such as email address, optional display name and authentication records.</li><li>Content you create, including note text, editor structure, notebooks, tags and image attachments.</li><li>Public-share tokens and content you deliberately make available through a share link.</li><li>Operational data such as request identifiers, timestamps, security-throttle records and service errors.</li></ul>
+  <h2>How data is used</h2><p>We use this data to authenticate you, store and retrieve notes, provide search and sharing, prevent abuse, operate backups, diagnose failures and respond to support requests.</p>
+  <h2>AI features</h2><p>When a production AI provider is configured and you invoke an AI action, bounded note content and your instruction may be sent to that provider to produce the result. Notin is <strong>not end-to-end encrypted</strong>; authorized infrastructure can process note content. AI features are disabled in production when no provider is configured.</p>
+  <h2>Service providers</h2><p>A deployment may use PostgreSQL and object-storage hosts, an SMTP provider, Google OAuth, Groq for optional AI, and Sentry for privacy-reduced error reporting. The final operator must publish its actual provider list and transfer locations.</p>
+  <h2>Sharing</h2><p>Anyone possessing an active public note link can read the shared note and its shared images. Links use high-entropy secrets, can be rotated or revoked, and should be treated as confidential.</p>
+  <h2>Retention and deletion</h2><p>Account data remains while the account is active. In-product account deletion removes live account records and owned uploads. Encrypted backups may retain deleted data for the operator’s documented backup-retention period; that period must be published before launch.</p>
+  <h2>Your choices</h2><p>You can export account data, revoke share links and delete the account from the app. For access, correction or privacy requests, email <a href="mailto:privacy@notin.app">privacy@notin.app</a>.</p>
+  <h2>Security</h2><p>Notin uses access controls, short-lived access tokens, rotating refresh sessions and HTTPS in production. No internet service is risk-free. Please report concerns through the <a href="security.html">security page</a>.</p>
+  <h2>Children</h2><p>The beta is not directed to children. The final operator must define and enforce an appropriate minimum age for each launch market.</p>
+  <h2>Changes</h2><p>Material changes will update the date above. Where required, users will receive notice or be asked to accept revised terms.</p>
+</main>
+<footer><div class="links"><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="security.html">Security</a></div></footer>
+</body></html>

@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Security — Notin</title><meta name="description" content="Report a security issue affecting Notin."><link rel="stylesheet" href="legal.css"></head>
+<body>
+<header><a class="brand" href="index.html"><img src="assets/notin-icon-nav.png" alt=""><span>Notin</span></a><a href="mailto:security@notin.app">security@notin.app</a></header>
+<main>
+<p class="meta">Last updated: 22 August 2026</p><h1>Security</h1>
+<p>We welcome responsible reports that help protect Notin users.</p>
+<h2>Report privately</h2><p>Email <a href="mailto:security@notin.app">security@notin.app</a> with the affected URL, reproducible steps, impact and any supporting material. Do not include another person’s note content, credentials or tokens unless strictly necessary.</p>
+<h2>Safe-harbor expectations</h2><p>Use test accounts and the minimum data required. Do not use denial of service, social engineering, persistence, destructive actions, automated mass scanning or access to data beyond what proves the issue. Allow reasonable time for investigation before disclosure.</p>
+<h2>Current security model</h2><ul><li>HTTPS is required in production.</li><li>Access tokens are short lived and refresh sessions rotate.</li><li>Notes are account-scoped and public shares use revocable secret links.</li><li>Notin is not end-to-end encrypted.</li><li>Production AI features may send bounded note content to the configured provider when invoked.</li></ul>
+<h2>Response targets</h2><p>The operator should acknowledge valid reports within three business days and provide status updates for high-severity issues. These targets must be staffed before public launch.</p>
+</main>
+<footer><div class="links"><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="security.html">Security</a></div></footer>
+</body></html>

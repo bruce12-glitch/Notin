@@ -4,13 +4,17 @@ import bcrypt from 'bcryptjs';
 import { OAuth2Client } from 'google-auth-library';
 import db from '../config/db.js';
 import { createAccessToken, hashToken, randomToken, mintCsrfToken } from '../lib/jwt.js';
+import { canonicalOrigin } from '../lib/httpSecurity.js';
 import { otpRequestAllowed } from '../lib/throttle.js';
 import { logError } from '../lib/logging.js';
 import { otpEmailSchema, otpVerifySchema, forgotPasswordSchema, resetPasswordSchema, EMAIL_RE } from '../lib/validation.js';
 import { sendInternalError } from '../lib/apiResponse.js';
 
 const env = process.env;
-const origin = env.APP_ORIGIN || 'http://localhost:4173';
+// APP_ORIGIN may contain a comma-separated CORS allowlist. Redirects and links
+// must always use one canonical URL rather than the raw list.
+const origin = String(env.PUBLIC_APP_URL || canonicalOrigin).replace(/\/+$/, '');
+const emailAuthEnabled = env.AUTH_EMAIL_ENABLED !== 'false';
 
 // Mailer — null if SMTP not configured (triggers demo mode)
 const mailer =
@@ -53,8 +57,30 @@ function publicUser(u) {
   return { id: u.id, email: u.email, username: u.username || null };
 }
 
-// In-memory OAuth state
-const pending = new Map();
+// OAuth state and PKCE are bound to the initiating browser with short-lived,
+// host-only, httpOnly cookies. This works across multiple API instances and
+// avoids the login-CSRF and restart problems of a process-local state Map.
+const oauthCookieOpts = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: 'lax',
+  path: '/',
+  maxAge: 5 * 60 * 1000,
+};
+const OAUTH_STATE_COOKIE = 'notin_oauth_state';
+const OAUTH_VERIFIER_COOKIE = 'notin_oauth_verifier';
+
+function safeEqual(left, right) {
+  const a = Buffer.from(String(left || ''));
+  const b = Buffer.from(String(right || ''));
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+function clearOauthCookies(res) {
+  const { maxAge, ...clearOptions } = oauthCookieOpts;
+  res.clearCookie(OAUTH_STATE_COOKIE, clearOptions);
+  res.clearCookie(OAUTH_VERIFIER_COOKIE, clearOptions);
+}
 
 // Helpers for time handling — use ISO strings for both pg and sqlite (TEXT)
 function nowIso() {
@@ -76,26 +102,80 @@ async function issueOtp(user) {
     `INSERT INTO otp_challenges (id, user_id, code_hash, expires_at, attempts, used_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
     [id, user.id, otpHash(id, code), expiresAt, 0, null, now]
   );
-  await mailer.sendMail({
-    from: env.MAIL_FROM || 'Notin <noreply@notin.app>',
-    to: user.email,
-    subject: 'Your Notin sign-in code',
-    text: `Your Notin verification code is ${code}. It expires in 5 minutes and can only be used once.`,
-  });
+  try {
+    await mailer.sendMail({
+      from: env.MAIL_FROM || 'Notin <noreply@notin.app>',
+      to: user.email,
+      subject: 'Your Notin sign-in code',
+      text: `Your Notin verification code is ${code}. It expires in 5 minutes and can only be used once.`,
+    });
+  } catch (error) {
+    // Never leave an active code in the database when delivery failed.
+    await db.query(`DELETE FROM otp_challenges WHERE id = $1`, [id]).catch(() => {});
+    throw error;
+  }
   return id;
 }
 
+// Public passwordless entry point used by both sign-up and "email me a code".
+// A new passwordless user is created only so the existing challenge FK remains
+// valid; if delivery fails that provisional row is removed immediately.
+export async function otpRequest(req, res) {
+  if (!emailAuthEnabled) return res.status(404).json({ error: 'Email sign-in is disabled' });
+  if (!mailer) return res.status(503).json({ error: 'Email sign-in is temporarily unavailable' });
+
+  const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+  const parsed = otpEmailSchema.safeParse(body);
+  if (!parsed.success) return res.status(400).json({ error: 'Valid email required' });
+  const email = parsed.data.email;
+  const gate = await otpRequestAllowed(email);
+  if (!gate.allowed) {
+    res.setHeader('Retry-After', String(gate.retryAfterSec || 900));
+    return res.status(429).json({ error: 'Too many codes requested — try again later' });
+  }
+
+  let user = await db.user.findUnique({ where: { email } });
+  let provisional = false;
+  try {
+    if (!user) {
+      try {
+        user = await db.user.create({ data: { email, username: null, password: null, googleSub: null } });
+        provisional = true;
+      } catch (createError) {
+        // A concurrent request may have created the same email after our read.
+        user = await db.user.findUnique({ where: { email } });
+        if (!user) throw createError;
+      }
+    }
+    const challenge = await issueOtp(user);
+    return res.json({ ok: true, challenge, email });
+  } catch (error) {
+    if (provisional && user?.id) {
+      await db.query(
+        `DELETE FROM "User" WHERE id = $1 AND password IS NULL AND google_sub IS NULL`,
+        [user.id],
+      ).catch(() => {});
+    }
+    return sendInternalError(req, res, error, 'Could not send code', 'otpRequest');
+  }
+}
+
 export async function googleStart(req, res) {
-  if (!env.GOOGLE_CLIENT_ID) {
-    return res.status(503).send('Google OAuth is not configured. Set GOOGLE_CLIENT_ID in .env');
+  if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET || !env.GOOGLE_REDIRECT_URI) {
+    return res.status(503).send('Google OAuth is not configured');
   }
   const state = random(24);
-  pending.set(state, Date.now() + 300000);
+  const codeVerifier = random(48);
+  const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
+  res.cookie(OAUTH_STATE_COOKIE, state, oauthCookieOpts);
+  res.cookie(OAUTH_VERIFIER_COOKIE, codeVerifier, oauthCookieOpts);
   const url = google.generateAuthUrl({
-    access_type: 'offline',
+    access_type: 'online',
     scope: ['openid', 'email', 'profile'],
     state,
     prompt: 'select_account',
+    code_challenge: codeChallenge,
+    code_challenge_method: 'S256',
   });
   res.redirect(url);
 }
@@ -103,11 +183,13 @@ export async function googleStart(req, res) {
 export async function googleCallback(req, res) {
   try {
     const { code, state } = req.query;
-    if (!code || !state || !pending.has(state) || pending.get(state) < Date.now()) {
+    const expectedState = req.cookies?.[OAUTH_STATE_COOKIE];
+    const codeVerifier = req.cookies?.[OAUTH_VERIFIER_COOKIE];
+    clearOauthCookies(res);
+    if (!code || !state || !expectedState || !codeVerifier || !safeEqual(state, expectedState)) {
       return res.status(400).send('Invalid or expired OAuth state');
     }
-    pending.delete(state);
-    const { tokens } = await google.getToken(code);
+    const { tokens } = await google.getToken({ code, codeVerifier });
     const ticket = await google.verifyIdToken({
       idToken: tokens.id_token,
       audience: env.GOOGLE_CLIENT_ID,
@@ -173,7 +255,11 @@ export async function otpResend(req, res) {
     }
     const email = parsed.data.email;
     const user = await db.user.findUnique({ where: { email } });
-    // Anti-enumeration: always return ok, but only send if user exists
+    // Always return an opaque challenge-shaped value. For unknown accounts it
+    // is intentionally not stored; callers cannot infer account existence from
+    // the response shape.
+    let responseChallenge = random(18);
+    // Anti-enumeration: always return ok, but only send if user exists.
     if (user) {
       // WP-SEC-003 — per-email issue throttle (per-challenge caps cannot
       // accumulate: issueOtp deletes prior challenges)
@@ -183,7 +269,7 @@ export async function otpResend(req, res) {
         return res.status(429).json({ error: 'Too many codes requested — try again later' });
       }
       try {
-        await issueOtp(user);
+        responseChallenge = await issueOtp(user);
       } catch (e) {
         if (!mailer && !isProduction) {
           // demo fallback
@@ -193,13 +279,14 @@ export async function otpResend(req, res) {
             `INSERT INTO otp_challenges (id, user_id, code_hash, expires_at, attempts, used_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
             [id, user.id, otpHash(id, '123456'), futureIso(5 * 60 * 1000), 0, null, nowIso()]
           );
+          responseChallenge = id;
           console.log(`[DEMO OTP resend] ${email} => 123456 challenge ${id}`);
         } else {
           throw e;
         }
       }
     }
-    res.json({ ok: true, message: 'If the account exists, a new code was sent.' });
+    res.json({ ok: true, challenge: responseChallenge, email, message: 'If the account exists, a new code was sent.' });
   } catch (e) {
     return sendInternalError(req, res, e, 'Could not resend code', 'otpResend');
   }
@@ -265,19 +352,28 @@ export async function otpVerify(req, res) {
   } catch {
     ok = false;
   }
-  // Update attempts / used_at
-  const usedAt = ok ? now : null;
-  // Note: for sqlite, need to handle attempts increment correctly; we set attempts+1 if not ok? Spec says attempts = attempts+1
-  // We'll fetch current attempts and increment
-  const newAttempts = (c.attempts || 0) + 1;
-  await db.query(`UPDATE otp_challenges SET attempts = $1, used_at = $2 WHERE id = $3`, [newAttempts, usedAt, challenge]);
-  // For timingSafeEqual, we already set usedAt only if ok, but we set attempts increment
-  // Actually spec sets used_at = ok ? now : null, and attempts+1 always
-  // Our code does that via newAttempts and usedAt
+  if (!ok) {
+    await db.query(
+      `UPDATE otp_challenges SET attempts = attempts + 1
+       WHERE id = $1 AND used_at IS NULL AND attempts < 5`,
+      [challenge],
+    );
+    return res.status(401).json({ error: 'Invalid or expired code' });
+  }
 
-  if (!ok) return res.status(401).json({ error: 'Invalid or expired code' });
+  // Atomic consume: two concurrent submissions of the same correct code cannot
+  // both create sessions. Expiry and attempt limits are rechecked in the write.
+  const consumed = await db.query(
+    `UPDATE otp_challenges SET attempts = attempts + 1, used_at = $1
+     WHERE id = $2 AND used_at IS NULL AND attempts < 5 AND expires_at > $3
+     RETURNING user_id`,
+    [now, challenge, now],
+  );
+  if (consumed.rowCount !== 1) {
+    return res.status(401).json({ error: 'Invalid or expired code' });
+  }
 
-  const user = await db.user.findById(c.user_id);
+  const user = await db.user.findById(consumed.rows[0].user_id);
   if (!user) return res.status(401).json({ error: 'Invalid or expired code' });
 
   const accessToken = await createAccessToken(user, 15);
@@ -404,8 +500,8 @@ const GENERIC_RESET_MSG = 'If an account exists for that email, a reset link is 
 const resetLinkFor = (token) => `${origin}/login.html?token=${encodeURIComponent(token)}`;
 
 export async function forgotPassword(req, res) {
+  const generic = { ok: true, message: GENERIC_RESET_MSG };
   try {
-    const generic = { ok: true, message: GENERIC_RESET_MSG };
     const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
     const parsed = forgotPasswordSchema.safeParse(body);
     // WP-HARDEN-001 — anti-enumeration is preserved verbatim: schema failures
@@ -452,7 +548,10 @@ export async function forgotPassword(req, res) {
     console.error(`[RESET] SMTP is not configured; reset email to ${user.email} could not be delivered`);
     return res.json(generic);
   } catch (e) {
-    return sendInternalError(req, res, e, 'Could not process reset request', 'forgotPassword');
+    // Preserve anti-enumeration even during SMTP/database faults. Operators get
+    // the request-id-correlated error; callers always receive the generic body.
+    logError(req, e, 'forgotPassword');
+    return res.json(generic);
   }
 }
 
@@ -470,21 +569,29 @@ export async function resetPassword(req, res) {
     }
     const { token, password } = parsed.data;
     const now = nowIso();
-    const { rows } = await db.query(
-      `SELECT * FROM password_reset_tokens WHERE token_hash = $1 LIMIT 1`,
-      [resetHash(token.trim())]
-    );
-    const r = rows[0];
-    const invalid = () => res.status(401).json({ error: 'Reset link is invalid or has expired' });
-    if (!r || r.used_at || r.expires_at < now) return invalid();
-    const user = await db.user.findById(r.user_id);
-    if (!user) return invalid();
     const hashed = await bcrypt.hash(password, 10);
-    await db.user.updatePassword(user.id, hashed);
-    // Single-use: consume the token…
-    await db.query(`UPDATE password_reset_tokens SET used_at = $1 WHERE id = $2`, [now, r.id]);
-    // …and revoke every existing refresh session for the user (new sign-in required)
-    await db.query(`UPDATE refresh_tokens SET revoked_at = $1, revoke_reason = 'password-reset' WHERE user_id = $2 AND revoked_at IS NULL`, [now, user.id]);
+    const changed = await db.$transaction(async (tx) => {
+      // Consume and obtain ownership in one statement. Only one concurrent
+      // request can receive the row and proceed with the password change.
+      const consumed = await tx.query(
+        `UPDATE password_reset_tokens SET used_at = $1
+         WHERE token_hash = $2 AND used_at IS NULL AND expires_at > $3
+         RETURNING id, user_id`,
+        [now, resetHash(token.trim()), now],
+      );
+      if (consumed.rowCount !== 1) return false;
+      const userId = consumed.rows[0].user_id;
+      const existing = await tx.query(`SELECT id FROM "User" WHERE id = $1 LIMIT 1`, [userId]);
+      if (existing.rowCount !== 1) return false;
+      await tx.query(`UPDATE "User" SET password = $1, "updatedAt" = $2 WHERE id = $3`, [hashed, now, userId]);
+      await tx.query(
+        `UPDATE refresh_tokens SET revoked_at = $1, revoke_reason = 'password-reset'
+         WHERE user_id = $2 AND revoked_at IS NULL`,
+        [now, userId],
+      );
+      return true;
+    });
+    if (!changed) return res.status(401).json({ error: 'Reset link is invalid or has expired' });
     res.json({ ok: true, message: 'Password updated. Sign in with your new password.' });
   } catch (e) {
     return sendInternalError(req, res, e, 'Could not reset password', 'resetPassword');
@@ -496,9 +603,10 @@ export async function health(req, res) {
   res.json({
     ok: true,
     service: 'notin-auth',
-    googleConfigured: Boolean(env.GOOGLE_CLIENT_ID),
+    googleConfigured: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_REDIRECT_URI),
+    emailAuthEnabled,
     smtpConfigured,
-    demoMode: !smtpConfigured && !isProduction,
-    hint: !smtpConfigured && !isProduction ? 'SMTP not configured — use POST /api/auth/otp/demo-request with {email} then verify with code 123456' : undefined,
+    demoMode: emailAuthEnabled && !smtpConfigured && !isProduction,
+    hint: emailAuthEnabled && !smtpConfigured && !isProduction ? 'SMTP not configured — use POST /api/auth/otp/demo-request with {email} then verify with code 123456' : undefined,
   });
 }

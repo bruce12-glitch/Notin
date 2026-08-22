@@ -10,9 +10,21 @@ const __dirname = path.dirname(__filename);
 
 const DATABASE_URL = process.env.DATABASE_URL || '';
 const isPostgresUrl = DATABASE_URL.startsWith('postgresql://') || DATABASE_URL.startsWith('postgres://');
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (isProduction && !isPostgresUrl) {
+  console.error('FATAL: production migrations require a postgres:// DATABASE_URL');
+  process.exit(1);
+}
 
 async function migratePostgres(pool) {
   console.log('Running PostgreSQL migrations...');
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      version TEXT PRIMARY KEY,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
 
   // Create cuid helper for id generation if not exists (fallback, but we generate ids in JS)
   await pool.query(`
@@ -234,6 +246,7 @@ async function migratePostgres(pool) {
   `);
   await pool.query(`CREATE INDEX IF NOT EXISTS password_reset_tokens_user_id_idx ON password_reset_tokens(user_id);`);
   await pool.query(`CREATE INDEX IF NOT EXISTS password_reset_tokens_token_hash_idx ON password_reset_tokens(token_hash);`);
+  await pool.query(`INSERT INTO schema_migrations (version) VALUES ('2026-08-22-market-hardening-v1') ON CONFLICT DO NOTHING;`);
 
   console.log('✅ PostgreSQL migrations complete');
 }
@@ -242,6 +255,12 @@ function migrateSqlite(dbPath) {
   console.log(`Running SQLite fallback migrations at ${dbPath}...`);
   const db = new DatabaseSync(dbPath);
   db.exec('PRAGMA journal_mode = WAL');
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (
+      version TEXT PRIMARY KEY,
+      applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
   // Use TEXT for timestamps (ISO strings) so JS ISO comparisons work lexical
   db.exec(`
     CREATE TABLE IF NOT EXISTS "User" (
@@ -415,6 +434,7 @@ function migrateSqlite(dbPath) {
   `);
   db.exec(`CREATE INDEX IF NOT EXISTS password_reset_tokens_user_id_idx ON password_reset_tokens(user_id);`);
   db.exec(`CREATE INDEX IF NOT EXISTS password_reset_tokens_token_hash_idx ON password_reset_tokens(token_hash);`);
+  db.prepare(`INSERT OR IGNORE INTO schema_migrations (version) VALUES (?)`).run('2026-08-22-market-hardening-v1');
   db.close();
   console.log('✅ SQLite fallback migrations complete');
 }
@@ -435,8 +455,11 @@ async function migrate() {
       await pool.end();
       return;
     } catch (e) {
-      console.warn(`⚠️  Postgres connection failed (${e.message}), falling back to SQLite for local dev...`);
       try { await pool.end(); } catch {}
+      if (isProduction) {
+        throw new Error(`Production PostgreSQL migration failed: ${e.message}`);
+      }
+      console.warn(`⚠️  Postgres connection failed (${e.message}), falling back to SQLite for local dev...`);
       // fall through to sqlite
     }
   } else {

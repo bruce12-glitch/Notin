@@ -86,8 +86,8 @@ test('a generated request id is a UUID when no inbound header is sent', async ({
   expect(requestIdOf(response)).toMatch(UUID_RE);
 });
 
-test('forced 500 keeps message and returns the same request id the client sent', async ({ request }) => {
-  const inbound = 'forced-500-support-id';
+test('malformed JSON returns a traceable 400 instead of generating a server error', async ({ request }) => {
+  const inbound = 'invalid-json-support-id';
   const response = await request.fetch('/api/notes', {
     method: 'POST',
     headers: {
@@ -96,9 +96,8 @@ test('forced 500 keeps message and returns the same request id the client sent',
     },
     data: '{not-json',
   });
-  expect(response.status()).toBe(500);
+  expect(response.status()).toBe(400);
   expect(requestIdOf(response)).toBe(inbound);
   const body = await response.json();
-  expect(body.message).toBe('Internal Server Error');
-  expect(body.requestId).toBe(inbound);
+  expect(body).toEqual({ message: 'Invalid JSON body', code: 'INVALID_JSON', requestId: inbound });
 });

@@ -1,0 +1,11 @@
+.git
+**/node_modules
+**/.env
+**/*.sqlite
+**/*.sqlite-shm
+**/*.sqlite-wal
+backend/uploads
+backend/playwright-report
+backend/test-results
+frontend/assets/evernote-homepage.json
+frontend/assets/hero-anim-data.js

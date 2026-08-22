@@ -159,6 +159,10 @@ export const noteCreateSchema = z.object({
 
 export const noteUpdateSchema = z.object({
   ...noteBaseFields,
+  // Optional optimistic-concurrency token. First-party clients send the
+  // timestamp they loaded; stale writes receive 409 instead of overwriting a
+  // newer edit from another device.
+  expectedUpdatedAt: z.string().datetime({ message: 'expectedUpdatedAt must be an ISO timestamp' }).optional(),
   tagIds: tagIdsSchema.optional(),
   isPinned: z.boolean({ invalid_type_error: 'isPinned must be a boolean' }).optional(),
   isTrashed: z.boolean({ invalid_type_error: 'isTrashed must be a boolean' }).optional(),
@@ -213,8 +217,11 @@ export const signupSchema = z
     username: usernameSchema,
     email: emailSchema,
     password: z
-      .string({ invalid_type_error: 'Password must be at least 8 characters' })
-      .min(8, 'Password must be at least 8 characters'),
+      .string({ invalid_type_error: 'Password must be 8–72 bytes' })
+      .min(8, 'Password must be at least 8 characters')
+      // bcrypt truncates after 72 bytes. Rejecting longer input prevents two
+      // visibly different passwords from becoming the same credential.
+      .refine((value) => Buffer.byteLength(value, 'utf8') <= 72, 'Password must be 72 bytes or fewer'),
   })
   .strict();
 
@@ -254,8 +261,9 @@ export const resetPasswordSchema = z
   .object({
     token: z.string({ invalid_type_error: 'Reset token required' }).min(1, 'Reset token required'),
     password: z
-      .string({ invalid_type_error: 'Password must be at least 8 characters' })
-      .min(8, 'Password must be at least 8 characters'),
+      .string({ invalid_type_error: 'Password must be 8–72 bytes' })
+      .min(8, 'Password must be at least 8 characters')
+      .refine((value) => Buffer.byteLength(value, 'utf8') <= 72, 'Password must be 72 bytes or fewer'),
   })
   .strict();
 

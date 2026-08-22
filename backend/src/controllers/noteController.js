@@ -10,6 +10,10 @@ import {
 import { sendValidationError, sendInternalError } from '../lib/apiResponse.js';
 
 const DEFAULT_LIMIT = 100;
+const configuredNoteQuota = Number.parseInt(process.env.MAX_NOTES_PER_USER || '5000', 10);
+const MAX_NOTES_PER_USER = Number.isSafeInteger(configuredNoteQuota) && configuredNoteQuota > 0
+  ? configuredNoteQuota
+  : 5000;
 
 // WP-HARDEN-001 — pagination query parsing for GET /api/notes.
 // Returns null after sending a 400 when any argument is invalid.
@@ -79,6 +83,14 @@ export const createNote = async (req, res) => {
   if (!body) return;
 
   try {
+    const noteCount = await prisma.note.count({ where: { userId } });
+    if (noteCount >= MAX_NOTES_PER_USER) {
+      return res.status(403).json({
+        message: `Note limit reached (${MAX_NOTES_PER_USER})`,
+        code: 'NOTE_QUOTA_REACHED',
+      });
+    }
+
     // WP-APP-005: optional notebook assignment on create (ownership-checked)
     let nbId = null;
     if (body.notebookId !== undefined && body.notebookId !== null && body.notebookId !== '') {
@@ -248,12 +260,19 @@ export const updateNote = async (req, res) => {
     if (Object.keys(data).length === 0) {
       return res.status(200).json(existing);
     }
+    if (body.expectedUpdatedAt !== undefined) data.expectedUpdatedAt = body.expectedUpdatedAt;
 
     const updated = await prisma.note.update({
       where: { id },
       data,
     });
 
+    if (!updated && body.expectedUpdatedAt !== undefined) {
+      return res.status(409).json({
+        message: 'This note changed in another session. Reload it before saving again.',
+        code: 'NOTE_CONFLICT',
+      });
+    }
     res.status(200).json(updated);
   } catch (error) {
     return sendInternalError(req, res, error, 'Failed to update note', 'updateNote');

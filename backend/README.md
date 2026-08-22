@@ -68,7 +68,7 @@ Attachment lists and file bytes are served only after bearer-token ownership che
 
 ## Read-only share security
 
-Creating a share generates a 32-byte cryptographically random base64url token. Only its SHA-256 hash is stored in `NoteShare`; creating another link rotates and invalidates the previous token. Revocation disables the row immediately. Tokens have no expiry by default (`expiresAt` is available for future policy).
+Creating a share generates a 32-byte cryptographically random base64url token. Only its SHA-256 hash is stored in `NoteShare`; creating another link rotates and invalidates the previous token. Revocation disables the row immediately. Tokens expire after 30 days by default; `SHARE_TTL_DAYS=0` can disable expiry for a controlled deployment.
 
 Public payloads contain only the note title, editor content, and that note's image metadata—never owner, notebook, tag, or authentication data. Public images use `/api/public/share/:token/files/:attachmentId`, which revalidates the active token, non-trashed note, and attachment-to-note relationship on every request. Trashed notes return **404** publicly and become visible again if restored while the share remains enabled. Public responses use `no-store` and a light IP rate limit. Permanent note deletion removes its share row.
 
@@ -80,7 +80,7 @@ The Playwright tooling lives in `backend/`. The suite uses Chromium and exercise
 
 ### Prerequisites
 
-- Node.js 20 or newer.
+- Node.js 22.5 or newer.
 - Install both the backend dependencies and the authentication app's TipTap browser modules.
 - Apply the database schema once.
 - Demo OTP must be enabled for the full journey: `NODE_ENV` must not be `production` and SMTP variables must be unset. The suite clearly skips the journey when `/api/auth/health` reports `demoMode: false`; the health smoke still runs.

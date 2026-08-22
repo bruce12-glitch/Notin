@@ -2,8 +2,10 @@
   "name": "notin-authentication",
   "private": true,
   "type": "module",
+  "engines": { "node": ">=22.5.0" },
   "scripts": {
-    "build:app": "esbuild app.js --bundle --format=esm --target=es2020 --outfile=app.bundle.js",
+    "build:app": "esbuild app.js --bundle --format=esm --target=es2020 --minify --outfile=app.bundle.js",
+    "check": "node --check app.js && node --check script.js && node --check share.js && node --check sw.js",
     "dev:app": "npm --prefix ../backend run dev",
     "dev:frontend": "node dev-server.mjs",
     "dev:design": "node design-server.mjs"

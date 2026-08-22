@@ -4,17 +4,23 @@
   "description": "Notin Backend - Clean PostgreSQL API (Prisma schema + pg driver)",
   "main": "src/server.js",
   "type": "module",
+  "engines": {
+    "node": ">=22.5.0"
+  },
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
     "db:migrate": "node src/db/migrate.js",
     "db:generate": "echo 'SQL is applied by npm run db:migrate (migrate.js). prisma/schema.prisma documents that schema; this repo does not run prisma generate.'",
+    "test": "npm run test:e2e",
+    "check": "find src -name '*.js' -print0 | xargs -0 -n1 node --check",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@sentry/node": "^10.69.0",
     "bcryptjs": "^2.4.3",
+    "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

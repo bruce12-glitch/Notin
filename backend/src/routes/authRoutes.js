@@ -5,6 +5,7 @@ import { verifyCsrfToken } from '../lib/jwt.js';
 import {
   googleStart,
   googleCallback,
+  otpRequest,
   otpResend,
   otpDemoRequest,
   otpVerify,
@@ -58,6 +59,7 @@ router.use(originGuard);
 
 router.get('/google', googleStart);
 router.get('/google/callback', googleCallback);
+router.post('/otp/request', otpRequest);
 router.post('/otp/resend', otpResend);
 router.post('/otp/demo-request', otpDemoRequest);
 router.post('/otp/verify', otpVerify);

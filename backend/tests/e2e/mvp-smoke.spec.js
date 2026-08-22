@@ -31,6 +31,10 @@ test('health endpoint reports the unified API is ready', async ({ request }) => 
   expect((await request.get('/sw.js')).ok()).toBeTruthy();
   expect((await request.get('/icons/icon-192.png')).ok()).toBeTruthy();
   expect((await request.get('/icons/icon-512.png')).ok()).toBeTruthy();
+  // Production static allowlist: source, manifests and design mocks are not public.
+  expect((await request.get('/app.js')).status()).toBe(404);
+  expect((await request.get('/package.json')).status()).toBe(404);
+  expect((await request.get('/design.html')).status()).toBe(404);
 });
 
 test('MVP journey: OTP, note persistence, organize, search, share, pin, trash, restore, logout', async ({ page, request, browser }) => {
@@ -58,8 +62,8 @@ test('MVP journey: OTP, note persistence, organize, search, share, pin, trash, r
   await expect(page.locator('#navHome')).toHaveClass(/is-active/);
   await expect(page.locator('#homeCreateNote')).toBeEnabled();
   await expect(page.locator('.home-empty-copy')).toContainText('first idea');
-  await page.locator('.capture-soon').click();
-  await expect(page.locator('.capture-soon')).toContainText('Coming soon');
+  await expect(page.locator('.capture-soon')).toBeDisabled();
+  await expect(page.locator('.capture-soon')).toContainText('planned');
   await expect(page).toHaveURL(/#\/home$/);
 
   // WP-UI-HOME-PIXEL-001 — post-auth Home matches the Evernote Home layout:
@@ -67,11 +71,12 @@ test('MVP journey: OTP, note persistence, organize, search, share, pin, trash, r
   await expect(page.locator('#appSidebar')).toBeVisible();
   await expect(page.locator('#globalSearchInput')).toHaveAttribute('placeholder', 'Search');
   await expect(page.locator('.app-sidebar-actions .app-create-note')).toContainText('Note');
-  await expect(page.locator('.app-sidebar-actions .app-icon-btn')).toHaveCount(3);
-  await expect(page.locator('.app-nav .app-nav-item')).toHaveCount(13);
+  await expect(page.locator('.app-sidebar-actions .app-icon-btn')).toHaveCount(2);
+  await expect(page.locator('.app-nav .app-nav-item')).toHaveCount(6);
   const navLabels = await page.locator('.app-nav .nav-label').allTextContents();
-  expect(navLabels).toEqual(['Home', 'Shortcuts', 'Notes', 'Trash', 'Tasks', 'Files', 'Calendar', 'Templates', 'Notebooks', 'Tags', 'Shared with me', 'Spaces', 'More']);
-  await expect(page.locator('#appSidebar .app-upgrade')).toContainText('Upgrade');
+  expect(navLabels).toEqual(['Home', 'Shortcuts', 'Notes', 'Trash', 'Notebooks', 'Tags']);
+  await expect(page.locator('#syncNotesBtn')).toBeEnabled();
+  await expect(page.locator('#openAiToolsBtn')).toBeEnabled();
   await expect(page.locator('#sidebarCollapse')).toBeVisible();
   await expect(page.locator('.home-note-grid')).toBeVisible();
   await expect(page.locator('.home-scratch-col .scratch-panel')).toBeVisible();
@@ -404,7 +409,7 @@ test('account export and confirmed deletion wipe owned data without affecting an
 
     expect((await ownerApi.get('/api/notes', { headers: ownerHeaders })).status()).toBe(401);
     expect((await ownerApi.post('/api/auth/refresh')).status()).toBe(401);
-    expect((await ownerApi.post('/api/users/signin', { data: { email: ownerEmail, password } })).status()).toBe(404);
+    expect((await ownerApi.post('/api/users/signin', { data: { email: ownerEmail, password } })).status()).toBe(401);
     expect((await ownerApi.get(`/api/public/share/${share.token}`)).status()).toBe(404);
     expect((await ownerApi.get(attachment.url, { headers: ownerHeaders })).status()).toBe(401);
 

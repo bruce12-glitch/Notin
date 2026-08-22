@@ -2,8 +2,10 @@
   "name": "notin-landing",
   "version": "1.0.0",
   "main": "script.js",
+  "engines": { "node": ">=22.5.0" },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "check": "node --check script.js && node --check dev-server.mjs",
+    "test": "npm run check"
   },
   "keywords": [],
   "author": "",

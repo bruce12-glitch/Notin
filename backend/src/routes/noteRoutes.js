@@ -35,6 +35,13 @@ function aiKeyGenerator(req) {
   return `ip:${addr}`;
 }
 
+function requireProductionAiProvider(req, res, next) {
+  if (process.env.NODE_ENV === 'production' && !process.env.GROQ_API_KEY) {
+    return res.status(503).json({ message: 'AI features are not configured' });
+  }
+  next();
+}
+
 function makeAiLimiter() {
   return rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -55,23 +62,23 @@ router.patch('/:id', updateNote);
 router.post('/:id/trash', trashNote);
 router.post('/:id/restore', restoreNote);
 const aiLimit = makeAiLimiter();
-router.post('/:id/summarize', aiLimit, summarizeNote);
+router.post('/:id/summarize', requireProductionAiProvider, aiLimit, summarizeNote);
 // WP-AI-002 — AI title suggestion (server suggests; client applies via autosave)
 const titleLimit = makeAiLimiter();
-router.post('/:id/suggest-title', titleLimit, suggestNoteTitle);
+router.post('/:id/suggest-title', requireProductionAiProvider, titleLimit, suggestNoteTitle);
 // WP-AI-002b — AI tag suggestions (server suggests; existing tag paths apply)
 const tagsLimit = makeAiLimiter();
-router.post('/:id/suggest-tags', tagsLimit, suggestNoteTags);
+router.post('/:id/suggest-tags', requireProductionAiProvider, tagsLimit, suggestNoteTags);
 // WP-AI-003 — chat with the open note (non-streaming; nothing is persisted)
 const chatLimit = makeAiLimiter();
-router.post('/:id/chat', chatLimit, chatWithNoteController);
+router.post('/:id/chat', requireProductionAiProvider, chatLimit, chatWithNoteController);
 // WP-AI-003b — streaming chat transport. Deliberately reuses the SAME chatLimit
 // instance: both transports draw from one 5-per-15-minute budget per USER, so
 // streaming is not a rate-limit escape hatch.
-router.post('/:id/chat/stream', chatLimit, chatWithNoteStreamController);
+router.post('/:id/chat/stream', requireProductionAiProvider, chatLimit, chatWithNoteStreamController);
 // WP-AI-004 — writing assistant (suggestion only; client applies explicitly)
 const assistLimit = makeAiLimiter();
-router.post('/:id/assist', assistLimit, assistNoteController);
+router.post('/:id/assist', requireProductionAiProvider, assistLimit, assistNoteController);
 // Read-only secret share links (owner only; POST rotates, DELETE revokes)
 router.post('/:id/share', createShare);
 router.delete('/:id/share', revokeShare);

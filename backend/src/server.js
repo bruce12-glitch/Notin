@@ -1,8 +1,8 @@
 import 'dotenv/config';
 import { captureExpressError } from './config/sentry.js';
 import express from 'express';
-import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import fs from 'node:fs';
@@ -20,7 +20,7 @@ import attachmentRoutes from './routes/attachmentRoutes.js';
 import publicShareRoutes from './routes/publicShareRoutes.js';
 import { signup, signin } from './controllers/userController.js';
 import { uploadDir } from './controllers/attachmentController.js';
-import { allowList, canonicalOrigin, isOriginAllowed } from './lib/httpSecurity.js';
+import { canonicalOrigin, isOriginAllowed } from './lib/httpSecurity.js';
 import { logError } from './lib/logging.js';
 import requestId from './middleware/requestId.js';
 
@@ -62,14 +62,59 @@ export function assertProductionEnv(env = process.env) {
     failures.push('DATABASE_URL must be a postgres:// URL in production');
   }
 
-  return failures;
+  const origins = String(env.APP_ORIGIN || '').split(',').map((value) => value.trim()).filter(Boolean);
+  for (const value of origins) {
+    try {
+      if (new URL(value).protocol !== 'https:') failures.push('APP_ORIGIN entries must use https:// in production');
+    } catch {
+      failures.push('APP_ORIGIN contains an invalid URL');
+    }
+  }
+  if (env.PUBLIC_APP_URL) {
+    try {
+      if (new URL(env.PUBLIC_APP_URL).protocol !== 'https:') failures.push('PUBLIC_APP_URL must use https:// in production');
+    } catch {
+      failures.push('PUBLIC_APP_URL is invalid');
+    }
+  }
+  if (!env.TRUST_PROXY || !String(env.TRUST_PROXY).trim()) {
+    failures.push('TRUST_PROXY must explicitly match the production proxy topology');
+  } else if (String(env.TRUST_PROXY).trim().toLowerCase() === 'true') {
+    failures.push('TRUST_PROXY=true is too permissive for production');
+  }
+
+  // The shipped signup UI is passwordless. A deployment may explicitly turn
+  // email auth off, otherwise boot must fail rather than presenting a flow that
+  // can never deliver its code or reset link.
+  if (env.AUTH_EMAIL_ENABLED !== 'false') {
+    for (const name of ['SMTP_HOST', 'SMTP_USER', 'SMTP_PASSWORD', 'MAIL_FROM']) {
+      if (!env[name] || !String(env[name]).trim()) failures.push(`${name} is required when email auth is enabled`);
+    }
+  }
+
+  return [...new Set(failures)];
 }
 
-app.set('trust proxy', 1);
+const trustProxySetting = process.env.TRUST_PROXY || '1';
+const normalizedTrustProxy = trustProxySetting.trim().toLowerCase();
+const trustProxyValue = /^\d+$/.test(normalizedTrustProxy)
+  ? Number(normalizedTrustProxy)
+  : normalizedTrustProxy === 'true'
+    ? true
+    : normalizedTrustProxy === 'false'
+      ? false
+      : trustProxySetting;
+try {
+  app.set('trust proxy', trustProxyValue);
+} catch {
+  console.error('FATAL: TRUST_PROXY is not a valid Express proxy setting');
+  process.exit(1);
+}
 
 // WP-OPS-001 — correlation id: after trust proxy, before helmet/CORS/routers
 // so every response (health, static, errors) carries X-Request-Id.
 app.use(requestId);
+app.use(compression());
 
 function resolveAppVersion() {
   const fromEnv = String(process.env.GIT_SHA || process.env.SOURCE_VERSION || '').trim();
@@ -113,17 +158,36 @@ async function probeUploadsWritable() {
   }
 }
 
-// Allow Arena/e2b preview iframes
+// Production is not embeddable and gets a restrictive baseline CSP. Preview
+// remains frameable because Arena renders it in an iframe.
 app.use(
   helmet({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: isProd ? {
+      directives: {
+        defaultSrc: ["'self'"],
+        baseUri: ["'self'"],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'self'"],
+        formAction: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+        imgSrc: ["'self'", 'data:', 'blob:'],
+        connectSrc: ["'self'"],
+        workerSrc: ["'self'", 'blob:'],
+        manifestSrc: ["'self'"],
+      },
+    } : false,
     crossOriginEmbedderPolicy: false,
-    frameguard: false,
+    frameguard: isProd ? { action: 'sameorigin' } : false,
+    hsts: isProd ? undefined : false,
   })
 );
 app.use((req, res, next) => {
-  res.removeHeader('X-Frame-Options');
-  res.setHeader('Content-Security-Policy', 'frame-ancestors *');
+  if (!isProd) {
+    res.removeHeader('X-Frame-Options');
+    res.setHeader('Content-Security-Policy', 'frame-ancestors *');
+  }
   const reqOrigin = req.headers.origin;
   // WP-DEPLOY-001 — CORS lockdown. In production only APP_ORIGIN allowlist
   // entries are echoed; everyone else gets the canonical origin back, never
@@ -140,16 +204,36 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Notin-CSRF, X-Request-Id');
   res.setHeader('Access-Control-Expose-Headers', 'X-Request-Id');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
   res.setHeader('Vary', 'Origin');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
 
-// Serve auth static pages from same origin (keeps UI available via API process)
-// This mirrors authentication/server.js static serving but from unified backend
+// Serve only the production UI surface. Source files, lockfiles, design mocks,
+// development servers and node_modules must never be downloadable from the API.
 const authStaticPath = path.join(__dirname, '../../authentication');
-app.use(express.static(authStaticPath, { extensions: ['html'] }));
+const publicAuthFiles = new Set([
+  '/index.html', '/login.html', '/app.html', '/share.html',
+  '/script.js', '/app.bundle.js', '/share.js', '/styles.css', '/app.css',
+  '/sw.js', '/manifest.webmanifest',
+]);
+const authStatic = express.static(authStaticPath, {
+  index: false,
+  etag: true,
+  setHeaders(res, filePath) {
+    if (/\.(?:js|css|png|webmanifest)$/.test(filePath)) {
+      res.setHeader('Cache-Control', isProd ? 'public, max-age=3600' : 'no-cache');
+    }
+  },
+});
+app.use((req, res, next) => {
+  if (!['GET', 'HEAD'].includes(req.method)) return next();
+  const pathname = req.path;
+  if (!publicAuthFiles.has(pathname) && !/^\/icons\/icon-(?:192|512)\.png$/.test(pathname)) return next();
+  if (/\.html$/.test(pathname)) res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  return authStatic(req, res, next);
+});
 
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
@@ -201,6 +285,7 @@ app.get('/', (req, res) => {
   // If request accepts html and auth index exists, serve it; otherwise JSON
   const accept = req.headers.accept || '';
   if (accept.includes('text/html')) {
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
     return res.sendFile(path.join(authStaticPath, 'index.html'));
   }
   res.json({
@@ -216,6 +301,13 @@ app.get('/', (req, res) => {
 app.get('/login.html', (req, res) => res.sendFile(path.join(authStaticPath, 'login.html')));
 
 app.use((err, req, res, next) => {
+  if (err?.type === 'entity.parse.failed' || (err instanceof SyntaxError && err?.status === 400)) {
+    return res.status(400).json({
+      message: 'Invalid JSON body',
+      code: 'INVALID_JSON',
+      requestId: req.id,
+    });
+  }
   // Capture only the Error object. Sentry's beforeSend strips request/user/extras.
   captureExpressError(err);
   logError(req, err.stack || err, 'unhandled');
