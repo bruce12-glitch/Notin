@@ -31,6 +31,9 @@ if (usePostgres) {
     connectionString: DATABASE_URL,
     connectionTimeoutMillis: 3000,
     idleTimeoutMillis: 10000,
+    max: Math.max(1, Number.parseInt(process.env.PG_POOL_MAX || '10', 10) || 10),
+    statement_timeout: Math.max(1000, Number.parseInt(process.env.PG_STATEMENT_TIMEOUT_MS || '10000', 10) || 10000),
+    query_timeout: Math.max(1000, Number.parseInt(process.env.PG_QUERY_TIMEOUT_MS || '12000', 10) || 12000),
   });
   pool.on('error', (err) => {
     console.error('Unexpected PostgreSQL pool error', err);
@@ -574,7 +577,13 @@ const db = {
       return row;
     },
     async update({ where: { id }, data }) {
-      const now = new Date().toISOString();
+      let now = new Date().toISOString();
+      if (data.expectedUpdatedAt) {
+        const expectedMs = Date.parse(data.expectedUpdatedAt);
+        if (Number.isFinite(expectedMs) && Date.parse(now) <= expectedMs) {
+          now = new Date(expectedMs + 1).toISOString();
+        }
+      }
       const sets = [];
       const params = [];
       let idx = 1;
@@ -608,14 +617,20 @@ const db = {
         params.push(usePostgres ? !!data.isPinned : (data.isPinned ? 1 : 0));
       }
       sets.push(`"updatedAt" = $${idx++}`); params.push(now);
+      const idParam = idx++;
       params.push(id);
+      let whereClause = `id = $${idParam}`;
+      if (data.expectedUpdatedAt !== undefined) {
+        whereClause += ` AND "updatedAt" = $${idx++}`;
+        params.push(data.expectedUpdatedAt);
+      }
       const setClause = sets.join(', ');
       const { rows } = await query(
-        `UPDATE "Note" SET ${setClause} WHERE id = $${idx} RETURNING id, title, description, "contentJson", "contentText", summary, "isTrashed", "isPinned", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt"`,
+        `UPDATE "Note" SET ${setClause} WHERE ${whereClause} RETURNING id, title, description, "contentJson", "contentText", summary, "isTrashed", "isPinned", "trashedAt", "notebookId", "userId", "createdAt", "updatedAt"`,
         params
       );
       // WP-APP-006 — replace tag set when tagIds provided (ownership validated in controller)
-      if (Array.isArray(data.tagIds)) {
+      if (rows[0] && Array.isArray(data.tagIds)) {
         await setNoteTags(id, data.tagIds);
       }
       const row = rows[0];

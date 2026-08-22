@@ -4,8 +4,23 @@ import path from 'node:path';
 import db from '../config/db.js';
 import { uploadDir } from './attachmentController.js';
 import { logError } from '../lib/logging.js';
+import { canonicalOrigin } from '../lib/httpSecurity.js';
 
 const TOKEN_BYTES = 32;
+const configuredShareTtlDays = Number.parseInt(process.env.SHARE_TTL_DAYS || '30', 10);
+const SHARE_TTL_DAYS = Number.isSafeInteger(configuredShareTtlDays) && configuredShareTtlDays >= 0
+  ? configuredShareTtlDays
+  : 30;
+const configuredPublicAppOrigin = process.env.PUBLIC_APP_URL
+  ? String(process.env.PUBLIC_APP_URL).replace(/\/+$/, '')
+  : null;
+
+function publicAppOrigin(req) {
+  if (configuredPublicAppOrigin) return configuredPublicAppOrigin;
+  if (process.env.NODE_ENV === 'production') return String(canonicalOrigin).replace(/\/+$/, '');
+  // Development convenience only. Production never trusts request host headers.
+  return `${req.protocol}://${req.get('host')}`;
+}
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
 const isTrashed = (value) => value === true || value === 1 || value === '1' || value === 't';
 
@@ -18,14 +33,6 @@ async function ownedNote(noteId, userId) {
   return rows[0] || null;
 }
 
-function publicBaseUrl(req) {
-  const forwardedProto = String(req.get('x-forwarded-proto') || '').split(',')[0].trim();
-  const forwardedHost = String(req.get('x-forwarded-host') || '').split(',')[0].trim();
-  const proto = forwardedProto || req.protocol;
-  const host = forwardedHost || req.get('host');
-  return `${proto}://${host}`;
-}
-
 export async function createShare(req, res) {
   try {
     const note = await ownedNote(req.params.id, req.userId);
@@ -35,6 +42,9 @@ export async function createShare(req, res) {
     const token = crypto.randomBytes(TOKEN_BYTES).toString('base64url');
     const tokenHash = hashToken(token);
     const now = new Date().toISOString();
+    const expiresAt = SHARE_TTL_DAYS === 0
+      ? null
+      : new Date(Date.now() + SHARE_TTL_DAYS * 86400000).toISOString();
     const shareId = `shr_${crypto.randomUUID()}`;
 
     // One share per note. Creating again rotates the secret and invalidates the old URL.
@@ -42,11 +52,12 @@ export async function createShare(req, res) {
     await db.query(
       `INSERT INTO "NoteShare" (id, "noteId", "userId", "tokenHash", "shareEnabled", "createdAt", "expiresAt")
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [shareId, note.id, req.userId, tokenHash, db.usePostgres ? true : 1, now, null],
+      [shareId, note.id, req.userId, tokenHash, db.usePostgres ? true : 1, now, expiresAt],
     );
 
-    const url = `${publicBaseUrl(req)}/share.html?token=${encodeURIComponent(token)}`;
-    res.status(201).json({ url, token });
+    // Never derive secret-bearing links from Host/X-Forwarded-Host headers.
+    const url = `${publicAppOrigin(req)}/share.html?token=${encodeURIComponent(token)}`;
+    res.status(201).json({ url, token, expiresAt });
   } catch (error) {
     logError(req, error);
     res.status(500).json({ message: 'Could not create share link' });

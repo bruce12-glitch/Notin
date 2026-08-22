@@ -12,6 +12,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const uploadDir = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads'));
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 export const MAX_IMAGES_PER_NOTE = 10;
+const configuredStorageQuota = Number.parseInt(process.env.MAX_ATTACHMENT_STORAGE_BYTES || String(250 * 1024 * 1024), 10);
+export const MAX_ATTACHMENT_STORAGE_BYTES = Number.isSafeInteger(configuredStorageQuota) && configuredStorageQuota > 0
+  ? configuredStorageQuota
+  : 250 * 1024 * 1024;
 // WP-HARDEN-001 — route params are user input too: reject ids that cannot
 // possibly exist before any DB/file work.
 function invalidId(value) {
@@ -66,6 +70,32 @@ async function removeFiles(files = []) {
   await Promise.all(files.map((file) => fs.promises.unlink(file.path).catch(() => {})));
 }
 
+async function hasExpectedImageSignature(file) {
+  const handle = await fs.promises.open(file.path, 'r');
+  try {
+    const header = Buffer.alloc(12);
+    const { bytesRead } = await handle.read(header, 0, header.length, 0);
+    if (file.mimetype === 'image/png') {
+      return bytesRead >= 8 && header.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+    }
+    if (file.mimetype === 'image/jpeg') {
+      return bytesRead >= 3 && header[0] === 0xff && header[1] === 0xd8 && header[2] === 0xff;
+    }
+    if (file.mimetype === 'image/gif') {
+      const signature = header.subarray(0, 6).toString('ascii');
+      return signature === 'GIF87a' || signature === 'GIF89a';
+    }
+    if (file.mimetype === 'image/webp') {
+      return bytesRead >= 12
+        && header.subarray(0, 4).toString('ascii') === 'RIFF'
+        && header.subarray(8, 12).toString('ascii') === 'WEBP';
+    }
+    return false;
+  } finally {
+    await handle.close();
+  }
+}
+
 export async function ensureAttachmentCapacity(req, res, next) {
   try {
     if (invalidId(req.params.noteId)) return res.status(400).json({ message: 'Invalid note id' });
@@ -73,11 +103,18 @@ export async function ensureAttachmentCapacity(req, res, next) {
     if (!note) return res.status(404).json({ message: 'Note not found' });
     const trashed = note.isTrashed === true || note.isTrashed === 1 || note.isTrashed === '1' || note.isTrashed === 't';
     if (trashed) return res.status(400).json({ message: 'Restore the note before attaching images' });
-    const { rows } = await db.query(
-      `SELECT COUNT(*) AS count FROM "Attachment" WHERE "noteId" = $1 AND "userId" = $2`,
-      [note.id, req.userId],
-    );
-    req.attachmentCount = Number(rows[0]?.count || 0);
+    const [{ rows: noteRows }, { rows: usageRows }] = await Promise.all([
+      db.query(
+        `SELECT COUNT(*) AS count FROM "Attachment" WHERE "noteId" = $1 AND "userId" = $2`,
+        [note.id, req.userId],
+      ),
+      db.query(
+        `SELECT COALESCE(SUM(size), 0) AS bytes FROM "Attachment" WHERE "userId" = $1`,
+        [req.userId],
+      ),
+    ]);
+    req.attachmentCount = Number(noteRows[0]?.count || 0);
+    req.attachmentStorageBytes = Number(usageRows[0]?.bytes || 0);
     next();
   } catch (error) {
     return sendInternalError(req, res, error, 'Could not prepare image upload', 'ensureAttachmentCapacity');
@@ -92,6 +129,18 @@ export async function uploadImages(req, res) {
     if ((req.attachmentCount || 0) + files.length > MAX_IMAGES_PER_NOTE) {
       await removeFiles(files);
       return res.status(400).json({ message: `A note can have at most ${MAX_IMAGES_PER_NOTE} images` });
+    }
+
+    const uploadedBytes = files.reduce((sum, file) => sum + Number(file.size || 0), 0);
+    if ((req.attachmentStorageBytes || 0) + uploadedBytes > MAX_ATTACHMENT_STORAGE_BYTES) {
+      await removeFiles(files);
+      return res.status(403).json({ message: 'Attachment storage limit reached', code: 'STORAGE_QUOTA_REACHED' });
+    }
+
+    const signatures = await Promise.all(files.map(hasExpectedImageSignature));
+    if (signatures.some((valid) => !valid)) {
+      await removeFiles(files);
+      return res.status(400).json({ message: 'An uploaded file does not match its declared image type' });
     }
 
     const created = [];
