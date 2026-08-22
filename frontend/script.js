@@ -34,6 +34,10 @@ function notinAppOrigin(){
     const preview = host.match(/^\d+-(.+)$/);
     if(preview) return `${location.protocol}//5000-${preview[1]}`;
     if(/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host)) return `${location.protocol}//${location.hostname}:5000`;
+    // Production architecture: marketing on notin.app, authenticated app on
+    // app.notin.app. Deployments on another domain must inject
+    // window.NOTIN_APP_ORIGIN before this script.
+    if(/^(www\.)?notin\.app$/i.test(location.hostname)) return 'https://app.notin.app';
     return location.origin;
   }catch{ return location.origin; }
 }
@@ -359,10 +363,10 @@ const OS_META = NOTIN_PLATFORMS[OS] || NOTIN_PLATFORMS.web;
   const card = grid.querySelector(`.platform-card[data-os="${OS}"]`);
   if (card) card.classList.add('recommended');
 
-  smart.textContent = OS_META.cta;
-  smart.setAttribute('href', OS_META.href);
-  if (osBadge) osBadge.textContent = `We detected ${OS_META.label} — grab the right build`;
-  if (osName) osName.textContent = `for ${OS_META.label}`;
+  smart.textContent = 'Open Notin web app';
+  smart.setAttribute('href', notinAppOrigin() + '/app.html');
+  if (osBadge) osBadge.textContent = `We detected ${OS_META.label} — native builds are not available yet`;
+  if (osName) osName.textContent = 'in your browser';
 })();
 
 // --- Hero: smart "Download for [OS]" button ---
@@ -370,8 +374,8 @@ const OS_META = NOTIN_PLATFORMS[OS] || NOTIN_PLATFORMS.web;
   const btn = document.getElementById('heroSmartDownload');
   const label = document.getElementById('heroDownloadLabel');
   if (!btn || !label) return;
-  label.textContent = `Download for ${OS_META.label}`;
-  btn.setAttribute('href', OS_META.href);
+  label.textContent = 'Open the web app';
+  btn.setAttribute('href', notinAppOrigin() + '/app.html');
 })();
 
 
@@ -851,19 +855,4 @@ if (yearEl) yearEl.textContent = new Date().getFullYear();
       photoWrap.classList.add('failed');
     });
   }
-})();
-
-// AUTH UI — connects the landing page to the separate JWT/Google OTP service
-(function () {
-  // Same-origin default: the dev server proxies /auth + /api to the unified API.
-  // (file:// fallback keeps the old standalone auth port for local double-click use)
-  const api = window.NOTIN_AUTH_API || (location.protocol.startsWith('http') ? location.origin : 'http://localhost:8787');
-  const modal = document.createElement('div'); modal.className='auth-modal'; modal.innerHTML=`<div class="auth-panel auth-3d" role="dialog" aria-modal="true" aria-labelledby="authTitle"><button class="auth-close" aria-label="Close">×</button><div class="auth-orbit"></div><p class="auth-kicker">SECURE ACCESS</p><h2 id="authTitle">Sign in to Notin</h2><p class="auth-copy">Continue with Google. We’ll send a one-time code to your verified Gmail.</p><button class="auth-google">Continue with Google</button><div class="auth-otp" hidden><label>Enter your 6-digit code<input inputmode="numeric" maxlength="6" autocomplete="one-time-code" class="auth-code"></label><button class="auth-verify">Verify code</button><button class="auth-resend">Resend code</button><p class="auth-status"></p></div></div>`; document.body.appendChild(modal);
-  const open=()=>modal.classList.add('is-open'), close=()=>modal.classList.remove('is-open');
-  modal.querySelector('.auth-close').onclick=close; modal.addEventListener('click',e=>{if(e.target===modal)close();});
-  const status=modal.querySelector('.auth-status'); const otp=modal.querySelector('.auth-otp');
-  modal.querySelector('.auth-google').onclick=()=>{ window.location.href=`${api}/auth/google`; };
-  modal.querySelector('.auth-verify').onclick=async()=>{const challenge=new URLSearchParams(location.search).get('challenge'); const code=modal.querySelector('.auth-code').value; try{const r=await fetch(`${api}/auth/otp/verify`,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({challenge,code})});const d=await r.json();if(!r.ok)throw Error(d.error);sessionStorage.setItem('notin_access_token',d.accessToken);status.textContent='Signed in successfully.';setTimeout(close,900);}catch(e){status.textContent=e.message;}};
-  // ?auth=otp — auto-open OTP panel after Google redirect (do not bind other CTAs)
-  if(new URLSearchParams(location.search).get('auth')==='otp'){open();otp.hidden=false;modal.querySelector('.auth-google').hidden=true;status.textContent='Code sent to your Gmail.';}
 })();
