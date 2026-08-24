@@ -142,6 +142,8 @@ function healthPayload(database, extra = {}) {
   return {
     status: database.reachable ? 'ok' : 'degraded',
     database,
+    storage: { provider: storage.storageProvider, uploadDir: storage.uploadDir },
+    security: { tokenVersioning: true, deviceInventory: true, passwordPolicy: true, cleanupJob: true },
     uptimeSeconds: Math.floor(process.uptime()),
     version: APP_VERSION,
     ...extra,
