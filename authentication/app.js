@@ -2560,13 +2560,27 @@ async function loadSessions(){
     sessions.forEach(s=>{
       const row = document.createElement('div');
       row.style.cssText = 'border:1px solid #e5e5e5; border-radius:8px; padding:8px 10px; display:flex; justify-content:space-between; align-items:center; gap:8px;';
-      const ua = s.userAgent ? String(s.userAgent).slice(0,80) : 'Unknown device';
+      const uaRaw = s.userAgent ? String(s.userAgent) : '';
+      const ua = uaRaw ? uaRaw.slice(0,80) : 'Unknown device';
       const ip = s.ipAddress || '—';
       const when = s.lastActiveAt ? new Date(s.lastActiveAt).toLocaleString() : '';
+      // Simple device type icon from UA
+      const isMobile = /Mobile|Android|iPhone|iPad/i.test(uaRaw);
+      const isChrome = /Chrome/i.test(uaRaw);
+      const isFirefox = /Firefox/i.test(uaRaw);
+      const isSafari = /Safari/i.test(uaRaw) && !isChrome;
+      let icon = '💻';
+      if(isMobile) icon = '📱';
+      else if(isFirefox) icon = '🦊';
+      else if(isChrome) icon = '🌐';
+      else if(isSafari) icon = '🧭';
       row.innerHTML = `
-        <div style="flex:1; min-width:0;">
-          <div style="font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(ua)} ${s.isCurrent?'<span style="color:#00A82D;">(current)</span>':''}</div>
-          <div style="font-size:11px; color:#666;">${escapeHtml(ip)} · ${escapeHtml(when)} · ${escapeHtml(s.id.slice(0,8))}…</div>
+        <div style="flex:1; min-width:0; display:flex; gap:8px; align-items:center;">
+          <span style="font-size:18px;">${icon}</span>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(ua)} ${s.isCurrent?'<span style="color:#00A82D;">(current)</span>':''}</div>
+            <div style="font-size:11px; color:#666;">${escapeHtml(ip)} · ${escapeHtml(when)} · ${escapeHtml(s.id.slice(0,8))}…</div>
+          </div>
         </div>
         <button type="button" data-family="${escapeHtml(s.id)}" style="height:32px; padding:0 10px; border-radius:6px; border:1px solid #d93025; color:#d93025; background:#fff; font-size:12px; ${s.isCurrent?'opacity:0.6;':''}" ${s.isCurrent?'disabled title="Current session"':'title="Revoke this session"'}>${s.isCurrent?'Current':'Revoke'}</button>
       `;

@@ -20,6 +20,7 @@ import attachmentRoutes from './routes/attachmentRoutes.js';
 import publicShareRoutes from './routes/publicShareRoutes.js';
 import { signup, signin } from './controllers/userController.js';
 import storage from './lib/storage.js';
+import { cleanupExpiredTokens } from './lib/cleanup.js';
 import { canonicalOrigin, isOriginAllowed } from './lib/httpSecurity.js';
 import { logError } from './lib/logging.js';
 import requestId from './middleware/requestId.js';
@@ -382,7 +383,21 @@ function requestShutdown(signal) {
   });
 }
 
-start();
+start().then(() => {
+  // WP-CLEANUP-001 — periodic cleanup of expired tokens (hourly)
+  // Runs on startup after DB connect, then hourly. In prod, operator should also run via cron.
+  const runCleanup = async () => {
+    try {
+      const results = await cleanupExpiredTokens();
+      const total = Object.values(results).reduce((a,b)=>a+b,0);
+      if (total > 0) console.log(`[cleanup] removed expired tokens`, results);
+    } catch (e) {
+      console.warn('[cleanup] failed', e.message);
+    }
+  };
+  runCleanup();
+  setInterval(runCleanup, 60 * 60 * 1000).unref();
+});
 
 process.on('SIGINT', () => requestShutdown('SIGINT'));
 process.on('SIGTERM', () => requestShutdown('SIGTERM'));
