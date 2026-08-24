@@ -18,6 +18,7 @@ import {
   revokeSession,
   revokeOtherSessions,
   cleanupTokens,
+  passwordStrength,
   health,
 } from '../controllers/authController.js';
 
@@ -84,6 +85,8 @@ router.post('/sessions/revoke-others', auth, sessionLimit, revokeOtherSessions);
 router.delete('/sessions/:familyId', auth, sessionLimit, revokeSession);
 // WP-CLEANUP-001 — expired token cleanup (Bearer-protected, rate limited)
 router.post('/cleanup', auth, sessionLimit, cleanupTokens);
+// WP-SEC-006 — password strength evaluation (public, rate limited via strict)
+router.post('/password-strength', passwordStrength);
 router.get('/health', health);
 
 export default router;
