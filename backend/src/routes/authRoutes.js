@@ -85,8 +85,14 @@ router.post('/sessions/revoke-others', auth, sessionLimit, revokeOtherSessions);
 router.delete('/sessions/:familyId', auth, sessionLimit, revokeSession);
 // WP-CLEANUP-001 — expired token cleanup (Bearer-protected, rate limited)
 router.post('/cleanup', auth, sessionLimit, cleanupTokens);
-// WP-SEC-006 — password strength evaluation (public, rate limited via strict)
-router.post('/password-strength', passwordStrength);
+// WP-SEC-006 — password strength evaluation (public, rate limited)
+const pwStrengthLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+router.post('/password-strength', pwStrengthLimit, passwordStrength);
 router.get('/health', health);
 
 export default router;

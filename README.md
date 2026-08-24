@@ -306,6 +306,8 @@ PORT=3000 API_TARGET=http://localhost:5000 node dev-server.mjs
 | GET | `/api/auth/sessions` | List active sessions (device inventory, Bearer) |
 | POST | `/api/auth/sessions/revoke-others` | Revoke all other sessions |
 | DELETE | `/api/auth/sessions/:familyId` | Revoke a session by familyId |
+| POST | `/api/auth/cleanup` | Cleanup expired OTP/reset/revoked tokens (Bearer, returns counts) |
+| POST | `/api/auth/password-strength` | Evaluate password strength (public, returns score/label/issues) |
 | GET | `/api/auth/health` | Auth health (demo mode status) |
 
 ### Users (`/api/users`)
