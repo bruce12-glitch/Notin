@@ -5,6 +5,7 @@ import { OAuth2Client } from 'google-auth-library';
 import db from '../config/db.js';
 import { createAccessToken, hashToken, randomToken, mintCsrfToken } from '../lib/jwt.js';
 import { canonicalOrigin } from '../lib/httpSecurity.js';
+import { cleanupExpiredTokens } from '../lib/cleanup.js';
 import { otpRequestAllowed } from '../lib/throttle.js';
 import { logError } from '../lib/logging.js';
 import { otpEmailSchema, otpVerifySchema, forgotPasswordSchema, resetPasswordSchema, EMAIL_RE } from '../lib/validation.js';
@@ -705,6 +706,15 @@ export async function revokeOtherSessions(req, res) {
     res.json({ ok: true, revokedCount: result.rowCount || 0, keptFamilyId: currentFamilyId });
   } catch (e) {
     return res.status(500).json({ message: 'Could not revoke other sessions' });
+  }
+}
+
+export async function cleanupTokens(req, res) {
+  try {
+    const results = await cleanupExpiredTokens();
+    res.json({ ok: true, cleaned: results });
+  } catch (e) {
+    res.status(500).json({ message: 'Cleanup failed' });
   }
 }
 

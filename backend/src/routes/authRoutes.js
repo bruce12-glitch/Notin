@@ -17,6 +17,7 @@ import {
   listSessions,
   revokeSession,
   revokeOtherSessions,
+  cleanupTokens,
   health,
 } from '../controllers/authController.js';
 
@@ -81,6 +82,8 @@ router.post('/logout', csrfGuard, logout);
 router.get('/sessions', auth, sessionLimit, listSessions);
 router.post('/sessions/revoke-others', auth, sessionLimit, revokeOtherSessions);
 router.delete('/sessions/:familyId', auth, sessionLimit, revokeSession);
+// WP-CLEANUP-001 — expired token cleanup (Bearer-protected, rate limited)
+router.post('/cleanup', auth, sessionLimit, cleanupTokens);
 router.get('/health', health);
 
 export default router;
