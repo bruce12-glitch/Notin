@@ -1,7 +1,7 @@
-// WP-STORAGE-001 — storage abstraction layer for attachments
-// Current implementation: local disk under UPLOAD_DIR (default backend/uploads)
-// Future: S3/R2 provider via env STORAGE_PROVIDER=s3 (presigned URLs, streaming)
-// This module exposes a provider-agnostic interface so controllers never touch fs directly.
+// WP-STORAGE-001 + WP-STORAGE-002 — storage abstraction layer for attachments
+// Provider interface: local disk (default) + S3/R2 via @aws-sdk/client-s3
+// Env: STORAGE_PROVIDER=local|s3, S3_BUCKET, AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, S3_ENDPOINT (optional for R2/MinIO), S3_FORCE_PATH_STYLE (true for MinIO)
+// Controllers never touch fs directly except via this module.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -21,10 +21,11 @@ fs.mkdirSync(uploadDir, { recursive: true });
 
 export const storageProvider = (process.env.STORAGE_PROVIDER || 'local').toLowerCase(); // local | s3
 
-// Local provider implementation
+// Local provider
 const localProvider = {
+  name: 'local',
   async save(file) {
-    // multer already saved to uploadDir with random filename; just return basename
+    // multer already saved to uploadDir with random filename; return basename
     return path.basename(file.path || file.filename);
   },
   async remove(storedPath) {
@@ -41,6 +42,10 @@ const localProvider = {
   fullPath(storedPath) {
     return path.join(uploadDir, path.basename(storedPath));
   },
+  getStream(storedPath) {
+    const filePath = path.join(uploadDir, path.basename(storedPath));
+    return fs.createReadStream(filePath);
+  },
   async probeWritable() {
     const probePath = path.join(uploadDir, `.healthwrite-${process.pid}-${Date.now()}`);
     try {
@@ -53,34 +58,139 @@ const localProvider = {
   }
 };
 
-// Future S3 provider stub — returns local behavior until configured
-const s3ProviderStub = {
+// S3 provider — real implementation via @aws-sdk/client-s3, lazy-loaded so local dev doesn't need SDK
+let s3Client = null;
+async function getS3Client() {
+  if (s3Client) return s3Client;
+  const bucket = process.env.S3_BUCKET;
+  if (!bucket) return null;
+  const { S3Client } = await import('@aws-sdk/client-s3');
+  const region = process.env.AWS_REGION || process.env.S3_REGION || 'us-east-1';
+  const endpoint = process.env.S3_ENDPOINT || undefined;
+  const forcePathStyle = String(process.env.S3_FORCE_PATH_STYLE || '').toLowerCase() === 'true';
+  s3Client = new S3Client({
+    region,
+    endpoint,
+    forcePathStyle,
+    credentials: process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY ? {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    } : undefined,
+  });
+  return s3Client;
+}
+
+const s3Provider = {
+  name: 's3',
   async save(file) {
-    // TODO: upload to S3 bucket via AWS SDK, return S3 key
-    console.warn('[storage] STORAGE_PROVIDER=s3 but S3 SDK not configured — falling back to local');
-    return localProvider.save(file);
+    const bucket = process.env.S3_BUCKET;
+    if (!bucket) {
+      console.warn('[storage] S3_BUCKET not set — falling back to local');
+      return localProvider.save(file);
+    }
+    try {
+      const client = await getS3Client();
+      if (!client) throw new Error('S3 client not configured');
+      const { PutObjectCommand } = await import('@aws-sdk/client-s3');
+      const key = path.basename(file.path || file.filename);
+      const fileStream = fs.createReadStream(file.path);
+      const fileSize = fs.statSync(file.path).size;
+      await client.send(new PutObjectCommand({
+        Bucket: bucket,
+        Key: key,
+        Body: fileStream,
+        ContentType: file.mimetype,
+        ContentLength: fileSize,
+      }));
+      // Remove local temp file after successful upload
+      await fs.promises.unlink(file.path).catch(() => {});
+      return key;
+    } catch (e) {
+      console.warn('[storage] S3 save failed, falling back to local', e.message);
+      return localProvider.save(file);
+    }
   },
   async remove(storedPath) {
-    // TODO: delete from S3
-    return localProvider.remove(storedPath);
+    const bucket = process.env.S3_BUCKET;
+    if (!bucket) return localProvider.remove(storedPath);
+    try {
+      const client = await getS3Client();
+      if (!client) throw new Error('S3 client not configured');
+      const { DeleteObjectCommand } = await import('@aws-sdk/client-s3');
+      await client.send(new DeleteObjectCommand({
+        Bucket: bucket,
+        Key: path.basename(storedPath),
+      }));
+    } catch (e) {
+      console.warn('[storage] S3 remove failed, trying local fallback', e.message);
+      await localProvider.remove(storedPath);
+    }
   },
-  async removeMany(storedPaths) {
-    return localProvider.removeMany(storedPaths);
+  async removeMany(storedPaths = []) {
+    const bucket = process.env.S3_BUCKET;
+    if (!bucket) return localProvider.removeMany(storedPaths);
+    try {
+      const client = await getS3Client();
+      if (!client) throw new Error('S3 client not configured');
+      const { DeleteObjectsCommand } = await import('@aws-sdk/client-s3');
+      const keys = storedPaths.map(p => ({ Key: path.basename(p) }));
+      if (!keys.length) return;
+      await client.send(new DeleteObjectsCommand({
+        Bucket: bucket,
+        Delete: { Objects: keys, Quiet: true },
+      }));
+    } catch (e) {
+      console.warn('[storage] S3 removeMany failed, falling back to local', e.message);
+      await localProvider.removeMany(storedPaths);
+    }
   },
   exists(storedPath) {
-    return localProvider.exists(storedPath);
+    // For performance, we assume exists if we have key; real check would be HeadObject async
+    // Synchronous exists check can't be S3 — return true to allow attempt, actual 404 handled in getStream
+    return true;
   },
   fullPath(storedPath) {
-    return localProvider.fullPath(storedPath);
+    // For S3, fullPath is not a local path — return key for reference
+    return path.basename(storedPath);
+  },
+  async getStream(storedPath) {
+    const bucket = process.env.S3_BUCKET;
+    if (!bucket) return localProvider.getStream(storedPath);
+    try {
+      const client = await getS3Client();
+      if (!client) throw new Error('S3 client not configured');
+      const { GetObjectCommand } = await import('@aws-sdk/client-s3');
+      const result = await client.send(new GetObjectCommand({
+        Bucket: bucket,
+        Key: path.basename(storedPath),
+      }));
+      return result.Body; // Readable stream
+    } catch (e) {
+      // Fallback to local if S3 fails
+      if (localProvider.exists(storedPath)) return localProvider.getStream(storedPath);
+      throw e;
+    }
   },
   async probeWritable() {
-    // TODO: S3 headBucket + putObject test
-    return localProvider.probeWritable();
+    const bucket = process.env.S3_BUCKET;
+    if (!bucket) return localProvider.probeWritable();
+    try {
+      const client = await getS3Client();
+      if (!client) return false;
+      const { HeadBucketCommand, PutObjectCommand, DeleteObjectCommand } = await import('@aws-sdk/client-s3');
+      await client.send(new HeadBucketCommand({ Bucket: bucket }));
+      const testKey = `.healthwrite-${process.pid}-${Date.now()}`;
+      await client.send(new PutObjectCommand({ Bucket: bucket, Key: testKey, Body: 'ok' }));
+      await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: testKey }));
+      return true;
+    } catch {
+      return false;
+    }
   }
 };
 
 export function getStorage() {
-  if (storageProvider === 's3') return s3ProviderStub;
+  if (storageProvider === 's3') return s3Provider;
   return localProvider;
 }
 

@@ -186,11 +186,40 @@ export async function getAttachmentFile(req, res) {
     if (invalidId(req.params.id)) return res.status(400).json({ message: 'Invalid attachment id' });
     const attachment = await ownedAttachment(req.params.id, req.userId);
     if (!attachment) return res.status(404).json({ message: 'Image not found' });
-    const filePath = attachmentStorage.fullPath(attachment.path);
-    if (!attachmentStorage.exists(attachment.path)) return res.status(404).json({ message: 'Image file not found' });
+    // Local: check exists synchronously; S3: exists always true, actual 404 handled in getStream
+    if (attachmentStorage.name === 'local' && !attachmentStorage.exists(attachment.path)) {
+      return res.status(404).json({ message: 'Image file not found' });
+    }
     res.type(attachment.mime);
     res.setHeader('Cache-Control', 'private, max-age=3600');
-    res.sendFile(filePath);
+    if (attachmentStorage.name === 's3') {
+      try {
+        const stream = await attachmentStorage.getStream(attachment.path);
+        // S3 Body is a readable stream (Node.js or Web stream); pipe if possible
+        if (stream && typeof stream.pipe === 'function') {
+          return stream.pipe(res);
+        } else if (stream && typeof stream.getReader === 'function') {
+          // Web stream fallback
+          const reader = stream.getReader();
+          const pump = async () => {
+            const { done, value } = await reader.read();
+            if (done) return res.end();
+            res.write(value);
+            return pump();
+          };
+          return pump();
+        } else {
+          // Fallback to sendFile for local fallback path
+          const filePath = attachmentStorage.fullPath(attachment.path);
+          return res.sendFile(filePath);
+        }
+      } catch (e) {
+        return res.status(404).json({ message: 'Image file not found' });
+      }
+    } else {
+      const filePath = attachmentStorage.fullPath(attachment.path);
+      return res.sendFile(filePath);
+    }
   } catch (error) {
     return sendInternalError(req, res, error, 'Could not load image', 'getAttachmentFile');
   }
