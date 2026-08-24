@@ -1,21 +1,14 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import multer from 'multer';
 import db from '../config/db.js';
 import { logError } from '../lib/logging.js';
 import { ID_RE } from '../lib/validation.js';
 import { sendInternalError } from '../lib/apiResponse.js';
+import attachmentStorage, { uploadDir, MAX_IMAGE_BYTES, MAX_IMAGES_PER_NOTE, MAX_ATTACHMENT_STORAGE_BYTES } from '../lib/storage.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-export const uploadDir = path.resolve(process.env.UPLOAD_DIR || path.join(__dirname, '../../uploads'));
-export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
-export const MAX_IMAGES_PER_NOTE = 10;
-const configuredStorageQuota = Number.parseInt(process.env.MAX_ATTACHMENT_STORAGE_BYTES || String(250 * 1024 * 1024), 10);
-export const MAX_ATTACHMENT_STORAGE_BYTES = Number.isSafeInteger(configuredStorageQuota) && configuredStorageQuota > 0
-  ? configuredStorageQuota
-  : 250 * 1024 * 1024;
+export { uploadDir, MAX_IMAGE_BYTES, MAX_IMAGES_PER_NOTE, MAX_ATTACHMENT_STORAGE_BYTES };
 // WP-HARDEN-001 — route params are user input too: reject ids that cannot
 // possibly exist before any DB/file work.
 function invalidId(value) {
@@ -29,8 +22,6 @@ const extensionByMime = {
   'image/webp': '.webp',
   'image/gif': '.gif',
 };
-
-fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadDir),
@@ -195,8 +186,8 @@ export async function getAttachmentFile(req, res) {
     if (invalidId(req.params.id)) return res.status(400).json({ message: 'Invalid attachment id' });
     const attachment = await ownedAttachment(req.params.id, req.userId);
     if (!attachment) return res.status(404).json({ message: 'Image not found' });
-    const filePath = path.join(uploadDir, path.basename(attachment.path));
-    if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'Image file not found' });
+    const filePath = attachmentStorage.fullPath(attachment.path);
+    if (!attachmentStorage.exists(attachment.path)) return res.status(404).json({ message: 'Image file not found' });
     res.type(attachment.mime);
     res.setHeader('Cache-Control', 'private, max-age=3600');
     res.sendFile(filePath);
@@ -211,7 +202,7 @@ export async function deleteAttachment(req, res) {
     const attachment = await ownedAttachment(req.params.id, req.userId);
     if (!attachment) return res.status(404).json({ message: 'Image not found' });
     await db.query(`DELETE FROM "Attachment" WHERE id = $1 AND "userId" = $2`, [attachment.id, req.userId]);
-    await fs.promises.unlink(path.join(uploadDir, path.basename(attachment.path))).catch(() => {});
+    await attachmentStorage.remove(attachment.path);
     res.status(204).end();
   } catch (error) {
     return sendInternalError(req, res, error, 'Could not remove image', 'deleteAttachment');
@@ -224,7 +215,7 @@ export async function deleteAttachmentsForNote(noteId, userId) {
     [noteId, userId],
   );
   await db.query(`DELETE FROM "Attachment" WHERE "noteId" = $1 AND "userId" = $2`, [noteId, userId]);
-  await Promise.all(rows.map((row) => fs.promises.unlink(path.join(uploadDir, path.basename(row.path))).catch(() => {})));
+  await attachmentStorage.removeMany(rows.map(r => r.path));
 }
 
 export function handleUploadError(error, req, res, next) {

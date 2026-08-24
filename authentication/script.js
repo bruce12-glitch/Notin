@@ -59,6 +59,9 @@ const resetSubmitBtn = document.getElementById('resetSubmitBtn');
 const resetBackBtn = document.getElementById('resetBackBtn');
 const resetPwdToggle = document.getElementById('resetPwdToggle');
 const resetDoneMsg = document.getElementById('resetDoneMsg');
+const resetStrength = document.getElementById('resetStrength');
+const resetStrengthBar = document.getElementById('resetStrengthBar');
+const resetStrengthFill = document.getElementById('resetStrengthFill');
 
 // OTP step for login uses suffixed IDs
 const otpStep2 = document.getElementById('otpStep') || document.querySelector('#otpStep');
@@ -510,6 +513,65 @@ if(appleBtn){
   });
 }
 
+// WP-SEC-006 — client-side password strength (mirrors backend validation.js)
+function evaluatePasswordStrength(pwd, email=''){
+  if(!pwd) return { score:0, label:'', color:'#e5e5e5', issues:[] };
+  const issues=[];
+  const lower = pwd.toLowerCase();
+  const emailLocal = String(email||'').split('@')[0].toLowerCase();
+  if(pwd.length < 8) issues.push('at least 8 characters');
+  if(Buffer) {} // placeholder
+  const categories = [/[a-z]/.test(pwd), /[A-Z]/.test(pwd), /[0-9]/.test(pwd), /[^A-Za-z0-9]/.test(pwd)].filter(Boolean).length;
+  if(categories < 3) issues.push('3 of: lower, upper, number, symbol');
+  if(/(.)\1\1/.test(pwd)) issues.push('no 3 repeating chars');
+  if(emailLocal && emailLocal.length>=3 && lower.includes(emailLocal)) issues.push('must not contain email');
+  // sequential
+  for(let i=0;i<lower.length-3;i++){
+    const a=lower.charCodeAt(i), b=lower.charCodeAt(i+1), c=lower.charCodeAt(i+2), d=lower.charCodeAt(i+3);
+    if(b===a+1 && c===b+1 && d===c+1){ issues.push('no sequential like abcd/1234'); break; }
+    if(b===a-1 && c===b-1 && d===c-1){ issues.push('no sequential like dcba/4321'); break; }
+  }
+  const common = new Set(['password','123456','qwerty','abc123','password1','12345678','111111','123123','qwerty123','admin','welcome','letmein','monkey','dragon','iloveyou']);
+  if(common.has(lower)) issues.push('too common');
+  let score = 0;
+  if(pwd.length >= 8) score++;
+  if(pwd.length >= 12) score++;
+  if(categories >= 3) score++;
+  if(categories === 4) score++;
+  if(!issues.length && pwd.length >= 12) score++;
+  if(issues.length) score = Math.min(score, 2);
+  let label='', color='';
+  if(score <=1){ label='Weak'; color='#E53E3E'; }
+  else if(score ===2){ label='Fair'; color='#DD6B20'; }
+  else if(score ===3){ label='Good'; color='#D69E2E'; }
+  else if(score >=4){ label='Strong'; color='#00A82D'; }
+  return { score, label, color, issues };
+}
+
+function renderResetStrength(){
+  if(!resetPassword || !resetStrength || !resetStrengthBar || !resetStrengthFill) return;
+  const pwd = resetPassword.value || '';
+  const email = (forgotEmail && forgotEmail.value) || currentEmail || '';
+  const { score, label, color, issues } = evaluatePasswordStrength(pwd, email);
+  if(!pwd){
+    resetStrength.textContent='';
+    resetStrengthBar.style.display='none';
+    resetStrengthFill.style.width='0%';
+    return;
+  }
+  resetStrengthBar.style.display='block';
+  const pct = Math.min(100, (score/5)*100);
+  resetStrengthFill.style.width = pct + '%';
+  resetStrengthFill.style.background = color;
+  if(issues.length){
+    resetStrength.textContent = label + ' — needs ' + issues.join(', ');
+    resetStrength.style.color = color;
+  } else {
+    resetStrength.textContent = label + ' password';
+    resetStrength.style.color = color;
+  }
+}
+
 // ── WP-AUTH-003 — forgot/reset password flow ──
 // “Can’t sign in?” → in-column forgot step (email → reset link). With SMTP the link arrives
 // by email; without SMTP (dev only) the server echoes a token and we offer one-tap continue.
@@ -581,8 +643,9 @@ if(resetForm){
       setResetError('Missing reset token — request a new reset link.');
       return;
     }
-    if(p1.length < 8){
-      setResetError('Password must be at least 8 characters');
+    const strength = evaluatePasswordStrength(p1, currentEmail);
+    if(p1.length < 8 || strength.issues.length){
+      setResetError(strength.issues.length ? 'Password: ' + strength.issues.join(', ') : 'Password must be at least 8 characters');
       return;
     }
     if(p1 !== p2){
@@ -619,6 +682,12 @@ if(resetPwdToggle && resetPassword){
     resetPassword.type = isPwd ? 'text' : 'password';
     resetPwdToggle.textContent = isPwd ? 'Hide' : 'Show';
   });
+}
+if(resetPassword){
+  resetPassword.addEventListener('input', renderResetStrength);
+}
+if(forgotEmail){
+  forgotEmail.addEventListener('input', ()=>{ if(resetStep && !resetStep.hidden) renderResetStrength(); });
 }
 
 if(loginLink){

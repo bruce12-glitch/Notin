@@ -27,7 +27,8 @@ export const jwtConfig = {
 };
 
 export async function createAccessToken(user, minutes = 15) {
-  return new SignJWT({ sub: user.id, email: user.email, type: 'access' })
+  const tokenVersion = Number.isFinite(Number(user?.tokenVersion)) ? Number(user.tokenVersion) : 0;
+  return new SignJWT({ sub: user.id, email: user.email, type: 'access', tv: tokenVersion })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuer(issuer)
     .setAudience(audience)
@@ -45,25 +46,8 @@ export async function verifyAccessToken(token) {
   return payload;
 }
 
-// Legacy support: verify with jsonwebtoken-style secret if needed (for 7d tokens issued before unify)
-// We keep jsonwebtoken verification as fallback attempt if jose fails
-import jwt from 'jsonwebtoken';
-export async function verifyAnyToken(token) {
-  try {
-    return await verifyAccessToken(token);
-  } catch (e) {
-    // Try legacy jsonwebtoken with JWT_SECRET
-    try {
-      const legacySecret = env.JWT_SECRET || accessSecret;
-      const decoded = jwt.verify(token, legacySecret);
-      // Normalize to jose payload shape
-      if (!decoded.id && !decoded.sub) throw new Error('Invalid legacy token');
-      return { sub: decoded.id || decoded.sub, email: decoded.email, type: 'access' };
-    } catch {
-      throw e;
-    }
-  }
-}
+// Legacy jsonwebtoken fallback retired in market-hardening — all tokens now jose HS256 15m.
+// Any pre-unify 7d tokens have long expired; no fallback needed.
 
 export function hashToken(value) {
   return crypto.createHash('sha256').update(value).digest('hex');

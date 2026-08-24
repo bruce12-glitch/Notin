@@ -68,9 +68,11 @@ export const signup = async (req, res) => {
     const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString();
     // WP-SEC-001 — every signup starts a NEW rotation family
     const familyId = randomToken(24);
+    const ua = String(req.headers['user-agent'] || '').slice(0, 500);
+    const ip = String(req.ip || '').slice(0, 128);
     await db.query(
-      `INSERT INTO refresh_tokens (hash, user_id, family_id, expires_at, revoked_at, revoke_reason, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [hashToken(refreshRaw), user.id, familyId, expiresAt, null, null, now]
+      `INSERT INTO refresh_tokens (hash, user_id, family_id, expires_at, revoked_at, revoke_reason, user_agent, ip_address, last_active_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [hashToken(refreshRaw), user.id, familyId, expiresAt, null, null, ua, ip, now, now]
     );
 
     // Set httpOnly cookie for refresh (same options as auth)
@@ -151,9 +153,11 @@ export const signin = async (req, res) => {
     const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString();
     // WP-SEC-001 — every signin starts a NEW rotation family
     const familyId = randomToken(24);
+    const ua = String(req.headers['user-agent'] || '').slice(0, 500);
+    const ip = String(req.ip || '').slice(0, 128);
     await db.query(
-      `INSERT INTO refresh_tokens (hash, user_id, family_id, expires_at, revoked_at, revoke_reason, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [hashToken(refreshRaw), user.id, familyId, expiresAt, null, null, now]
+      `INSERT INTO refresh_tokens (hash, user_id, family_id, expires_at, revoked_at, revoke_reason, user_agent, ip_address, last_active_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [hashToken(refreshRaw), user.id, familyId, expiresAt, null, null, ua, ip, now, now]
     );
     const isProd = process.env.NODE_ENV === 'production';
     res.cookie('notin_refresh', refreshRaw, {

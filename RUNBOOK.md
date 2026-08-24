@@ -50,16 +50,38 @@ PORT=3000 API_TARGET=http://127.0.0.1:5000 node dev-server.mjs
 ## Uploads and read-only shares
 
 - `UPLOAD_DIR` defaults to `backend/uploads/` when the backend is started normally. The directory is ignored by Git; never commit uploaded files.
-- Accepted images are PNG/JPEG/WebP/GIF, up to 5 MB each and 10 per note.
-- Back up the uploads directory together with the database. Permanent note deletion removes its local image files.
+- Storage abstraction: `backend/src/lib/storage.js` provides `local` (default) and `s3` stub provider. Set `STORAGE_PROVIDER=s3` to enable S3 path (requires SDK wiring). `uploadDir` probed via `storage.probeWritable()` in `GET /api/health/deep`.
+- Accepted images are PNG/JPEG/WebP/GIF, up to 5 MB each and 10 per note. Storage quota `MAX_ATTACHMENT_STORAGE_BYTES` default 250 MB (configurable), enforced in `ensureAttachmentCapacity`.
+- Back up the uploads directory together with the database. Permanent note deletion removes its local image files via `storage.removeMany()`.
 - Share secrets are 32 random bytes; only SHA-256 hashes are stored. Links expire after 30 days by default and can be revoked or rotated sooner. Public routes are `/api/public/share/:token` and `/api/public/share/:token/files/:attachmentId`.
 - Public share reads expose only title/body and safely scoped note images. Revoked/invalid shares return 404. Trashed notes also return 404 publicly; restoring an enabled share makes it readable again.
 
-## Account export & delete
+## Account export, usage, sessions & delete
 
 Authenticated users can download JSON from `GET /api/users/me/export`. It includes their profile (never the password hash), notes and editor content, notebooks, tags, and attachment metadata; uploaded image bytes and auth/share secrets are not included. In the app, open **Account → Export data**.
 
-`DELETE /api/users/me` requires the exact JSON body `{ "confirm": "DELETE" }`. The app requires typing `DELETE`. A successful deletion removes notes, notebooks, tags, shares, OTP/reset/refresh records, attachment rows and local files, then clears refresh cookies. Remaining access tokens fail immediately because protected requests verify that the user still exists. This operation is irreversible; export and verify backups first.
+`GET /api/users/me/usage` returns quotas and current counts:
+```json
+{
+  "notes": {"count": 12, "quota": 5000},
+  "attachments": {"count": 3, "storageBytes": 1234567, "storageQuota": 262144000},
+  "sessions": {"count": 2}
+}
+```
+Shown in Account → Usage.
+
+`GET /api/auth/sessions` (and alias `GET /api/users/me/sessions`) lists active refresh-token families:
+- Each family = one device/browser that signed in
+- Captures `user_agent` (≤500) and `ip_address` (≤128) at mint time, `last_active_at` updated on rotation
+- `isCurrent` true when refresh cookie hash matches family
+- In app: Account → Active sessions shows UA/IP/last active + Revoke buttons
+
+`DELETE /api/auth/sessions/:familyId` revokes that family (`revoke_reason='user-revoke'`). If revoking current session, cookies cleared.
+`POST /api/auth/sessions/revoke-others` revokes all except current (or all if Bearer-only call).
+
+Token versioning: `User.tokenVersion` increments on password reset (`POST /api/auth/reset-password`). Access tokens carry `tv` claim; `auth` middleware rejects stale `tv` vs current `tokenVersion` → 401 even within 15m window. Refresh tokens already revoked at reset.
+
+`DELETE /api/users/me` requires the exact JSON body `{ "confirm": "DELETE" }`. The app requires typing `DELETE`. A successful deletion removes notes, notebooks, tags, shares, OTP/reset/refresh records, attachment rows and local files, then clears refresh cookies. Remaining access tokens fail immediately because protected requests verify that the user still exists and token version. This operation is irreversible; export and verify backups first.
 
 ## Optional Sentry monitoring
 
@@ -108,7 +130,9 @@ The full journey requires development demo OTP conditions. If demo OTP is disabl
 - [ ] Set the public HTTPS `APP_ORIGIN` and `PUBLIC_APP_URL`; verify secure HTTP-only refresh cookies through the proxy.
 - [ ] Configure the two-origin routing contract: marketing at `notin.app`, app/API at `app.notin.app` (see `deploy/nginx.conf.example`).
 - [ ] Keep `AUTH_EMAIL_ENABLED=true` only with working SMTP; production boot enforces this.
-- [ ] Put `UPLOAD_DIR` on durable storage with correct filesystem permissions; do not serve it as a public static directory.
+- [ ] Put `UPLOAD_DIR` on durable storage with correct filesystem permissions; do not serve it as a public static directory. For S3, set `STORAGE_PROVIDER=s3`, `AWS_REGION`, `S3_BUCKET`, and IAM credentials; verify `GET /api/health/deep` reports `uploads.writable=true`.
+- [ ] Enforce password policy: 3-of-4 categories, common blocklist, no sequential/repeating, no email/username containment — already active in `validation.js` and reset UI strength bar.
+- [ ] Verify device inventory: `GET /api/auth/sessions` lists UA/IP, revoke works, `tokenVersion` increments on reset (old JWTs get 401).
 - [ ] Schedule and test restores for PostgreSQL and `UPLOAD_DIR` (or SQLite + uploads for non-production installations).
 - [ ] Optionally set and verify `SENTRY_DSN`; leave it unset to disable monitoring.
 - [ ] Run `npm run test:e2e` against the release URL.

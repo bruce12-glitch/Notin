@@ -159,6 +159,10 @@ const exportDataBtn = document.getElementById('exportDataBtn');
 const deleteAccountConfirm = document.getElementById('deleteAccountConfirm');
 const deleteAccountBtn = document.getElementById('deleteAccountBtn');
 const accountStatus = document.getElementById('accountStatus');
+const usageStats = document.getElementById('usageStats');
+const sessionsList = document.getElementById('sessionsList');
+const revokeOthersBtn = document.getElementById('revokeOthersBtn');
+const refreshSessionsBtn = document.getElementById('refreshSessionsBtn');
 const offlineBanner = document.getElementById('offlineBanner');
 const errorBanner = document.getElementById('appError');
 const mobileBar = document.getElementById('mobileBar');
@@ -2515,6 +2519,82 @@ async function registerServiceWorker(){
 }
 
 // ── WP-AUTH-004 — account export + permanent deletion ──
+async function loadUsage(){
+  if(!usageStats) return;
+  usageStats.textContent = 'Loading usage…';
+  try{
+    const res = await fetchWithAuth(API_BASE + '/api/users/me/usage', {method:'GET'});
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.message || 'Could not load usage');
+    const notes = data.notes || {};
+    const attach = data.attachments || {};
+    const mb = (bytes)=> (bytes/1024/1024).toFixed(1);
+    const notesPct = Math.min(100, ((notes.count||0)/(notes.quota||5000))*100);
+    const storagePct = Math.min(100, ((attach.storageBytes||0)/(attach.storageQuota||262144000))*100);
+    const bar = (pct, color) => `<div style="height:6px; background:#eee; border-radius:3px; overflow:hidden; margin:4px 0 8px;"><div style="height:100%; width:${pct}%; background:${color}; transition:width 0.3s;"></div></div>`;
+    usageStats.innerHTML = `
+      <div style="font-weight:600;">Notes: ${notes.count||0} / ${notes.quota||5000}</div>
+      ${bar(notesPct, notesPct>90?'#E53E3E':notesPct>70?'#DD6B20':'#00A82D')}
+      <div>Notebooks: ${data.notebooks?.count||0} · Tags: ${data.tags?.count||0} · Sessions: ${data.sessions?.count||0}</div>
+      <div style="margin-top:8px; font-weight:600;">Images: ${attach.count||0} · Storage: ${mb(attach.storageBytes||0)} MB / ${mb(attach.storageQuota||262144000)} MB</div>
+      ${bar(storagePct, storagePct>90?'#E53E3E':storagePct>70?'#DD6B20':'#00A82D')}
+    `;
+  }catch(e){
+    usageStats.textContent = e.message || 'Could not load usage';
+  }
+}
+
+async function loadSessions(){
+  if(!sessionsList) return;
+  sessionsList.innerHTML = '<div style="font-size:13px; color:#666;">Loading sessions…</div>';
+  try{
+    const res = await fetchWithAuth(API_BASE + '/api/auth/sessions', {method:'GET'});
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.message || 'Could not load sessions');
+    const sessions = data.sessions || [];
+    sessionsList.innerHTML = '';
+    if(!sessions.length){
+      sessionsList.innerHTML = '<div style="font-size:13px; color:#666;">No active sessions</div>';
+      return;
+    }
+    sessions.forEach(s=>{
+      const row = document.createElement('div');
+      row.style.cssText = 'border:1px solid #e5e5e5; border-radius:8px; padding:8px 10px; display:flex; justify-content:space-between; align-items:center; gap:8px;';
+      const ua = s.userAgent ? String(s.userAgent).slice(0,80) : 'Unknown device';
+      const ip = s.ipAddress || '—';
+      const when = s.lastActiveAt ? new Date(s.lastActiveAt).toLocaleString() : '';
+      row.innerHTML = `
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(ua)} ${s.isCurrent?'<span style="color:#00A82D;">(current)</span>':''}</div>
+          <div style="font-size:11px; color:#666;">${escapeHtml(ip)} · ${escapeHtml(when)} · ${escapeHtml(s.id.slice(0,8))}…</div>
+        </div>
+        <button type="button" data-family="${escapeHtml(s.id)}" style="height:32px; padding:0 10px; border-radius:6px; border:1px solid #d93025; color:#d93025; background:#fff; font-size:12px; ${s.isCurrent?'opacity:0.6;':''}" ${s.isCurrent?'disabled title="Current session"':'title="Revoke this session"'}>${s.isCurrent?'Current':'Revoke'}</button>
+      `;
+      const btn = row.querySelector('button');
+      if(btn && !s.isCurrent){
+        btn.addEventListener('click', async ()=>{
+          btn.disabled = true; btn.textContent = 'Revoking…';
+          try{
+            const r = await fetchWithAuth(API_BASE + `/api/auth/sessions/${encodeURIComponent(s.id)}`, {method:'DELETE'});
+            const j = await r.json().catch(()=>({}));
+            if(!r.ok) throw new Error(j.message || 'Revoke failed');
+            await loadSessions();
+            await loadUsage();
+            setError('');
+            if(accountStatus) accountStatus.textContent = 'Session revoked';
+          }catch(e){
+            setError(e.message || 'Could not revoke');
+            btn.disabled = false; btn.textContent = 'Revoke';
+          }
+        });
+      }
+      sessionsList.appendChild(row);
+    });
+  }catch(e){
+    sessionsList.innerHTML = `<div style="font-size:13px; color:#d93025;">${escapeHtml(e.message || 'Could not load sessions')}</div>`;
+  }
+}
+
 function openAccountModal(){
   if(!accountModal) return;
   accountModal.hidden = false;
@@ -2522,6 +2602,8 @@ function openAccountModal(){
   if(deleteAccountConfirm) deleteAccountConfirm.value = '';
   if(deleteAccountBtn) deleteAccountBtn.disabled = true;
   exportDataBtn?.focus();
+  loadUsage();
+  loadSessions();
 }
 function closeAccountModal(){
   if(accountModal) accountModal.hidden = true;
@@ -2557,6 +2639,25 @@ if(exportDataBtn) exportDataBtn.addEventListener('click', async ()=>{
   }catch(e){
     if(accountStatus) accountStatus.textContent = e.message || 'Could not export data';
   }finally{ exportDataBtn.disabled = false; }
+});
+if(refreshSessionsBtn) refreshSessionsBtn.addEventListener('click', ()=>{ loadSessions(); loadUsage(); });
+if(revokeOthersBtn) revokeOthersBtn.addEventListener('click', async ()=>{
+  revokeOthersBtn.disabled = true;
+  revokeOthersBtn.textContent = 'Revoking…';
+  if(accountStatus) accountStatus.textContent = 'Revoking other sessions…';
+  try{
+    const res = await fetchWithAuth(API_BASE + '/api/auth/sessions/revoke-others', {method:'POST'});
+    const j = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(j.message || 'Could not revoke');
+    await loadSessions();
+    await loadUsage();
+    if(accountStatus) accountStatus.textContent = `Revoked ${j.revokedCount||0} other session(s)`;
+  }catch(e){
+    if(accountStatus) accountStatus.textContent = e.message || 'Could not revoke other sessions';
+  }finally{
+    revokeOthersBtn.disabled = false;
+    revokeOthersBtn.textContent = 'Revoke all other sessions';
+  }
 });
 if(deleteAccountBtn) deleteAccountBtn.addEventListener('click', async ()=>{
   if(deleteAccountConfirm?.value !== 'DELETE') return;

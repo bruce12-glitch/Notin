@@ -300,17 +300,22 @@ PORT=3000 API_TARGET=http://localhost:5000 node dev-server.mjs
 | POST | `/api/auth/otp/resend` | Resend OTP and return a replacement opaque challenge |
 | POST | `/api/auth/otp/demo-request` | Request demo OTP (dev only) |
 | POST | `/api/auth/forgot-password` | Request password reset |
-| POST | `/api/auth/reset-password` | Reset password with token |
-| POST | `/api/auth/refresh` | Rotate refresh token |
+| POST | `/api/auth/reset-password` | Reset password with token (increments tokenVersion, revokes all refresh) |
+| POST | `/api/auth/refresh` | Rotate refresh token (captures UA/IP) |
 | POST | `/api/auth/logout` | Revoke refresh token (CSRF-guarded) |
+| GET | `/api/auth/sessions` | List active sessions (device inventory, Bearer) |
+| POST | `/api/auth/sessions/revoke-others` | Revoke all other sessions |
+| DELETE | `/api/auth/sessions/:familyId` | Revoke a session by familyId |
 | GET | `/api/auth/health` | Auth health (demo mode status) |
 
 ### Users (`/api/users`)
 | Method | Path | Description |
 |---|---|---|
-| POST | `/api/users/signup` | Create account |
-| POST | `/api/users/signin` | Sign in (returns JWT + refresh cookie) |
+| POST | `/api/users/signup` | Create account (password policy: 3-of-4 categories, common blocklist) |
+| POST | `/api/users/signin` | Sign in (returns JWT + refresh cookie, captures UA/IP) |
 | GET | `/api/users/me/export` | Export all user data (JSON, protected) |
+| GET | `/api/users/me/usage` | Usage: notes/quota, storage, sessions (protected) |
+| GET | `/api/users/me/sessions` | Alias for active sessions (protected) |
 | DELETE | `/api/users/me` | Permanently delete account (protected) |
 
 ### Notes (`/api/notes` — protected)
@@ -391,7 +396,7 @@ Tests use throwaway data on every run. Failure-only screenshots and retained tra
 
 ## 🔁 CI/CD
 
-The complete CI pipeline is staged at `ci/e2e.yml`; a repository administrator must move it to `.github/workflows/e2e.yml` to activate it:
+The complete CI pipeline is **active** at `.github/workflows/e2e.yml` (mirror at `ci/e2e.yml`):
 
 - **E2E suite** — Full Playwright test run against Chromium
 - **Fail-closed smokes** — Verifies the server refuses to boot with placeholder secrets or non-`postgres://` URLs
@@ -406,13 +411,14 @@ The project implements several security-hardening measures:
 
 | Measure | Implementation |
 |---|---|
-| **JWT authentication** | 15-minute access tokens (memory-only) + rotating HTTP-only refresh cookies (SHA-256, one-time use) |
-| **Password hashing** | bcryptjs with salt rounds |
+| **JWT authentication** | 15-minute access tokens (memory-only, `tv` claim) + rotating HTTP-only refresh cookies (SHA-256, one-time use) + tokenVersion invalidation on password reset |
+| **Password hashing** | bcryptjs + password policy (3-of-4 categories, common blocklist, no sequential/repeating, no email/username containment) |
 | **OTP security** | Hashed codes, 5-minute expiry, single-use, max 5 attempts |
 | **CSRF protection** | Signed origin validation via httpSecurity middleware |
 | **Fail-closed boot** | Production refuses to start with placeholder secrets or without a real PostgreSQL URL |
 | **CORS** | Locked to `APP_ORIGIN` in production; preview/localhost echo is dev-only |
 | **Rate limiting** | IP-based rate limits on auth endpoints and public share reads |
+| **Device inventory** | Active sessions with UA/IP/lastActive, revoke per device or revoke-others |
 | **Share tokens** | 32-byte cryptographically random tokens; only SHA-256 hashes stored |
 | **Input sanitization** | SQL injection prevention via parameterized queries; XSS prevention in editor output |
 | **Attachment validation** | File type whitelist (PNG/JPEG/WebP/GIF), size limits, random filenames |

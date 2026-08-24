@@ -45,6 +45,7 @@ async function migratePostgres(pool) {
       username TEXT,
       password TEXT,
       google_sub TEXT UNIQUE,
+      "tokenVersion" INTEGER NOT NULL DEFAULT 0,
       "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
     );
@@ -53,8 +54,10 @@ async function migratePostgres(pool) {
   await pool.query(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS username TEXT;`);
   await pool.query(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS password TEXT;`);
   await pool.query(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS google_sub TEXT;`);
+  await pool.query(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "tokenVersion" INTEGER NOT NULL DEFAULT 0;`);
   await pool.query(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW();`);
   await pool.query(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW();`);
+  await pool.query(`UPDATE "User" SET "tokenVersion" = 0 WHERE "tokenVersion" IS NULL;`);
   // Make existing NOT NULL constraints relaxed — postgres doesn't easily alter via IF NOT EXISTS, use DO block
   await pool.query(`
     DO $$
@@ -218,6 +221,11 @@ async function migratePostgres(pool) {
   // remaining legacy sessions — fail-closed by design.
   await pool.query(`UPDATE refresh_tokens SET family_id = user_id WHERE family_id IS NULL;`);
   await pool.query(`CREATE INDEX IF NOT EXISTS refresh_tokens_family_idx ON refresh_tokens(family_id);`);
+  // WP-SEC-005 — device inventory: user_agent, ip_address, last_active_at for session listing
+  await pool.query(`ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS user_agent TEXT;`);
+  await pool.query(`ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS ip_address TEXT;`);
+  await pool.query(`ALTER TABLE refresh_tokens ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMPTZ;`);
+  await pool.query(`UPDATE refresh_tokens SET last_active_at = created_at WHERE last_active_at IS NULL;`);
 
   // WP-SEC-003 — account lockout / OTP issue throttle (per-email, scoped)
   await pool.query(`
@@ -247,6 +255,8 @@ async function migratePostgres(pool) {
   await pool.query(`CREATE INDEX IF NOT EXISTS password_reset_tokens_user_id_idx ON password_reset_tokens(user_id);`);
   await pool.query(`CREATE INDEX IF NOT EXISTS password_reset_tokens_token_hash_idx ON password_reset_tokens(token_hash);`);
   await pool.query(`INSERT INTO schema_migrations (version) VALUES ('2026-08-22-market-hardening-v1') ON CONFLICT DO NOTHING;`);
+  await pool.query(`INSERT INTO schema_migrations (version) VALUES ('2026-08-24-token-versioning-v1') ON CONFLICT DO NOTHING;`);
+  await pool.query(`INSERT INTO schema_migrations (version) VALUES ('2026-08-24-device-inventory-v1') ON CONFLICT DO NOTHING;`);
 
   console.log('✅ PostgreSQL migrations complete');
 }
@@ -269,6 +279,7 @@ function migrateSqlite(dbPath) {
       username TEXT,
       password TEXT,
       google_sub TEXT UNIQUE,
+      tokenVersion INTEGER NOT NULL DEFAULT 0,
       "createdAt" TEXT NOT NULL DEFAULT (datetime('now')),
       "updatedAt" TEXT NOT NULL DEFAULT (datetime('now'))
     );
@@ -276,6 +287,8 @@ function migrateSqlite(dbPath) {
   // Ensure indexes
   db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User"(email) WHERE email IS NOT NULL;`);
   db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS "User_google_sub_key" ON "User"(google_sub) WHERE google_sub IS NOT NULL;`);
+  try{ db.exec(`ALTER TABLE "User" ADD COLUMN tokenVersion INTEGER NOT NULL DEFAULT 0`); }catch(e){ if(!String(e.message).includes('duplicate column')) throw e; }
+  try{ db.exec(`UPDATE "User" SET tokenVersion = 0 WHERE tokenVersion IS NULL`); }catch{}
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS "Note" (
@@ -406,6 +419,11 @@ function migrateSqlite(dbPath) {
   // remaining legacy sessions — fail-closed by design.
   db.exec(`UPDATE refresh_tokens SET family_id = user_id WHERE family_id IS NULL;`);
   db.exec(`CREATE INDEX IF NOT EXISTS refresh_tokens_family_idx ON refresh_tokens(family_id);`);
+  // WP-SEC-005 — device inventory
+  try{ db.exec(`ALTER TABLE refresh_tokens ADD COLUMN user_agent TEXT`); }catch(e){ if(!String(e.message).includes('duplicate column')) throw e; }
+  try{ db.exec(`ALTER TABLE refresh_tokens ADD COLUMN ip_address TEXT`); }catch(e){ if(!String(e.message).includes('duplicate column')) throw e; }
+  try{ db.exec(`ALTER TABLE refresh_tokens ADD COLUMN last_active_at TEXT`); }catch(e){ if(!String(e.message).includes('duplicate column')) throw e; }
+  try{ db.exec(`UPDATE refresh_tokens SET last_active_at = created_at WHERE last_active_at IS NULL`); }catch{}
 
   // WP-SEC-003 — account lockout / OTP issue throttle (per-email, scoped)
   db.exec(`
@@ -435,6 +453,8 @@ function migrateSqlite(dbPath) {
   db.exec(`CREATE INDEX IF NOT EXISTS password_reset_tokens_user_id_idx ON password_reset_tokens(user_id);`);
   db.exec(`CREATE INDEX IF NOT EXISTS password_reset_tokens_token_hash_idx ON password_reset_tokens(token_hash);`);
   db.prepare(`INSERT OR IGNORE INTO schema_migrations (version) VALUES (?)`).run('2026-08-22-market-hardening-v1');
+  db.prepare(`INSERT OR IGNORE INTO schema_migrations (version) VALUES (?)`).run('2026-08-24-token-versioning-v1');
+  db.prepare(`INSERT OR IGNORE INTO schema_migrations (version) VALUES (?)`).run('2026-08-24-device-inventory-v1');
   db.close();
   console.log('✅ SQLite fallback migrations complete');
 }

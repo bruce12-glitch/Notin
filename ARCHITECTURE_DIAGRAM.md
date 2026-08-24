@@ -1,573 +1,305 @@
-# 🏗️ Notin Architecture Diagram
+# 🏗️ Notin Architecture Diagram — Current (2026-08-22)
+
+> Updated after WP-HARDEN-001 + production-beta hardening (#45). Previous version incorrectly marked Backend/Auth as PLANNED — now 100% implemented.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              NOTIN REPOSITORY                                  │
+│                              NOTIN REPOSITORY  (e2ee739)                    │
 │                                                                              │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐          │
-│  │   FRONTEND      │  │    BACKEND       │  │  AUTHENTICATION   │          │
-│  │   (✅ COMPLETE)  │  │   (⚠️ PLANNED)   │  │   (⚠️ PLANNED)   │          │
-│  │                 │  │                 │  │                 │          │
-│  │  ┌─────────────┐│  │  ┌─────────────┐│  │  ┌─────────────┐│          │
-│  │  │  index.html ││  │  │  API Server  ││  │  │   OAuth      ││          │
-│  │  │ (1,023 L)  ││  │  │ (Express)    ││  │  │ (Google,    ││          │
-│  │  └─────────────┘│  │  │             ││  │  │  GitHub)    ││          │
-│  │  ┌─────────────┐│  │  │  ┌─────────┐│  │  │  ┌─────────┐│          │
-│  │  │ context.html││  │  │  │ Database││  │  │  │  JWT    ││          │
-│  │  │ (330 L)    ││  │  │  │ (PostgreSQL)│  │  │  │         ││          │
-│  │  └─────────────┘│  │  │  └─────────┘│  │  │  └─────────┘│          │
-│  │  ┌─────────────┐│  │  │             ││  │  │             ││          │
-│  │  │  input.css  ││  │  │  Sync       ││  │  │  Sessions   ││          │
-│  │  │ (1,455 L)  ││  │  │  Protocol   ││  │  │  Management ││          │
-│  │  └─────────────┘│  │  │             ││  │  │             ││          │
-│  │  ┌─────────────┐│  │  └─────────────┘│  │  └─────────────┘│          │
-│  │  │  script.js  ││  │                 │  │                 │          │
-│  │  │ (985 L)    ││  │  ┌─────────────┐│  │  ┌─────────────┐│          │
-│  │  └─────────────┘│  │  │   Search     ││  │  │ Encryption  ││          │
-│  │                 │  │  │   Service    ││  │  │ (Zero-       ││          │
-│  │  ┌─────────────┐│  │  │             ││  │  │  Knowledge)  ││          │
-│  │  │   assets/    ││  │  └─────────────┘│  │  └─────────────┘│          │
-│  │  │  - videos   ││  │                 │  │                 │          │
-│  │  │  - icons    ││  │  ┌─────────────┐│  │                 │          │
-│  │  │  - images   ││  │  │   AI        ││  │                 │          │
-│  │  └─────────────┘│  │  │   Features   ││  │                 │          │
-│  │                 │  │  │             ││  │                 │          │
-│  └─────────────────┘  │  └─────────────┘  │  └─────────────────┘          │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐              │
+│  │   FRONTEND      │  │    BACKEND       │  │  AUTHENTICATION   │            │
+│  │   (✅ COMPLETE)  │  │   (✅ COMPLETE)  │  │   (✅ COMPLETE)  │            │
+│  │                 │  │                  │  │                 │              │
+│  │  index.html     │  │  Express 4.21    │  │  app.html       │              │
+│  │  index-neon.html│  │  Unified :5000   │  │  TipTap 2.27    │              │
+│  │  context.html   │  │  REST + static   │  │  OAuth + OTP    │              │
+│  │  legal pages    │  │  Prisma docs     │  │  PWA sw.js v15  │              │
+│  │  Tailwind v4    │  │  pg + SQLite     │  │  share.html     │              │
+│  │  Vanilla JS     │  │  Zod validation  │  │  esbuild bundle │              │
+│  └────────┬────────┘  └────────┬─────────┘  └────────┬────────┘              │
+│           │                    │                     │                       │
+│           │  dev-server :3000  │  serves static      │                       │
+│           └──── proxies /api/*─┴──── from ../../authentication              │
+│                                │                                             │
+│                                ▼                                             │
+│                     ┌─────────────────────┐                                  │
+│                     │  Database            │                                  │
+│                     │  PG 16 prod          │                                  │
+│                     │  SQLite dev fallback │                                  │
+│                     │  migrate.js source   │                                  │
+│                     │  10 tables           │                                  │
+│                     └─────────────────────┘                                  │
 │                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────┐│
-│  │                         DOCS (Mirror of Frontend)                       ││
-│  │                                                                       ││
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                  ││
-│  │  │  index.html │  │ input.css   │  │  script.js  │                  ││
-│  │  └─────────────┘  └─────────────┘  └─────────────┘                  ││
-│  │  ┌─────────────┐  ┌─────────────┐                                  ││
-│  │  │ index-neon  │  │ styles.css  │                                  ││
-│  │  └─────────────┘  └─────────────┘                                  ││
-│  └─────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────┐│
-│  │                    SCREENSHOTS (78 verification images)                 ││
-│  └─────────────────────────────────────────────────────────────────────┘│
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │  CI/CD: .github/workflows/e2e.yml (active) + ci/e2e.yml (mirror)     │    │
+│  │  Fail-closed smokes, Postgres rehearsal, Playwright Chromium         │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────────────────┘
+
+Ports:
+  5000 = Unified API + Auth + Editor + Share (backend/src/server.js)
+  3000 = Marketing dev server (frontend/dev-server.mjs) proxies /api/* /auth/* → :5000
 ```
 
 ---
 
-## 📱 Landing Page Structure
+## Backend — Unified Server (port 5000)
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            index.html (1,023 lines)                            │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────┐│
-│  │  1. NAVBAR (Sticky, Glass-morphism)                                    ││
-│  │     ┌─────────────┐  ┌─────────────┐  ┌─────────────────────────┐  ││
-│  │     │   Logo      │  │ Mega-Menus  │  │  CTA Stack (Login/DL/    │  ││
-│  │     │  (Notin)    │  │ (Features/  │  │   Start Free + Theme     │  ││
-│  │     └─────────────┘  │ Explore/    │  │   Toggle)               │  ││
-│  │                    │  │ Plans)      │  │                         │  ││
-│  └────────────────────┴─────────────┴─────────────────────────┘          │
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────┐│
-│  │  2. HERO (Split Layout: 50/50)                                        ││
-│  │     ┌─────────────────────────────┐  ┌─────────────────────────┐  ││
-│  │     │  LEFT: Copy                   │  │  RIGHT: Video + 3D Assets │  ││
-│  │     │  - "Your second brain"        │  │  - Hero Video (MP4)      │  ││
-│  │     │  - Subheadline                │  │  - 3D Note Cards (3)     │  ││
-│  │     │  - "Get Notin free" CTA       │  │  - AI Badge (glowing)    │  ││
-│  │     │  - "Already have account?"     │  │  - Rotating Ring         │  ││
-│  │     │  - Download CTA (OS-aware)    │  │  - Mouse Parallax        │  ││
-│  │     └─────────────────────────────┘  └─────────────────────────┘  ││
-│  └─────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────┐│
-│  │  3. CARDS SHOWCASE (8 Feature Cards)                                   ││
-│  │     ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐                ││
-│  │     │ Template │ │Notebooks │ │  Search  │ │  Tasks   │ ...            ││
-│  │     │          │ │& Spaces  │ │          │ │          │                ││
-│  │     └──────────┘ └──────────┘ └──────────┘ └──────────┘                ││
-│  │     - Infinite loop (dual sets)                                        ││
-│  │     - Circle designs on hover/click                                   ││
-│  │     - Autoplay (2.6s interval)                                        ││
-│  │     - 56px arrow buttons (bottom-center)                             ││
-│  └─────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────┐│
-│  │  4. CAPTURE (Split Row)                                               ││
-│  │     ┌─────────────────────┐  ┌─────────────────────┐                ││
-│  │     │  Copy (left)         │  │  App Mockup (right)  │                ││
-│  │     │  - "Capture ideas..."│  │  - Note interface     │                ││
-│  │     │  - Feature list      │  │  - Checklist          │                ││
-│  │     │  - "Try it free" CTA │  │  - Tags               │                ││
-│  │     └─────────────────────┘  └─────────────────────┘                ││
-│  └─────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────┐│
-│  │  5. ORGANIZE SHOWCASE (Layered Composition)                          ││
-│  │     ┌─────────────────────────────────────────────────────────────┐││
-│  │     │  Cream Container (#F6F0E7)                                    │││
-│  │     │  ┌─────────────────┐  ┌─────────────────┐                  │││
-│  │     │  │  Photo (left)     │  │  Content (right)  │                  │││
-│  │     │  │  - Workspace img  │  │  - "Bring order..."│                  │││
-│  │     │  │  - Notebook card  │  │  - Description     │                  │││
-│  │     │  │  - Task card      │  │  - "Try it free"   │                  │││
-│  │     │  │  - Floating labels│  │  - K-shape decals  │                  │││
-│  │     │  │  (Ideas, Draft,   │  │                    │                  ││
-│  │     │  │   Collabs)        │  │                    │                  │││
-│  │     │  └─────────────────┘  └─────────────────┘                  │││
-│  │     └─────────────────────────────────────────────────────────────┘││
-│  └─────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────┐│
-│  │  6. TESTIMONIALS (Carousel)                                           ││
-│  │     ┌──────────────┐ ┌──────────────┐ ┌──────────────┐              ││
-│  │     │ Testimonial 1 │ │ Testimonial 2 │ │ Testimonial 3 │ ...          ││
-│  │     │  - Quote     │ │  - Quote     │ │  - Quote     │              ││
-│  │     │  - Author    │ │  - Author    │ │  - Author    │              ││
-│  │     └──────────────┘ └──────────────┘ └──────────────┘              ││
-│  │     - Scroll-snap based                                                ││
-│  │     - 56px circular arrow buttons (bottom-center)                       ││
-│  └─────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────┐│
-│  │  7. PRICING (3 Tiers)                                                 ││
-│  │     ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                ││
-│  │     │   FREE      │  │    PRO      │  │   TEAM      │                ││
-│  │     │  - ₹0       │  │  - 14-day   │  │  - Contact  │                ││
-│  │     │  - Unlimited│  │   trial     │  │   sales     │                ││
-│  │     │   notes    │  │  - Everything│  │  - Everything│                ││
-│  │     │  - 3 devices│  │   in Free   │  │   in Pro    │                ││
-│  │     │  - Basic    │  │  - AI search │  │  + Shared   │                ││
-│  │     │   search   │  │  - Encryption│  │   workspaces │                ││
-│  │     └─────────────┘  └─────────────┘  └─────────────┘                ││
-│  │     - Monthly/Yearly toggle (billing)                                  ││
-│  │     - Pro card has "Most popular" badge                                ││
-│  └─────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────┐│
-│  │  8. AI TOOLS BAND (Promo)                                             ││
-│  │     ┌─────────────────────────────────────────────────────────────┐││
-│  │     │  "Want to give AI a try?"                                      │││
-│  │     │  - Upload  - Record  - Transcribe  [Try it for free]           │││
-│  │     └─────────────────────────────────────────────────────────────┘││
-│  └─────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────┐│
-│  │  9. DOWNLOAD (6 Platforms + Web Clipper)                             ││
-│  │     ┌─────────────────────────────────────────────────────────────┐││
-│  │     │  Smart Download Strip                                          │││
-│  │     │  - "Get the build for your device"                             │││
-│  │     │  - OS detection (Windows/Mac/Linux/iOS/Android/Web)           │││
-│  │     │  - Smart CTA button                                            │││
-│  │     │  - QR code for mobile                                          │││
-│  │     └─────────────────────────────────────────────────────────────┘││
-│  │                                                                       ││
-│  │     Platform Grid (2x3):                                             ││
-│  │     ┌──────────┐ ┌──────────┐ ┌──────────┐                          ││
-│  │     │  Web     │ │ Windows  │ │  macOS   │                          ││
-│  │     └──────────┘ └──────────┘ └──────────┘                          ││
-│  │     ┌──────────┐ ┌──────────┐ ┌──────────┐                          ││
-│  │     │  Linux   │ │   iOS    │ │ Android  │                          ││
-│  │     └──────────┘ └──────────┘ └──────────┘                          ││
-│  │                                                                       ││
-│  │     Web Clipper:                                                    ││
-│  │     ┌─────────────────────────────────────────────────────────────┐││
-│  │     │  "Save anything from the web"                                 │││
-│  │     │  [Chrome] [Firefox] [Safari]                                   │││
-│  │     └─────────────────────────────────────────────────────────────┘││
-│  └─────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────┐│
-│  │  10. DARK CTA (Evernote-style)                                       ││
-│  │     ┌─────────────────────────────────────────────────────────────┐││
-│  │     │  Background: #141414 with lime glow (#94E130)                   │││
-│  │     │  "NEW" badge                                                  │││
-│  │     │  "Your productivity, supercharged"                           │││
-│  │     │  "Discover more →"                                            │││
-│  │     └─────────────────────────────────────────────────────────────┘││
-│  └─────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────┐│
-│  │  11. FAQ (4 Items)                                                  ││
-│  │     ┌─────────────────────────────────────────────────────────────┐││
-│  │     │  Q: Is Notin free to use?                                     ││
-│  │     │  A: Yes! Free plan includes...                               ││
-│  │     │                                                               ││
-│  │     │  Q: Which platforms does Notin support?                       ││
-│  │     │  A: Web, Windows, macOS, Linux, iOS, Android...               ││
-│  │     │                                                               ││
-│  │     │  Q: Are my notes private and secure?                          ││
-│  │     │  A: Absolutely. End-to-end encrypted...                        ││
-│  │     │                                                               ││
-│  │     │  Q: Can I work offline?                                        ││
-│  │     │  A: Yes. Full offline support...                              ││
-│  │     └─────────────────────────────────────────────────────────────┘││
-│  │     - Accordion-style (details/summary)                              ││
-│  │     - + / - indicators                                               ││
-│  └─────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────────┐│
-│  │  12. FOOTER (4 Columns)                                             ││
-│  │     ┌─────────────┐  ┌─────────────┐  ┌─────────────┐              ││
-│  │     │  Product    │  │  Company     │  │  Legal       │              ││
-│  │     │  - Features │  │  - About     │  │  - Privacy   │              ││
-│  │     │  - Pricing   │  │  - Blog      │  │  - Terms     │              ││
-│  │     │  - Download  │  │  - Careers   │  │  - Security   │              ││
-│  │     │  - Changelog│  │  - Contact   │  │              │              ││
-│  │     └─────────────┘  └─────────────┘  └─────────────┘              ││
-│  │     ┌─────────────────────────────────────────────────────────────┐││
-│  │     │  © 2026 Notin. All rights reserved.                         │││
-│  │     │  Made with ❤️ in India                                        │││
-│  │     └─────────────────────────────────────────────────────────────┘││
-│  └─────────────────────────────────────────────────────────────────────┘│
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+backend/src/server.js
+├─ trust proxy → requestId (X-Request-Id echo/replace)
+├─ compression → helmet CSP (prod: frame-ancestors self, else *)
+├─ CORS: prod = APP_ORIGIN allowlist only, dev = echo origin
+├─ static allowlist: only /index.html,/login.html,/app.html,/share.html,
+│                    /script.js,/app.bundle.js,/share.js,/styles.css,/app.css,
+│                    /sw.js,/manifest.webmanifest,/icons/icon-*.png
+├─ json 10mb + cookieParser
+├─ /health (liveness, no DB) → {ok, database: PG|SQLite-fallback}
+├─ /api/health (readiness, SELECT 1, 2s timeout) → 200 ok / 503 degraded
+├─ /api/health/deep (+ uploadDir writability)
+├─ /api/auth/* + /auth/* (legacy) → authRoutes (refresh, logout CSRF-guarded)
+├─ /api/users → userRoutes (signup, signin, export, delete)
+├─ /api/notes → noteRoutes (CRUD, trash/restore, share, AI)
+├─ /api/notebooks → notebookRoutes
+├─ /api/tags → tagRoutes
+├─ /api/notes/:id/attachments + /api/attachments/:id/file → attachmentRoutes
+├─ /api/public/share/:token → publicShareRoutes (no auth)
+├─ errorHandler (Sentry stripped)
+└─ graceful shutdown SIGTERM/SIGINT 10s drain → db.disconnect
+
+config/db.js:
+  - DATABASE_URL postgres://? → pg.Pool, else node:sqlite fallback
+  - Production refuses fallback at import + $connect + query()
+  - query() uses $n placeholders, dual driver compatible
+
+db/migrate.js:
+  - Real source of truth, idempotent DO $$ blocks (fixed missing END;)
+  - Tables: User, Note(+notebookId,isPinned,summary), Notebook, Tag, NoteTag,
+            Attachment, NoteShare, otp_challenges, refresh_tokens(+family_id,revoke_reason),
+            password_reset_tokens, auth_throttle
+  - Indexes: 16 non-unique + GIN FTS indexes (Note_title_fts_idx, etc)
+
+lib/:
+  - validation.js (Zod): noteCreate/Update strict, notebook/tag name 1-100/50,
+                         contentJson plain-object ≤2MB deep walk, tagIds ≤50 unique,
+                         EMAIL_RE, ID_RE, expectedUpdatedAt ISO
+  - apiResponse.js: sendValidationError, sendNotFound, sendConflict, sendInternalError
+  - httpSecurity.js: canonicalOrigin, isOriginAllowed single source
+  - jwt.js: jose access 15m + refresh rotation, family_id
+  - throttle.js: per-email lockout 1→5→15→60m, OTP issue 5/15m sliding window
+  - logging.js: logError(req, err, ctx) with [requestId]
+
+controllers/:
+  - authController.js: OTP issue/verify/resend/demo-request, Google OAuth stub (503 without creds),
+                       forgot/reset (hashed, 60m TTL, session revocation), refresh (compare-and-swap UPDATE,
+                       10s grace sibling, replay nuke), logout
+  - userController.js: signup/signin, export JSON, DELETE /me {confirm:DELETE} cascade
+  - noteController.js: create with quota 5000, getNotes with filter=active|trash|all, q (FTS PG vs LIKE SQLite),
+                       notebookId=none/unfiled, tagId, pagination page/limit/includeMeta/includeRank,
+                       update with expectedUpdatedAt, tagIds replace-set, isPinned boolean
+  - notebook/tag/share/attachment/ai controllers
+  - aiController.js: summarize, suggest-title, suggest-tags (maps to existing IDs), chat (non-streaming),
+                     chat/stream SSE (same 5/15m budget, mock split ~6-word chunks, Groq streaming with
+                     buffered line parsing, disconnect via res close), assist (continue/rephrase/shorten/expand)
 ```
 
 ---
 
-## 🎨 Motion & Interaction System
+## Frontend — Marketing Site (Green + Neon)
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         MOTION ENGINE ARCHITECTURE                            │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  SCROLL SYSTEM                                                              │
-│  ├─ Scroll Progress Bar (top, 3px height)                                  │
-│  │  └─ Updates on scroll via requestAnimationFrame                          │
-│  ├─ Back-to-Top Button (bottom-right)                                      │
-│  │  └─ Appears after 600px scroll                                          │
-│  └─ Navbar Shrink                                                          │
-│     └─ Height reduces from 72px to 58px after 260px scroll                  │
-│                                                                              │
-│  REVEAL SYSTEM                                                             │
-│  ├─ IntersectionObserver based                                            │
-│  │  └─ Threshold: 0.12                                                     │
-│  ├─ Staggered Reveals                                                      │
-│  │  └─ Delay: i * 70ms (max 420ms)                                         │
-│  └─ CSS Transitions                                                       │
-│     └─ opacity: 0 → 1, transform: translateY(22px) → none                  │
-│                                                                              │
-│  3D SYSTEM                                                                 │
-│  ├─ Tilt Cards                                                             │
-│  │  └─ perspective(900px) rotateX/Y + translateY                           │
-│  ├─ Magnetic Buttons                                                       │
-│  │  └─ Follows cursor with transform (dx/dy * 0.22)                        │
-│  ├─ Hero 3D Assets                                                         │
-│  │  └─ Mouse parallax: --px3d/--py3d CSS vars                               │
-│  └─ Parallax Layers                                                       │
-│     └─ data-parallax attribute controls speed                              │
-│                                                                              │
-│  CAROUSEL SYSTEM                                                           │
-│  ├─ Features Carousel                                                      │
-│  │  ├─ Infinite loop (dual card sets)                                      │
-│  │  ├─ Autoplay (2.6s interval)                                            │
-│  │  └─ Pauses on hover/touch                                               │
-│  └─ Testimonials Carousel                                                 │
-│     └─ Scroll-snap based with arrow buttons                                 │
-│                                                                              │
-│  VIDEO SYSTEM                                                              │
-│  ├─ Hero Video                                                            │
-│  │  ├─ <video autoplay muted loop playsinline>                            │
-│  │  ├─ Play-enforcer (retries + gesture fallback)                        │
-│  │  └─ Poster fallback                                                    │
-│  └─ Video Lightbox                                                        │
-│     └─ Modal with backdrop blur + full video player                        │
-│                                                                              │
-│  THEME SYSTEM                                                             │
-│  └─ Cookie-based switcher (Green ⇄ Neon)                                  │
-│     └─ Redirects between index.html and index-neon.html                   │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+frontend/
+├─ index.html (956L) Green Edition, index-neon.html (915L) Neon
+├─ context.html roadmap, privacy.html / terms.html / security.html (beta drafts 2026-08-22)
+├─ input.css / input-neon.css → Tailwind v4 → styles.css / styles-neon.css (28KB min)
+├─ polish.css responsive layer
+├─ script.js (858L) motion engine:
+│   - scroll progress, back-to-top, navbar shrink 72→58px @260px
+│   - IntersectionObserver reveal threshold 0.12, stagger i*70ms max 420ms
+│   - 3D tilt perspective(900px), magnetic buttons dx*0.22, parallax --px3d/--py3d
+│   - CardsShowcase 8 cards infinite loop dual sets, autoplay 2.6s, hover circles
+│   - Video play-enforcer, OS-aware download CTA, theme switcher via notinAppOrigin()
+├─ dev-server.mjs :3000 proxies /api/* /auth/* → :5000
+└─ assets/: hero-demo-full.mp4, Lottie evernote-homepage.json, 3D icons
+```
+
+Component hierarchy same as previous doc — 12 sections: Navbar (mega-menu), Hero split, CardsShowcase, Capture, OrganizeShowcase, Testimonials, Pricing, AIToolsBand, Download (6 platforms + web clipper disabled spans aria-disabled), DarkCTA, FAQ, Footer.
+
+CTA wiring fixed WP-FUNNEL-001 + WP-LEFTOVERS-001: login→/login.html, signup→/, app→/app.html, enterprise→mailto:hello@notin.app, binaries → disabled spans role=link Coming soon.
+
+---
+
+## Authentication & Editor App (post-auth)
+
+```
+authentication/
+├─ index.html signup, login.html signin, script.js auth client
+│   - readCookie, csrfHeaders, single-flight bootstrapToken guard
+├─ app.html (356L) Evernote-dark Home + editor
+│   - sidebar: All Notes, Shortcuts (pinned), Notebooks, Tags, Trash, + hidden beta nav
+│   - list: searchInput, note rows with tag chips + notebook pill + hover pin + green active bar
+│   - editor: TipTap (StarterKit + Underline + TaskList/Item + Placeholder), 28px title,
+│             meta strip edited time + live word count, floating toolbar pill, 900ms debounce autosave
+│   - AI: Summarize button, Ask this note panel (6 turns memory-only, textContent bubbles),
+│         Assist dropdown (Continue/Rephrase/Shorten/Expand) + selection bubble on coordsAtPos()
+│   - account modal: export, DELETE typed confirm, logout
+│   - offline banner via navigator.onLine
+├─ app.js (2717L) vanilla ESM:
+│   - plainFromNote, docFromNote, compareNotes (pinned-first + updated/created/title)
+│   - IndexedDB notin-offline-v1 snapshots per userId (notes/notebooks/tags, never tokens)
+│   - offlineReadOnly guards, loadCachedNotes, updateOfflineSnapshot
+│   - SW registration skipped under Playwright webdriver
+├─ app.bundle.js esbuild minified (git diff check in CI)
+├─ app.css, styles.css
+├─ share.html/share.js public renderer (title+body+image metadata only)
+├─ sw.js CACHE_NAME notin-shell-v15, shell-only, bypass /api/* /auth/*
+├─ manifest.webmanifest + icons/icon-192.png / 512.png
+└─ package.json only TipTap + esbuild (no express/nodemailer legacy — retired WP-HARDEN-001)
 ```
 
 ---
 
-## 🎯 Component Hierarchy
+## Database Schema (migrate.js source)
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           COMPONENT TREE                                      │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  App                                                                         │
-│  ├─ Navbar                                                                  │
-│  │  ├─ Logo (img + text)                                                   │
-│  │  ├─ MegaMenu (3x)                                                        │
-│  │  │  ├─ MegaDrop (Features/Explore/Plans)                                │
-│  │  │  │  ├─ MegaBtn (trigger)                                              │
-│  │  │  │  └─ MegaPanel (dropdown)                                           │
-│  │  │  │     └─ MegaCard (content)                                         │
-│  │  │  │        ├─ MegaLabel (category)                                     │
-│  │  │  │        └─ MegaLink (8x in Features)                                │
-│  │  │  │           ├─ Icon (SVG)                                            │
-│  │  │  │           ├─ Label (text)                                         │
-│  │  │  │           └─ Description (text)                                   │
-│  │  │  └─ MegaPlan (3x in Plans)                                           │
-│  │  │     ├─ Plan Name                                                    │
-│  │  │     ├─ Plan Description                                             │
-│  │  │     └─ Plan Price                                                   │
-│  │  └─ CTAStack                                                            │
-│  │     ├─ Login (text link)                                               │
-│  │     ├─ Download (btn-outline-evernote)                                  │
-│  │     ├─ Start Free (btn-3d)                                             │
-│  │     └─ ThemeToggle                                                    │
-│  │        ├─ Dot (gradient)                                                │
-│  │        └─ Label ("Switch to Neon")                                     │
-│  │                                                                       │
-│  ├─ Hero                                                                   │
-│  │  ├─ CopyBlock                                                           │
-│  │  │  ├─ Badge ("New — AI-powered search")                                │
-│  │  │  ├─ Headline ("Your second brain")                                  │
-│  │  │  ├─ Subheadline                                                     │
-│  │  │  ├─ CTA Group                                                        │
-│  │  │  │  ├─ Get Notin Free (btn-3d)                                       │
-│  │  │  │  └─ Download (btn-outline-evernote, OS-aware)                    │
-│  │  │  └─ Login Link                                                      │
-│  │  └─ VisualBlock                                                        │
-│  │     ├─ HeroVideo (video element)                                       │
-│  │     ├─ Hero3D (4x)                                                     │
-│  │     │  ├─ Note A (Ideas 24 notes)                                       │
-│  │     │  ├─ Note B (3 tasks done today)                                   │
-│  │     │  ├─ Note C (Collabs 18 people)                                    │
-│  │     │  └─ Badge (AI, glowing)                                          │
-│  │     └─ HeroRing (rotating)                                             │
-│  │                                                                       │
-│  ├─ CardsShowcase                                                         │
-│  │  ├─ Header (headline + subheadline)                                    │
-│  │  ├─ CarouselTrack                                                      │
-│  │  │  └─ Card (8x, duplicated for loop)                                   │
-│  │  │     ├─ ShowcaseCircles (2x: big + small)                             │
-│  │  │     │  └─ SVG (decorative shapes)                                    │
-│  │  │     ├─ Icon (SVG)                                                    │
-│  │  │     ├─ Title (h5)                                                   │
-│  │  │     └─ Description (p)                                              │
-│  │  └─ Arrows (prev/next)                                                 │
-│  │                                                                       │
-│  ├─ SplitContent (Capture)                                                │
-│  │  ├─ Copy (left)                                                        │
-│  │  │  ├─ Eyebrow ("Capture")                                            │
-│  │  │  ├─ Headline                                                        │
-│  │  │  ├─ Description                                                     │
-│  │  │  ├─ Feature List (4 items with checkmarks)                         │
-│  │  │  └─ CTA ("Try it free")                                            │
-│  │  └─ Visual (right)                                                     │
-│  │     └─ AppMockup (note interface)                                     │
-│  │        ├─ Window Chrome                                                │
-│  │        ├─ Note Content                                                 │
-│  │        ├─ Tags (3x)                                                    │
-│  │        └─ Mock Caret (animated)                                         │
-│  │                                                                       │
-│  ├─ OrganizeShowcase                                                      │
-│  │  ├─ Visual (left)                                                      │
-│  │  │  ├─ Decorations (3x: top/left/bottom)                               │
-│  │  │  ├─ Photo (workspace image)                                         │
-│  │  │  │  └─ Fallback (if image fails)                                    │
-│  │  │  ├─ NotebookCard                                                   │
-│  │  │  │  ├─ Header (icon + label + chevron)                               │
-│  │  │  │  ├─ Rows (6x notebook items)                                     │
-│  │  │  │  └─ Create Action ("New Notebook")                               │
-│  │  │  ├─ TaskCard                                                        │
-│  │  │  │  ├─ Primary Task (title + metadata + avatar)                      │
-│  │  │  │  ├─ Completed Task (with checkbox)                                │
-│  │  │  │  └─ Input Row ("Enter task")                                     │
-│  │  │  └─ FloatingLabels (3x: Ideas/Draft/Collabs)                         │
-│  │  └─ Content (right)                                                    │
-│  │     ├─ Badge ("Organize")                                             │
-│  │     ├─ Headline                                                        │
-│  │     ├─ Description                                                     │
-│  │     └─ CTA ("Try it for free") + Status Messages                       │
-│  │                                                                       │
-│  ├─ Testimonials                                                         │
-│  │  ├─ Header                                                             │
-│  │  └─ CarouselTrack                                                      │
-│  │     └─ Testimonial (6x)                                                │
-│  │        ├─ Blockquote                                                   │
-│  │        └─ Figcaption (author + role)                                   │
-│  │                                                                       │
-│  ├─ Pricing                                                               │
-│  │  ├─ Header + Billing Toggle                                            │
-│  │  └─ Grid (3x)                                                          │
-│  │     └─ PriceCard                                                       │
-│  │        ├─ Tier Name (Free/Pro/Team)                                    │
-│  │        ├─ Price (with monthly/yearly)                                  │
-│  │        ├─ Feature List (4-5 items)                                     │
-│  │        └─ CTA Button                                                   │
-│  │                                                                       │
-│  ├─ AIToolsBand                                                           │
-│  │  ├─ Copy (left)                                                        │
-│  │  └─ Chips (right)                                                     │
-│  │     └─ AIChip (3x: Upload/Record/Transcribe)                          │
-│  │                                                                       │
-│  ├─ Download                                                               │
-│  │  ├─ Header                                                             │
-│  │  ├─ SmartDownloadStrip                                                 │
-│  │  │  ├─ OS Badge (detected device)                                      │
-│  │  │  ├─ Headline (OS-aware)                                             │
-│  │  │  ├─ Description                                                     │
-│  │  │  └─ Smart CTA + QR Code                                             │
-│  │  └─ PlatformGrid (2x3)                                                 │
-│  │     └─ PlatformCard (6x: Web/Windows/macOS/Linux/iOS/Android)          │
-│  │        ├─ RecBadge (if recommended)                                    │
-│  │        ├─ Icon (brand SVG)                                              │
-│  │        ├─ Info (name + subtitle)                                       │
-│  │        └─ DownloadLink                                                │
-│  │                                                                       │
-│  ├─ DarkCTA                                                                │
-│  │  ├─ Background (lime glow)                                             │
-│  │  ├─ Badge ("NEW")                                                      │
-│  │  ├─ Headline ("Your productivity, supercharged")                      │
-│  │  ├─ Description                                                        │
-│  │  └─ CTA Link ("Discover more")                                        │
-│  │                                                                       │
-│  ├─ FAQ                                                                   │
-│  │  ├─ Header                                                             │
-│  │  └─ Items (4x)                                                         │
-│  │     └─ FaqItem (details/summary)                                       │
-│  │        ├─ Summary (question + indicator)                                │
-│  │        └─ FaqBody (answer)                                             │
-│  │                                                                       │
-│  └─ Footer                                                                │
-│     ├─ Brand (logo + tagline)                                             │
-│     ├─ Columns (4x: Product/Company/Legal)                                │
-│     │  └─ Links (various)                                                 │
-│     └─ Bottom (copyright + made in India)                                 │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+User: id, email unique, username?, password?, google_sub unique?, createdAt, updatedAt
+Note: id, title, description, contentJson TEXT, contentText TEXT, summary TEXT,
+      isTrashed BOOL default 0, trashedAt, isPinned BOOL default 0,
+      userId FK CASCADE, notebookId FK SET NULL, createdAt, updatedAt
+Notebook: id, userId FK CASCADE, name, createdAt, updatedAt
+Tag: id, userId FK CASCADE, name, createdAt
+NoteTag: noteId FK CASCADE, tagId FK CASCADE, composite PK, createdAt
+Attachment: id, noteId FK CASCADE, userId FK CASCADE, filename, mime, size, path, createdAt
+NoteShare: id, noteId unique FK CASCADE, userId FK CASCADE, tokenHash unique, shareEnabled BOOL,
+           createdAt, expiresAt
+otp_challenges: id, user_id FK CASCADE, code_hash, expires_at, attempts, used_at, created_at
+refresh_tokens: hash PK, user_id FK CASCADE, expires_at, revoked_at, family_id, revoke_reason, created_at
+password_reset_tokens: id, user_id FK CASCADE, token_hash, expires_at, used_at, created_at
+auth_throttle: email+scope PK, count, window_start, lock_level, locked_until, updated_at
+schema_migrations: version
+
+Indexes: User_email_key, User_google_sub_key, Note_userId_idx, Note_isTrashed_idx,
+         Note_isPinned_idx, Note_notebookId_idx, Note_title_fts_idx GIN, Note_content_fts_idx GIN,
+         Note_description_fts_idx GIN, Notebook_userId_idx, Tag_userId_idx, NoteTag_noteId_idx,
+         NoteTag_tagId_idx, Attachment_noteId_idx, Attachment_userId_idx, NoteShare_noteId_key,
+         NoteShare_tokenHash_key, NoteShare_userId_idx, otp_challenges_user_id_idx, etc,
+         refresh_tokens_user_id_idx, refresh_tokens_family_idx, etc
 ```
 
 ---
 
-## 🎨 Design Token System
+## Security Model
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         TAILWIND v4 THEME                                  │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  @theme {                                                                   │
-│    --font-sans: "Inter", -apple-system, "SF Pro Text", sans-serif;          │
-│    --font-display: "IBM Plex Sans", "Inter", sans-serif;                  │
-│    --font-mono: "JetBrains Mono", ui-monospace, monospace;                 │
-│                                                                              │
-│    /* BRAND PALETTE */                                                     │
-│    --color-brand-50:  #e9f9ee;    // Lightest green                        │
-│    --color-brand-100: #eefad8;    // Lighter green                         │
-│    --color-brand-200: #ddf4b2;    // Light green                           │
-│    --color-brand-300: #c4ec82;    // Medium-light green                    │
-│    --color-brand-400: #a8f05a;    // Medium green                           │
-│    --color-brand-500: #8fe333;    // PRIMARY (Evernote green)              │
-│    --color-brand-600: #7cc92a;    // Darker green                          │
-│    --color-brand-700: #5fa11e;    // Dark green                            │
-│    --color-brand-800: #005c1a;    // Darkest green                         │
-│                                                                              │
-│    /* SEMANTIC SURFACES */                                                 │
-│    --color-bg-primary:   #f4eee5;    // Warm cream (page bg)                │
-│    --color-bg-secondary: #f9f6f2;    // Lighter cream (section bg)         │
-│    --color-bg-tertiary:  #141414;    // Near-black (dark sections)         │
-│    --color-surface:      #ffffff;    // White (cards)                       │
-│                                                                              │
-│    /* SEMANTIC TEXT */                                                    │
-│    --color-text-primary:   #141414;    // Dark (main text)                  │
-│    --color-text-secondary: #292929;    // Medium-dark (secondary)            │
-│    --color-text-tertiary:  #8b877f;    // Light (muted text)                │
-│                                                                              │
-│    /* SEMANTIC STROKES */                                                  │
-│    --color-stroke-cards:   #e7e0d3;    // Card borders                      │
-│    --color-stroke-buttons: #d8d0c0;    // Button borders                   │
-│  }                                                                         │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+JWT: access 15m memory-only, refresh httpOnly Secure SameSite rotating cookie SHA-256 one-time-use
+     family_id = user_id for legacy rows, randomToken(24) for new families, successor inherits family
+     replay: consumed token in 10s grace → fresh sibling (benign race), else nuke family revoke_reason='replay'
+     logout → revoke_reason='logout' not sheltered by grace
+
+CSRF: notin_csrf cookie rand.hmac (HMAC-SHA256 keyed by sha256(refresh secret)), non-httpOnly
+      requires cookie present ∧ header x-notin-csrf present ∧ equal ∧ signature valid on refresh/logout
+      else 403 Invalid CSRF token; absent refresh cookie → skip → generic 401 Invalid session
+      Origin guard: mutating auth routes with non-allowlisted Origin → 403 Invalid origin
+
+Throttle: auth_throttle per email per scope (signin, otp-issue), 5 fails → 1m →5m→15m→60m capped
+          wrong password still runs bcrypt, correct password clears ladder
+
+Validation: Zod strict, unknown fields rejected, control chars rejected, title ≤500, description ≤100k,
+            contentText ≤500k, contentJson plain acyclic ≤2MB, tagIds 0-50 unique, notebookId sane charset
+
+Shares: 32-byte random token, SHA-256 at rest, rotate/revoke, trashed→404, scoped files
+
+Attachments: mime whitelist PNG/JPEG/WebP/GIF, ≤5MB, ≤10/note, storage quota 250MB, magic-byte check,
+             random filenames, owner-only serving private max-age 3600
+
+CORS: prod locked to APP_ORIGIN allowlist, preview echo dev-only, Vary Origin
 ```
 
 ---
 
-## 🎯 CSS Class Usage Analysis
-
-### Most Used Classes (by frequency)
+## AI Layer (Phase 2 complete 7/7)
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│  Rank  │  Class              │  Usage Count  │  Purpose                      │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  1     │  reveal            │  50+         │  Scroll-triggered animations   │
-│  2     │  rounded-2xl       │  40+         │  Card border radius            │
-│  3     │  border            │  35+         │  Border styling                │
-│  4     │  border-stroke-cards│ 30+         │  Card borders                  │
-│  5     │  bg-surface        │  25+         │  Card backgrounds              │
-│  6     │  p-6 / p-7         │  25+         │  Card padding                  │
-│  7     │  text-text-secondary│ 20+         │  Secondary text color          │
-│  8     │  transition        │  20+         │  Smooth transitions            │
-│  9     │  hover:...         │  20+         │  Hover states                  │
-│  10    │  flex             │  15+         │  Flexbox layout                │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+Provider: lib/ai/provider.js abstraction
+  - GROQ_API_KEY unset → deterministic mocks (no network)
+  - GROQ_API_KEY set → Groq API bounded to 800 chars, 20s whole-response abort
 
----
+Endpoints (all owner-scoped, authenticated, per-user rate limit user:<userId>):
+  POST /api/notes/:id/summarize → mock or Groq
+  POST /api/notes/:id/suggest-title
+  POST /api/notes/:id/suggest-tags → 3-5 suggestions mapped to existing tag IDs, never creates tags
+  POST /api/notes/:id/chat → non-streaming JSON in/out, ≤6 turns history, role user|assistant, content ≤2000
+  POST /api/notes/:id/chat/stream → SSE data: {"delta":…} + [DONE], same 5/15m budget as chat,
+                                  mock splits mockChatAnswer into ~6-word chunks via setImmediate,
+                                  Groq path buffered line parsing, per-frame JSON tolerance, finally cancels reader on res close
+  POST /api/notes/:id/assist → continue/rephrase/shorten/expand, 5/15m dedicated budget,
+                              read-only server, pending suggestion memory-only, Apply → insertContentAt → onEdit → autosave
 
-## 📊 Performance Architecture
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                      PERFORMANCE OPTIMIZATIONS                              │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  LOADING PERFORMANCE                                                        │
-│  ├─ No CDN dependencies (all local)                                        │
-│  ├─ Pre-compiled CSS (28KB minified)                                       │
-│  ├─ Inlined critical CSS (none - all pre-compiled)                         │
-│  ├─ Lazy-loaded images (loading="lazy")                                   │
-│  ├─ Async decoded images (decoding="async")                               │
-│  └─ Preloaded fonts (Google Fonts)                                         │
-│                                                                              │
-│  RENDERING PERFORMANCE                                                    │
-│  ├─ GPU-accelerated animations (transform/opacity only)                   │
-│  ├─ will-change for animated elements                                      │
-│  ├─ requestAnimationFrame for smooth animations                            │
-│  └─ No layout thrashing (transform-based animations)                      │
-│                                                                              │
-│  MEMORY EFFICIENCY                                                         │
-│  ├─ Single rAF loop for parallax (shared across elements)                  │
-│  ├─ Event delegation where possible                                       │
-│  └─ Cleanup of animation frame requests                                   │
-│                                                                              │
-│  ACCESSIBILITY                                                            │
-│  ├─ prefers-reduced-motion support                                        │
-│  │  └─ All animations disabled when reduced motion preferred             │
-│  ├─ ARIA labels and roles                                                 │
-│  ├─ Semantic HTML (section, article, figure, etc.)                         │
-│  ├─ Focus management for modals                                           │
-│  └─ Keyboard navigation support                                          │
-│                                                                              │
-│  SEO                                                                       │
-│  ├─ Semantic HTML structure                                               │
-│  ├─ Meta tags (title, description, keywords)                               │
-│  ├─ Open Graph tags                                                       │
-│  ├─ Twitter Card tags                                                     │
-│  ├─ JSON-LD structured data                                               │
-│  └─ Canonical URL                                                         │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+Client: stream-first empty bubble textContent += fill, fallback to JSON endpoint, transcript session-only cleared on view change/reload
 ```
 
 ---
 
-## 🎯 Summary
+## PWA / Offline
 
-This architecture diagram provides a comprehensive visual representation of:
+```
+manifest.webmanifest installable, icons 192/512
+sw.js notin-shell-v15 caches shell assets only, bypasses /api/* /auth/*
+IndexedDB notin-offline-v1 store snapshots keyed by userId, session-only active userId cleared on logout/delete
+Offline: list/body read-only, create/edit/save/organize/share disabled, offline banner shown
+Not a sync engine — offline edits intentionally unsupported
+```
 
-1. **Repository Structure** - How files and folders are organized
-2. **Page Architecture** - The 12 sections of the landing page
-3. **Component Hierarchy** - Parent-child relationships
-4. **Motion System** - Animation and interaction architecture
-5. **Design Tokens** - Color palette and typography system
-6. **Performance** - Optimization strategies
+---
 
-The Notin project demonstrates **exceptional architectural design** with:
-- Clear separation of concerns
-- Reusable component patterns
-- Efficient animation systems
-- Comprehensive accessibility
-- Production-ready performance
+## Motion & Design Tokens
+
+```
+Tailwind v4 @theme:
+  font-sans Inter, font-display IBM Plex Sans, font-mono JetBrains Mono
+  brand 50 #e9f9ee → 800 #005c1a, primary 500 #8fe333 (Evernote green)
+  bg-primary #f4eee5 cream, bg-tertiary #141414 near-black, surface #fff
+  text-primary #141414, stroke-cards #e7e0d3
+
+Motion engine:
+  rAF scroll progress 3px top, back-to-top @600px, navbar shrink @260px
+  reveal IntersectionObserver 0.12, stagger 70ms max 420ms, opacity 0→1 translateY 22px→0
+  tilt perspective(900px) rotateX/Y, magnetic dx*0.22, parallax data-parallax speed
+  carousel dual sets infinite loop, autoplay 2.6s pause on hover/touch
+  video autoplay muted loop playsinline + play-enforcer + poster fallback
+  reduced-motion guards CSS + JS
+```
+
+---
+
+## CI/CD & Ops
+
+```
+.github/workflows/e2e.yml (active) + ci/e2e.yml (mirror):
+  - install auth/backend/frontend deps, npm run check (node --check), build:app + git diff check,
+    audit --omit=dev high level
+  - migrate SQLite dev path
+  - fail-closed smokes: no env + placeholder secrets → must exit non-zero + FATAL: line
+  - Postgres rehearsal: real postgres:16-alpine, random non-placeholder secrets, assert /health reports PostgreSQL
+  - Playwright E2E whole suite (workers 1, retries 1 in CI, trace retain-on-failure)
+  - artifacts playwright-report/test-results on failure
+
+Dockerfile: multi-stage auth-build (esbuild) + backend-deps + runtime node:22.22-alpine non-root notin,
+           HEALTHCHECK wget /health
+
+RUNBOOK.md: backup/restore drill executed 2026-08-18 SQLite proof, Postgres commands documented,
+            liveness vs readiness table, X-Request-Id tracing, graceful shutdown 10s
+
+Deploy nginx.conf.example: marketing notin.app + app/API app.notin.app two-origin contract
+```
+
+---
+
+## Summary
+
+Notin now has:
+- Marketing 100% with truthful beta legal pages
+- Unified backend 100% with fail-closed prod boot, FTS search, pagination, quotas, Zod validation, per-user AI limits, CSRF+replay+lockout hardening
+- Editor 100% with TipTap, organize, attachments, shares, AI chat/stream/assist, PWA offline read-only
+- CI fully staged and now active at .github/workflows/e2e.yml
+- Remaining for public market: real hosting, S3 uploads, SMTP/Google OAuth, Stripe billing, Teams/Spaces, native apps/web clipper, legal entity review, monitoring, token-versioning/device inventory/password policy hardening.

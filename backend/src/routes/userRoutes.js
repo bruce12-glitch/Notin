@@ -1,7 +1,8 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { signup, signin } from '../controllers/userController.js';
-import { deleteAccount, exportAccount } from '../controllers/accountController.js';
+import { deleteAccount, exportAccount, getUsage } from '../controllers/accountController.js';
+import { listSessions, revokeSession, revokeOtherSessions } from '../controllers/authController.js';
 import auth from '../middleware/auth.js';
 
 const router = express.Router();
@@ -15,6 +16,11 @@ const signinIpLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, standard
 router.post('/signup', signupIpLimit, signup);
 router.post('/signin', signinIpLimit, signin);
 router.get('/me/export', auth, accountLimit, exportAccount);
+router.get('/me/usage', auth, accountLimit, getUsage);
 router.delete('/me', auth, accountLimit, deleteAccount);
+// WP-SEC-005 — device inventory aliases under /users/me
+router.get('/me/sessions', auth, accountLimit, listSessions);
+router.post('/me/sessions/revoke-others', auth, accountLimit, revokeOtherSessions);
+router.delete('/me/sessions/:familyId', auth, accountLimit, revokeSession);
 
 export default router;

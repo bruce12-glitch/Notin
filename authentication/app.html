@@ -317,7 +317,7 @@
       <button class="app-fab" type="button" id="openAiToolsFab" title="Open note AI tools" aria-label="AI assistant"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z" fill="currentColor"/><path d="M19 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2z" fill="currentColor" opacity=".7"/></svg></button>
     </div>
   </div>
-  <!-- WP-AUTH-004 — account export and permanent deletion -->
+  <!-- WP-AUTH-004 + WP-SEC-005/006 — account export, usage, sessions, deletion -->
   <div class="app-modal" id="accountModal" hidden>
     <div class="app-modal-backdrop" id="accountModalBackdrop"></div>
     <div class="app-modal-card app-account-card" role="dialog" aria-modal="true" aria-labelledby="accountModalTitle">
@@ -325,10 +325,23 @@
         <h3 id="accountModalTitle">Account</h3>
         <button type="button" class="app-account-close" id="accountModalClose" aria-label="Close account panel">×</button>
       </div>
+      <section class="app-account-section" id="usageSection">
+        <h4>Usage</h4>
+        <div id="usageStats" style="font-size:13px; color:#444; line-height:1.6;">Loading usage…</div>
+      </section>
       <section class="app-account-section">
         <h4>Export your data</h4>
         <p>Download notes, notebooks, tags, and image metadata as JSON. Image files are not included.</p>
         <button type="button" class="app-account-export" id="exportDataBtn">Export data</button>
+      </section>
+      <section class="app-account-section" id="sessionsSection">
+        <h4>Active sessions</h4>
+        <p>Each device or browser that signed in creates a session. Revoke any you don't recognize.</p>
+        <div id="sessionsList" style="display:flex; flex-direction:column; gap:8px; margin-top:8px;"></div>
+        <div style="margin-top:10px; display:flex; gap:8px;">
+          <button type="button" class="app-account-export" id="revokeOthersBtn" style="height:36px;">Revoke all other sessions</button>
+          <button type="button" class="app-account-export" id="refreshSessionsBtn" style="height:36px;">Refresh</button>
+        </div>
       </section>
       <section class="app-account-section app-account-danger">
         <h4>Delete account</h4>

@@ -117,14 +117,16 @@
             <p class="auth-switch"><a href="#" id="forgotBackBtn">Back to sign in</a></p>
           </div>
 
-          <!-- WP-AUTH-003 — Reset password step (token from email link / dev mode) -->
+          <!-- WP-AUTH-003 — Reset password step (token from email link / dev mode) + WP-SEC-006 strength -->
           <div id="resetStep" class="auth-step" hidden>
             <p class="otp-help">Choose a new password for your account. The link works once and expires in 60 minutes.</p>
             <form id="resetForm" class="auth-form" novalidate>
               <div class="password-input-row">
-                <input type="password" id="resetPassword" class="auth-input" placeholder="New password (8+ characters)" autocomplete="new-password" required>
+                <input type="password" id="resetPassword" class="auth-input" placeholder="New password (8+ chars, 3 of: upper/lower/number/symbol)" autocomplete="new-password" required>
                 <button type="button" class="pwd-toggle" id="resetPwdToggle" aria-label="Show password">Show</button>
               </div>
+              <div id="resetStrength" class="otp-meta" aria-live="polite" style="margin-top:6px; font-size:12px; color:#666;"></div>
+              <div id="resetStrengthBar" style="height:4px; background:#e5e5e5; border-radius:2px; margin-top:6px; overflow:hidden; display:none;"><div id="resetStrengthFill" style="height:100%; width:0%; background:#00A82D; transition:width 0.2s;"></div></div>
               <input type="password" id="resetConfirm" class="auth-input" placeholder="Confirm new password" autocomplete="new-password" required>
               <div class="auth-error" id="resetError" aria-live="polite"></div>
               <button type="submit" class="btn-continue" id="resetSubmitBtn">Reset password</button>
