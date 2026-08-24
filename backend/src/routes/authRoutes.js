@@ -2,6 +2,7 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { isOriginAllowed } from '../lib/httpSecurity.js';
 import { verifyCsrfToken } from '../lib/jwt.js';
+import auth from '../middleware/auth.js';
 import {
   googleStart,
   googleCallback,
@@ -13,6 +14,9 @@ import {
   logout,
   forgotPassword,
   resetPassword,
+  listSessions,
+  revokeSession,
+  revokeOtherSessions,
   health,
 } from '../controllers/authController.js';
 
@@ -67,6 +71,10 @@ router.post('/forgot-password', resetStrict, forgotPassword);
 router.post('/reset-password', resetStrict, resetPassword);
 router.post('/refresh', csrfGuard, refresh);
 router.post('/logout', csrfGuard, logout);
+// WP-SEC-005 — device inventory (Bearer-protected, not cookie-only)
+router.get('/sessions', auth, listSessions);
+router.post('/sessions/revoke-others', auth, revokeOtherSessions);
+router.delete('/sessions/:familyId', auth, revokeSession);
 router.get('/health', health);
 
 export default router;

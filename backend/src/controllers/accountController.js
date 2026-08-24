@@ -22,6 +22,30 @@ function clearSessionCookies(res) {
   res.clearCookie('notin_csrf', { ...common, httpOnly: false, path: '/' });
 }
 
+export async function getUsage(req, res) {
+  try {
+    const userId = req.userId;
+    const [noteCountRes, attachmentRes, notebookRes, tagRes, sessionRes] = await Promise.all([
+      db.query(`SELECT COUNT(*) as total FROM "Note" WHERE "userId" = $1`, [userId]),
+      db.query(`SELECT COUNT(*) as count, COALESCE(SUM(size),0) as bytes FROM "Attachment" WHERE "userId" = $1`, [userId]),
+      db.query(`SELECT COUNT(*) as total FROM "Notebook" WHERE "userId" = $1`, [userId]),
+      db.query(`SELECT COUNT(*) as total FROM "Tag" WHERE "userId" = $1`, [userId]),
+      db.query(`SELECT COUNT(DISTINCT family_id) as total FROM refresh_tokens WHERE user_id = $1 AND revoked_at IS NULL`, [userId]),
+    ]);
+    const maxNotes = Number.parseInt(process.env.MAX_NOTES_PER_USER || '5000', 10) || 5000;
+    const maxStorage = Number.parseInt(process.env.MAX_ATTACHMENT_STORAGE_BYTES || String(250*1024*1024), 10) || 250*1024*1024;
+    res.json({
+      notes: { count: Number(noteCountRes.rows[0]?.total || 0), quota: maxNotes },
+      notebooks: { count: Number(notebookRes.rows[0]?.total || 0) },
+      tags: { count: Number(tagRes.rows[0]?.total || 0) },
+      attachments: { count: Number(attachmentRes.rows[0]?.count || 0), storageBytes: Number(attachmentRes.rows[0]?.bytes || 0), storageQuota: maxStorage },
+      sessions: { count: Number(sessionRes.rows[0]?.total || 0) },
+    });
+  } catch (e) {
+    res.status(500).json({ message: 'Could not load usage' });
+  }
+}
+
 export async function exportAccount(req, res) {
   try {
     const user = await db.user.findById(req.userId);

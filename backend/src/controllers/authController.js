@@ -381,9 +381,11 @@ export async function otpVerify(req, res) {
   const expiresAt = futureIso(30 * 86400000);
   // WP-SEC-001 — every verified session starts a NEW rotation family
   const familyId = randomToken(24);
+  const ua = String(req.headers['user-agent'] || '').slice(0, 500);
+  const ip = String(req.ip || '').slice(0, 128);
   await db.query(
-    `INSERT INTO refresh_tokens (hash, user_id, family_id, expires_at, revoked_at, revoke_reason, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [hashToken(refreshRaw), user.id, familyId, expiresAt, null, null, now]
+    `INSERT INTO refresh_tokens (hash, user_id, family_id, expires_at, revoked_at, revoke_reason, user_agent, ip_address, last_active_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+    [hashToken(refreshRaw), user.id, familyId, expiresAt, null, null, ua, ip, now, now]
   );
   res.cookie('notin_refresh', refreshRaw, { ...cookieOpts, maxAge: 30 * 86400000 });
   res.cookie('notin_refresh', refreshRaw, { ...cookieOptsLegacy, maxAge: 30 * 86400000 });
@@ -456,9 +458,11 @@ export async function refresh(req, res) {
     if (!user) throw new Error('No user');
     const nextRaw = randomToken(48);
     const expiresAt = futureIso(30 * 86400000);
+    const ua = String(req.headers['user-agent'] || '').slice(0, 500);
+    const ip = String(req.ip || '').slice(0, 128);
     await db.query(
-      `INSERT INTO refresh_tokens (hash, user_id, family_id, expires_at, revoked_at, revoke_reason, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [hashToken(nextRaw), user.id, row.family_id, expiresAt, null, null, now]
+      `INSERT INTO refresh_tokens (hash, user_id, family_id, expires_at, revoked_at, revoke_reason, user_agent, ip_address, last_active_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [hashToken(nextRaw), user.id, row.family_id, expiresAt, null, null, ua, ip, now, now]
     );
     res.cookie('notin_refresh', nextRaw, { ...cookieOpts, maxAge: 30 * 86400000 });
     res.cookie('notin_refresh', nextRaw, { ...cookieOptsLegacy, maxAge: 30 * 86400000 });
@@ -583,7 +587,9 @@ export async function resetPassword(req, res) {
       const userId = consumed.rows[0].user_id;
       const existing = await tx.query(`SELECT id FROM "User" WHERE id = $1 LIMIT 1`, [userId]);
       if (existing.rowCount !== 1) return false;
-      await tx.query(`UPDATE "User" SET password = $1, "updatedAt" = $2 WHERE id = $3`, [hashed, now, userId]);
+      // WP-SEC-004 — password reset increments tokenVersion, invalidating all
+      // existing access tokens even if they are still within 15m window.
+      await tx.query(`UPDATE "User" SET password = $1, "tokenVersion" = COALESCE("tokenVersion",0) + 1, "updatedAt" = $2 WHERE id = $3`, [hashed, now, userId]);
       await tx.query(
         `UPDATE refresh_tokens SET revoked_at = $1, revoke_reason = 'password-reset'
          WHERE user_id = $2 AND revoked_at IS NULL`,
@@ -598,7 +604,112 @@ export async function resetPassword(req, res) {
   }
 }
 
+
+// WP-SEC-005 — device inventory: list active refresh-token families (sessions)
+// Each live refresh token = one family = one device/session. User agent and IP
+// captured at mint time (refresh rotation updates last_active_at implicitly via
+// new row). Current session marked via refresh cookie hash.
+export async function listSessions(req, res) {
+  try {
+    const userId = req.userId;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+    const now = nowIso();
+    // Find current family from cookie if present
+    let currentFamilyId = null;
+    const raw = req.cookies?.notin_refresh;
+    if (raw) {
+      const { rows } = await db.query(`SELECT family_id FROM refresh_tokens WHERE hash = $1 AND user_id = $2 LIMIT 1`, [hashToken(raw), userId]);
+      if (rows[0]?.family_id) currentFamilyId = rows[0].family_id;
+    }
+    // Active sessions = unrevoked refresh tokens (one per family, latest)
+    const { rows } = await db.query(
+      `SELECT family_id, user_agent, ip_address, last_active_at, created_at, expires_at
+       FROM refresh_tokens
+       WHERE user_id = $1 AND revoked_at IS NULL
+       ORDER BY COALESCE(last_active_at, created_at) DESC`,
+      [userId]
+    );
+    const sessions = rows.map(r => ({
+      id: r.family_id,
+      familyId: r.family_id,
+      userAgent: r.user_agent || null,
+      ipAddress: r.ip_address || null,
+      lastActiveAt: r.last_active_at || r.created_at,
+      createdAt: r.created_at,
+      expiresAt: r.expires_at,
+      isCurrent: currentFamilyId ? r.family_id === currentFamilyId : false,
+    }));
+    res.json({ sessions });
+  } catch (e) {
+    return res.status(500).json({ message: 'Could not list sessions' });
+  }
+}
+
+export async function revokeSession(req, res) {
+  try {
+    const userId = req.userId;
+    const familyId = String(req.params.familyId || '').trim();
+    if (!familyId) return res.status(400).json({ message: 'Family id required' });
+    if (!/^[A-Za-z0-9_-]{1,128}$/.test(familyId)) return res.status(400).json({ message: 'Invalid family id' });
+    const now = nowIso();
+    const { rowCount, rows: checkRows } = await db.query(
+      `SELECT family_id FROM refresh_tokens WHERE family_id = $1 AND user_id = $2 AND revoked_at IS NULL LIMIT 1`,
+      [familyId, userId]
+    ).then(r => ({ rowCount: r.rowCount, rows: r.rows })).catch(() => ({ rowCount: 0, rows: [] }));
+    // Actually use UPDATE to revoke
+    const result = await db.query(
+      `UPDATE refresh_tokens SET revoked_at = $1, revoke_reason = 'user-revoke' WHERE family_id = $2 AND user_id = $3 AND revoked_at IS NULL`,
+      [now, familyId, userId]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ message: 'Session not found' });
+    // If revoking current session, clear cookies
+    const raw = req.cookies?.notin_refresh;
+    if (raw) {
+      const { rows } = await db.query(`SELECT family_id FROM refresh_tokens WHERE hash = $1 LIMIT 1`, [hashToken(raw)]);
+      // After revoke, the cookie's family is now revoked, so clear
+      if (rows[0]?.family_id === familyId || !rows[0]) {
+        res.clearCookie('notin_refresh', cookieOpts);
+        res.clearCookie('notin_refresh', cookieOptsLegacy);
+        res.clearCookie('notin_csrf', csrfCookieOpts);
+      }
+    }
+    res.status(200).json({ ok: true, revokedFamilyId: familyId });
+  } catch (e) {
+    return res.status(500).json({ message: 'Could not revoke session' });
+  }
+}
+
+export async function revokeOtherSessions(req, res) {
+  try {
+    const userId = req.userId;
+    let currentFamilyId = null;
+    const raw = req.cookies?.notin_refresh;
+    if (raw) {
+      const { rows } = await db.query(`SELECT family_id FROM refresh_tokens WHERE hash = $1 AND user_id = $2 LIMIT 1`, [hashToken(raw), userId]);
+      if (rows[0]?.family_id) currentFamilyId = rows[0].family_id;
+    }
+    const now = nowIso();
+    let result;
+    if (currentFamilyId) {
+      result = await db.query(
+        `UPDATE refresh_tokens SET revoked_at = $1, revoke_reason = 'user-revoke-others' WHERE user_id = $2 AND family_id != $3 AND revoked_at IS NULL`,
+        [now, userId, currentFamilyId]
+      );
+    } else {
+      // No current cookie (Bearer-only call) — revoke all refresh sessions
+      result = await db.query(
+        `UPDATE refresh_tokens SET revoked_at = $1, revoke_reason = 'user-revoke-others' WHERE user_id = $2 AND revoked_at IS NULL`,
+        [now, userId]
+      );
+    }
+    res.json({ ok: true, revokedCount: result.rowCount || 0, keptFamilyId: currentFamilyId });
+  } catch (e) {
+    return res.status(500).json({ message: 'Could not revoke other sessions' });
+  }
+}
+
 export async function health(req, res) {
+
   const smtpConfigured = Boolean(mailer);
   res.json({
     ok: true,

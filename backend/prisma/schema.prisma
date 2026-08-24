@@ -13,13 +13,14 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  username  String?
-  password  String?
-  googleSub String?  @unique @map("google_sub")
-  createdAt DateTime @default(now()) @map("createdAt")
-  updatedAt DateTime @updatedAt @map("updatedAt")
+  id           String   @id @default(cuid())
+  email        String   @unique
+  username     String?
+  password     String?
+  googleSub    String?  @unique @map("google_sub")
+  tokenVersion Int      @default(0) @map("tokenVersion")
+  createdAt    DateTime @default(now()) @map("createdAt")
+  updatedAt    DateTime @updatedAt @map("updatedAt")
 
   notes               Note[]
   notebooks           Notebook[]
@@ -167,6 +168,10 @@ model RefreshToken {
   // WP-SEC-001 — rotation family + replay-detection reason (docs-only mirror of migrate.js)
   familyId     String?  @map("family_id")
   revokeReason String?  @map("revoke_reason")
+  // WP-SEC-005 — device inventory
+  userAgent    String?  @map("user_agent")
+  ipAddress    String?  @map("ip_address")
+  lastActiveAt DateTime? @map("last_active_at")
   createdAt DateTime  @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

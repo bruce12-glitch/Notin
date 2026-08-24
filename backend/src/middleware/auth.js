@@ -1,4 +1,4 @@
-import { verifyAccessToken, verifyAnyToken } from '../lib/jwt.js';
+import { verifyAccessToken } from '../lib/jwt.js';
 import db from '../config/db.js';
 
 const auth = async (req, res, next) => {
@@ -10,20 +10,9 @@ const auth = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
     if (!token) return res.status(401).json({ message: 'Unauthorized' });
 
-    let payload;
-    try {
-      payload = await verifyAccessToken(token);
-    } catch (e) {
-      // Fallback to legacy verification for tokens issued before unify (7d)
-      try {
-        payload = await verifyAnyToken(token);
-      } catch {
-        throw e;
-      }
-    }
+    const payload = await verifyAccessToken(token);
 
-    // jose payload uses sub, legacy uses id
-    req.userId = payload.sub || payload.id;
+    req.userId = payload.sub;
     req.userEmail = payload.email;
     req.tokenPayload = payload;
     if (!req.userId) throw new Error('Invalid token payload');
@@ -31,6 +20,12 @@ const auth = async (req, res, next) => {
     // makes a deleted account's remaining short-lived token fail immediately.
     const user = await db.user.findById(req.userId);
     if (!user) throw new Error('Account no longer exists');
+    // WP-SEC-004 — token versioning: password reset increments tokenVersion,
+    // invalidating all previously issued access tokens even if they are still
+    // within their 15m window. Refresh tokens are already revoked at reset time.
+    const payloadTv = Number.isFinite(Number(payload.tv)) ? Number(payload.tv) : 0;
+    const userTv = Number.isFinite(Number(user.tokenVersion)) ? Number(user.tokenVersion) : 0;
+    if (payloadTv !== userTv) throw new Error('Stale token version');
     next();
   } catch (error) {
     return res.status(401).json({ message: 'Unauthorized' });

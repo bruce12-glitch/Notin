@@ -342,16 +342,19 @@ const db = {
   user: {
     async findUnique({ where: { email } }) {
       if (!email) return null;
-      const { rows } = await query('SELECT id, username, email, password, google_sub as "googleSub", "createdAt", "updatedAt" FROM "User" WHERE email = $1 LIMIT 1', [email.trim().toLowerCase()]);
+      const { rows } = await query('SELECT id, username, email, password, google_sub as "googleSub", "tokenVersion", "createdAt", "updatedAt" FROM "User" WHERE email = $1 LIMIT 1', [email.trim().toLowerCase()]);
+      if (rows[0]) rows[0].tokenVersion = Number(rows[0].tokenVersion || 0);
       return rows[0] || null;
     },
     async findById(id) {
-      const { rows } = await query('SELECT id, username, email, password, google_sub as "googleSub", "createdAt", "updatedAt" FROM "User" WHERE id = $1 LIMIT 1', [id]);
+      const { rows } = await query('SELECT id, username, email, password, google_sub as "googleSub", "tokenVersion", "createdAt", "updatedAt" FROM "User" WHERE id = $1 LIMIT 1', [id]);
+      if (rows[0]) rows[0].tokenVersion = Number(rows[0].tokenVersion || 0);
       return rows[0] || null;
     },
     async findByGoogleSub(googleSub) {
       if (!googleSub) return null;
-      const { rows } = await query('SELECT id, username, email, password, google_sub as "googleSub", "createdAt", "updatedAt" FROM "User" WHERE google_sub = $1 LIMIT 1', [googleSub]);
+      const { rows } = await query('SELECT id, username, email, password, google_sub as "googleSub", "tokenVersion", "createdAt", "updatedAt" FROM "User" WHERE google_sub = $1 LIMIT 1', [googleSub]);
+      if (rows[0]) rows[0].tokenVersion = Number(rows[0].tokenVersion || 0);
       return rows[0] || null;
     },
     async findFirstByEmail(email) {
@@ -362,17 +365,24 @@ const db = {
       const now = new Date().toISOString();
       const normEmail = String(email).trim().toLowerCase();
       const { rows } = await query(
-        `INSERT INTO "User" (id, email, username, password, google_sub, "createdAt", "updatedAt")
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
-         RETURNING id, username, email, password, google_sub as "googleSub", "createdAt", "updatedAt"`,
-        [id, normEmail, username || null, password || null, googleSub || null, now, now]
+        `INSERT INTO "User" (id, email, username, password, google_sub, "tokenVersion", "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         RETURNING id, username, email, password, google_sub as "googleSub", "tokenVersion", "createdAt", "updatedAt"`,
+        [id, normEmail, username || null, password || null, googleSub || null, 0, now, now]
       );
+      if (rows[0]) rows[0].tokenVersion = Number(rows[0].tokenVersion || 0);
       return rows[0];
     },
     async updatePassword(id, hashed) {
       const now = new Date().toISOString();
-      const { rows } = await query(`UPDATE "User" SET password = $1, "updatedAt" = $2 WHERE id = $3 RETURNING id, username, email, password, google_sub as "googleSub", "createdAt", "updatedAt"`, [hashed, now, id]);
+      const { rows } = await query(`UPDATE "User" SET password = $1, "updatedAt" = $2 WHERE id = $3 RETURNING id, username, email, password, google_sub as "googleSub", "tokenVersion", "createdAt", "updatedAt"`, [hashed, now, id]);
+      if (rows[0]) rows[0].tokenVersion = Number(rows[0].tokenVersion || 0);
       return rows[0];
+    },
+    async incrementTokenVersion(id) {
+      const now = new Date().toISOString();
+      const { rows } = await query(`UPDATE "User" SET "tokenVersion" = COALESCE("tokenVersion",0) + 1, "updatedAt" = $1 WHERE id = $2 RETURNING id, "tokenVersion"`, [now, id]);
+      return rows[0] ? Number(rows[0].tokenVersion) : null;
     },
   },
   // WP-APP-005 — Notebooks (minimal)

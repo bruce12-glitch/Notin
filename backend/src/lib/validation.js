@@ -212,18 +212,69 @@ export const tagSchema = z
 
 // ── auth ─────────────────────────────────────────────────────────────────────
 
+// WP-SEC-006 — password policy: common passwords blocklist + complexity
+const COMMON_PASSWORDS = new Set([
+  'password','123456','123456789','qwerty','abc123','password1','12345678','111111',
+  '123123','1234567','qwerty123','000000','1q2w3e','aa12345678','abc123456','password123',
+  '1234','12345','dragon','iloveyou','monkey','letmein','trustno1','admin','welcome',
+  'login','princess','solo','starwars','1234567890','qwertyuiop','superman','654321',
+  'jesus','password12','master','hello','charlie','aa123456','donald','qwerty12345',
+  'notinsuper','notin123','notin2024','changeme','test123','test1234','test12345'
+]);
+
+function passwordComplexityError(value) {
+  if (COMMON_PASSWORDS.has(String(value).toLowerCase())) return 'This password is too common — choose a less predictable one';
+  const categories = [
+    /[a-z]/.test(value),
+    /[A-Z]/.test(value),
+    /[0-9]/.test(value),
+    /[^A-Za-z0-9]/.test(value),
+  ].filter(Boolean).length;
+  if (categories < 3) return 'Password must include at least 3 of: lowercase, uppercase, number, special character';
+  if (/(.)\1\1/.test(value)) return 'Password must not contain 3 repeating characters in a row';
+  // sequential check for 4+ ascending/descending (e.g., abcd, 1234)
+  const lower = value.toLowerCase();
+  for (let i = 0; i < lower.length - 3; i++) {
+    const a = lower.charCodeAt(i), b = lower.charCodeAt(i+1), c = lower.charCodeAt(i+2), d = lower.charCodeAt(i+3);
+    if (b === a+1 && c === b+1 && d === c+1) return 'Password must not contain sequential characters like abcd or 1234';
+    if (b === a-1 && c === b-1 && d === c-1) return 'Password must not contain sequential characters like dcba or 4321';
+  }
+  return null;
+}
+
+const basePasswordSchema = z
+  .string({ invalid_type_error: 'Password must be 8–72 bytes' })
+  .min(8, 'Password must be at least 8 characters')
+  .refine((value) => Buffer.byteLength(value, 'utf8') <= 72, 'Password must be 72 bytes or fewer')
+  .refine((value) => !COMMON_PASSWORDS.has(String(value).toLowerCase()), 'This password is too common — choose a less predictable one')
+  .refine((value) => {
+    const categories = [/[a-z]/.test(value), /[A-Z]/.test(value), /[0-9]/.test(value), /[^A-Za-z0-9]/.test(value)].filter(Boolean).length;
+    return categories >= 3;
+  }, 'Password must include at least 3 of: lowercase, uppercase, number, special character');
+
 export const signupSchema = z
   .object({
     username: usernameSchema,
     email: emailSchema,
-    password: z
-      .string({ invalid_type_error: 'Password must be 8–72 bytes' })
-      .min(8, 'Password must be at least 8 characters')
-      // bcrypt truncates after 72 bytes. Rejecting longer input prevents two
-      // visibly different passwords from becoming the same credential.
-      .refine((value) => Buffer.byteLength(value, 'utf8') <= 72, 'Password must be 72 bytes or fewer'),
+    password: basePasswordSchema,
   })
-  .strict();
+  .strict()
+  .superRefine((data, ctx) => {
+    const emailLocal = String(data.email || '').split('@')[0].toLowerCase();
+    const pwdLower = String(data.password || '').toLowerCase();
+    if (emailLocal && emailLocal.length >= 3 && pwdLower.includes(emailLocal)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['password'], message: 'Password must not contain your email address' });
+    }
+    const uname = String(data.username || '').toLowerCase();
+    if (uname && uname.length >= 3 && pwdLower.includes(uname)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['password'], message: 'Password must not contain your username' });
+    }
+    const complexity = passwordComplexityError(data.password);
+    if (complexity && !complexity.includes('at least 3 of')) {
+      // The 3-of-4 check already reported via refine; only report extra checks here
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['password'], message: complexity });
+    }
+  });
 
 // Signin keeps its legacy coercion and 404/401/429 contract in the controller;
 // the schema only guards shape/type so a non-object body cannot slip through.
@@ -260,10 +311,7 @@ export const forgotPasswordSchema = z
 export const resetPasswordSchema = z
   .object({
     token: z.string({ invalid_type_error: 'Reset token required' }).min(1, 'Reset token required'),
-    password: z
-      .string({ invalid_type_error: 'Password must be 8–72 bytes' })
-      .min(8, 'Password must be at least 8 characters')
-      .refine((value) => Buffer.byteLength(value, 'utf8') <= 72, 'Password must be 72 bytes or fewer'),
+    password: basePasswordSchema,
   })
   .strict();
 
