@@ -19,7 +19,7 @@ import authRoutes from './routes/authRoutes.js';
 import attachmentRoutes from './routes/attachmentRoutes.js';
 import publicShareRoutes from './routes/publicShareRoutes.js';
 import { signup, signin } from './controllers/userController.js';
-import { uploadDir } from './controllers/attachmentController.js';
+import storage from './lib/storage.js';
 import { canonicalOrigin, isOriginAllowed } from './lib/httpSecurity.js';
 import { logError } from './lib/logging.js';
 import requestId from './middleware/requestId.js';
@@ -148,14 +148,7 @@ function healthPayload(database, extra = {}) {
 }
 
 async function probeUploadsWritable() {
-  const probePath = path.join(uploadDir, `.healthwrite-${process.pid}`);
-  try {
-    await fs.promises.writeFile(probePath, 'ok');
-    await fs.promises.unlink(probePath).catch(() => {});
-    return true;
-  } catch {
-    return false;
-  }
+  return storage.probeWritable();
 }
 
 // Production is not embeddable and gets a restrictive baseline CSP. Preview
