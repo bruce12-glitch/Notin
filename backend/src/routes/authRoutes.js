@@ -35,6 +35,12 @@ const resetStrict = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+const sessionLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Apply rate limit to all /api/auth/* (and legacy /auth/* if mounted)
 router.use(strict);
@@ -72,9 +78,9 @@ router.post('/reset-password', resetStrict, resetPassword);
 router.post('/refresh', csrfGuard, refresh);
 router.post('/logout', csrfGuard, logout);
 // WP-SEC-005 — device inventory (Bearer-protected, not cookie-only)
-router.get('/sessions', auth, listSessions);
-router.post('/sessions/revoke-others', auth, revokeOtherSessions);
-router.delete('/sessions/:familyId', auth, revokeSession);
+router.get('/sessions', auth, sessionLimit, listSessions);
+router.post('/sessions/revoke-others', auth, sessionLimit, revokeOtherSessions);
+router.delete('/sessions/:familyId', auth, sessionLimit, revokeSession);
 router.get('/health', health);
 
 export default router;
