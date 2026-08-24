@@ -2529,11 +2529,15 @@ async function loadUsage(){
     const notes = data.notes || {};
     const attach = data.attachments || {};
     const mb = (bytes)=> (bytes/1024/1024).toFixed(1);
+    const notesPct = Math.min(100, ((notes.count||0)/(notes.quota||5000))*100);
+    const storagePct = Math.min(100, ((attach.storageBytes||0)/(attach.storageQuota||262144000))*100);
+    const bar = (pct, color) => `<div style="height:6px; background:#eee; border-radius:3px; overflow:hidden; margin:4px 0 8px;"><div style="height:100%; width:${pct}%; background:${color}; transition:width 0.3s;"></div></div>`;
     usageStats.innerHTML = `
-      <div>Notes: ${notes.count||0} / ${notes.quota||5000}</div>
-      <div>Notebooks: ${data.notebooks?.count||0} · Tags: ${data.tags?.count||0}</div>
-      <div>Images: ${attach.count||0} · Storage: ${mb(attach.storageBytes||0)} MB / ${mb(attach.storageQuota||262144000)} MB</div>
-      <div>Sessions: ${data.sessions?.count||0}</div>
+      <div style="font-weight:600;">Notes: ${notes.count||0} / ${notes.quota||5000}</div>
+      ${bar(notesPct, notesPct>90?'#E53E3E':notesPct>70?'#DD6B20':'#00A82D')}
+      <div>Notebooks: ${data.notebooks?.count||0} · Tags: ${data.tags?.count||0} · Sessions: ${data.sessions?.count||0}</div>
+      <div style="margin-top:8px; font-weight:600;">Images: ${attach.count||0} · Storage: ${mb(attach.storageBytes||0)} MB / ${mb(attach.storageQuota||262144000)} MB</div>
+      ${bar(storagePct, storagePct>90?'#E53E3E':storagePct>70?'#DD6B20':'#00A82D')}
     `;
   }catch(e){
     usageStats.textContent = e.message || 'Could not load usage';
