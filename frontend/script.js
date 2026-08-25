@@ -81,11 +81,11 @@ if (navToggle && mobilePanel) {
       { label: 'Word counter', href: '#ai-tools' },
     ]},
     { label: 'Plans', children: [
-      { label: 'Free — ₹0', href: '#pricing' },
-      { label: 'Pro — ₹199/mo', href: '#pricing' },
-      { label: 'Team — ₹399/user/mo', href: '#pricing' },
+      { label: 'Free beta — ₹0', href: '#pricing' },
+      { label: 'AI tools — try free', href: '#pricing' },
+      { label: 'Teams roadmap', href: '#pricing' },
     ]},
-    { label: 'Enterprise', href: '#' },
+    { label: 'Enterprise', href: 'mailto:hello@notin.app?subject=Enterprise%20demo' },
     { label: 'About', href: 'context.html' },
   ];
 

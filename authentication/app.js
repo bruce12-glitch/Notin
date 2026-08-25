@@ -35,7 +35,7 @@ const finePointerQuery = window.matchMedia('(pointer: fine)');
 let listAnimateNext = false;
 let listAnimationTimer = null;
 // WP-UI-HOME-001 — tiny hash router for authenticated app views.
-let currentView = 'home'; // home | notes | shortcuts | notebooks | tags | trash | account
+let currentView = 'home'; // home | notes | shortcuts | notebooks | tags | trash | tasks | templates | account
 let routeReady = false;
 let soonToastTimer = null;
 // WP-APP-010 — offline read state. Tokens remain memory-only; only the non-secret user id
@@ -222,6 +222,21 @@ const organizeCreateError = document.getElementById('organizeCreateError');
 const organizeListTitle = document.getElementById('organizeListTitle');
 const organizeCount = document.getElementById('organizeCount');
 const organizeGrid = document.getElementById('organizeGrid');
+const navTasks = document.getElementById('navTasks');
+const navTemplates = document.getElementById('navTemplates');
+const tasksView = document.getElementById('tasksView');
+const tasksList = document.getElementById('tasksList');
+const tasksCount = document.getElementById('tasksCount');
+const tasksNewNote = document.getElementById('tasksNewNote');
+const countTasksEl = document.getElementById('countTasks');
+const templatesView = document.getElementById('templatesView');
+const templatesGrid = document.getElementById('templatesGrid');
+const templatesBlankNote = document.getElementById('templatesBlankNote');
+const noteMoreBtn = document.getElementById('noteMoreBtn');
+const noteMoreMenu = document.getElementById('noteMoreMenu');
+const shortcutsHelpModal = document.getElementById('shortcutsHelpModal');
+const shortcutsHelpBackdrop = document.getElementById('shortcutsHelpBackdrop');
+const shortcutsHelpClose = document.getElementById('shortcutsHelpClose');
 
 function getEmail(){
   const qs = new URLSearchParams(location.search);
@@ -290,6 +305,27 @@ function docFromNote(note){
 function createEmptyDoc(){ return { type:'doc', content:[{type:'paragraph'}] }; }
 // WP-APP-007 — pushpin glyph (list rows + editor action share it)
 const PIN_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H16v-2c-1.66 0-3-1.34-3-3z"/></svg>';
+function tPara(text){ return { type:'paragraph', content: text ? [{type:'text', text}] : [] }; }
+function tHeading(level, text){ return { type:'heading', attrs:{level}, content:[{type:'text', text}] }; }
+function tTask(text, checked=false){ return { type:'taskItem', attrs:{checked}, content:[tPara(text)] }; }
+function tBullet(text){ return { type:'listItem', content:[tPara(text)] }; }
+function tDoc(...content){ return { type:'doc', content }; }
+function templatePlain(doc){ return extractPlain(doc); }
+const NOTE_TEMPLATES = [
+  { id:'meeting', icon:'🗓', name:'Meeting notes', blurb:'Agenda, decisions, and follow-ups.', title:'Meeting notes',
+    doc: tDoc(tHeading(2,'Attendees'), tPara(''), tHeading(2,'Agenda'), {type:'bulletList', content:[tBullet('Topic 1'), tBullet('Topic 2')]}, tHeading(2,'Notes'), tPara(''), tHeading(2,'Decisions'), tPara(''), tHeading(2,'Action items'), {type:'taskList', content:[tTask('Owner — follow up'), tTask('Send recap')]}) },
+  { id:'journal', icon:'✎', name:'Daily journal', blurb:'A short prompt to capture the day.', title:'Daily journal',
+    doc: tDoc(tHeading(2,'Today I am grateful for'), tPara(''), tHeading(2,'What happened'), tPara(''), tHeading(2,'What I learned'), tPara(''), tHeading(2,'Tomorrow'), {type:'taskList', content:[tTask('One important next step')]}) },
+  { id:'todo', icon:'☑', name:'To-do list', blurb:'A focused checklist you can reopen from Tasks.', title:'To-do list',
+    doc: tDoc(tPara('Keep this list short. Move finished work out of the way.'), {type:'taskList', content:[tTask('Most important task'), tTask('Second priority'), tTask('Nice to have')]}) },
+  { id:'project', icon:'▣', name:'Project brief', blurb:'Goal, scope, and next steps.', title:'Project brief',
+    doc: tDoc(tHeading(2,'Goal'), tPara('What does done look like?'), tHeading(2,'Scope'), {type:'bulletList', content:[tBullet('In scope'), tBullet('Out of scope')]}, tHeading(2,'Milestones'), {type:'taskList', content:[tTask('Kickoff'), tTask('First draft'), tTask('Ship')]}, tHeading(2,'Risks'), tPara('')) },
+  { id:'weekly', icon:'⟳', name:'Weekly review', blurb:'Look back, then plan the next week.', title:'Weekly review',
+    doc: tDoc(tHeading(2,'Wins'), tPara(''), tHeading(2,'Misses'), tPara(''), tHeading(2,'Lessons'), tPara(''), tHeading(2,'Next week'), {type:'taskList', content:[tTask('Priority 1'), tTask('Priority 2'), tTask('Priority 3')]}) },
+  { id:'braindump', icon:'✦', name:'Brain dump', blurb:'Empty the noise, then sort later.', title:'Brain dump',
+    doc: tDoc(tPara('Write everything that is on your mind. Organize after the page is full.'), tPara('')) },
+];
+
 // WP-APP-007 — pin-aware sort. Pinned notes always precede unpinned ones;
 // within each group the active sort control decides (updated/created/title).
 function compareNotes(a,b){
@@ -716,7 +752,7 @@ if(aiTagChips) aiTagChips.addEventListener('click', async (event)=>{
 if(aiTagDismiss) aiTagDismiss.addEventListener('click', ()=>{ hideAiTags(); hideAiAssist(); });
 
 // ── WP-UI-HOME-001 — authenticated view router + Home dashboard ──
-const APP_ROUTES = new Set(['home','notes','shortcuts','notebooks','tags','trash','account']);
+const APP_ROUTES = new Set(['home','notes','shortcuts','notebooks','tags','trash','tasks','templates','account']);
 function routeFromHash(){
   const value = location.hash.replace(/^#\/?/, '').split('/')[0].toLowerCase();
   return APP_ROUTES.has(value) ? value : 'home';
@@ -744,25 +780,33 @@ function setViewChrome(view){
   const showHome = currentView==='home' || currentView==='account';
   const showShortcuts = currentView==='shortcuts';
   const showOrganize = currentView==='notebooks' || currentView==='tags';
+  const showTasks = currentView==='tasks';
+  const showTemplates = currentView==='templates';
   if(homeView) homeView.hidden = !showHome;
   if(shortcutsView) shortcutsView.hidden = !showShortcuts;
   if(organizeView) organizeView.hidden = !showOrganize;
-  if(editorWorkspace) editorWorkspace.hidden = showHome || showShortcuts || showOrganize;
+  if(tasksView) tasksView.hidden = !showTasks;
+  if(templatesView) templatesView.hidden = !showTemplates;
+  if(editorWorkspace) editorWorkspace.hidden = showHome || showShortcuts || showOrganize || showTasks || showTemplates;
   if(layout){
     layout.classList.toggle('is-home', showHome);
     layout.classList.toggle('is-shortcuts', showShortcuts);
     layout.classList.toggle('is-organize', showOrganize);
-    if(showHome || showShortcuts || showOrganize){ layout.classList.remove('is-list','is-editor'); }
+    layout.classList.toggle('is-tasks', showTasks);
+    layout.classList.toggle('is-templates', showTemplates);
+    if(showHome || showShortcuts || showOrganize || showTasks || showTemplates){ layout.classList.remove('is-list','is-editor'); }
     else if(!layout.classList.contains('is-editor')) layout.classList.add('is-list');
   }
-  [navHome,navAll,navShortcuts,navNotebooks,navTags,navTrash].forEach(el=>{
+  [navHome,navAll,navShortcuts,navNotebooks,navTags,navTrash,navTasks,navTemplates].forEach(el=>{
     if(!el) return;
     const active = (el===navHome && currentView==='home')
       || (el===navAll && currentView==='notes')
       || (el===navShortcuts && currentView==='shortcuts')
       || (el===navNotebooks && currentView==='notebooks')
       || (el===navTags && currentView==='tags')
-      || (el===navTrash && currentView==='trash');
+      || (el===navTrash && currentView==='trash')
+      || (el===navTasks && currentView==='tasks')
+      || (el===navTemplates && currentView==='templates');
     el.classList.toggle('is-active', active);
     el.setAttribute('aria-current', active ? 'page' : 'false');
   });
@@ -785,8 +829,18 @@ function renderHome(){
   if(!recent.length){
     const empty = document.createElement('div');
     empty.className = 'home-empty-copy';
-    empty.innerHTML = '<strong>Your Home is ready for its first idea.</strong><span>Create a note and it will appear here automatically.</span><button type="button" class="home-empty-cta">Create a note</button>';
+    empty.innerHTML = '<strong>Your Home is ready for its first idea.</strong><span>Create a note and it will appear here automatically.</span><button type="button" class="home-empty-cta">Create a note</button><div class="home-template-row"></div>';
     empty.querySelector('button').addEventListener('click', createNote);
+    const row = empty.querySelector('.home-template-row');
+    NOTE_TEMPLATES.slice(0,4).forEach(tpl=>{
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'home-template-chip';
+      chip.disabled = offlineReadOnly;
+      chip.textContent = tpl.name;
+      chip.addEventListener('click', ()=> createNoteFromTemplate(tpl.id));
+      row.appendChild(chip);
+    });
     homeNoteGrid.appendChild(empty);
     return;
   }
@@ -862,6 +916,253 @@ function renderOrganizeView(){
     organizeGrid.appendChild(card);
   });
 }
+function extractTasksFromNote(note){
+  const tasks = [];
+  let json = null;
+  try{
+    json = typeof note.contentJson === 'string' ? JSON.parse(note.contentJson) : note.contentJson;
+  }catch{ json = null; }
+  if(!json) return tasks;
+  function walk(node){
+    if(!node) return;
+    if(node.type==='taskItem'){
+      tasks.push({
+        text: extractPlain(node) || 'Untitled task',
+        checked: !!(node.attrs && node.attrs.checked),
+        noteId: note.id,
+        noteTitle: note.title || 'Untitled',
+        index: tasks.length,
+      });
+    }
+    if(Array.isArray(node.content)) node.content.forEach(walk);
+  }
+  walk(json);
+  return tasks;
+}
+function allActiveTasks(){
+  const source = notes.length ? notes : (Array.isArray(offlineSnapshot?.notes) ? offlineSnapshot.notes : []);
+  return source.filter(note=>!note.isTrashed).flatMap(extractTasksFromNote);
+}
+function renderTasks(){
+  if(!tasksList) return;
+  const items = allActiveTasks();
+  const openCount = items.filter(item=>!item.checked).length;
+  if(tasksCount) tasksCount.textContent = `${items.length} ${items.length===1?'task':'tasks'}`;
+  if(countTasksEl) countTasksEl.textContent = String(openCount);
+  tasksList.innerHTML = '';
+  if(!items.length){
+    const empty = document.createElement('div');
+    empty.className = 'tasks-empty';
+    empty.innerHTML = '<strong>No checklists yet</strong><span>Add a to-do list template, or use the ☑ toolbar button in a note.</span>';
+    tasksList.appendChild(empty);
+    return;
+  }
+  items.forEach(item=>{
+    const row = document.createElement('div');
+    row.className = 'task-row' + (item.checked ? ' is-done' : '');
+    const check = document.createElement('button');
+    check.type = 'button';
+    check.className = 'task-check-btn';
+    check.disabled = offlineReadOnly;
+    check.setAttribute('aria-pressed', item.checked ? 'true' : 'false');
+    check.setAttribute('aria-label', item.checked ? 'Mark incomplete' : 'Mark complete');
+    check.textContent = item.checked ? '✓' : '';
+    check.addEventListener('click', ()=> toggleTaskChecked(item));
+    const copy = document.createElement('div');
+    copy.className = 'task-row-copy';
+    const text = document.createElement('span');
+    text.className = 'task-row-text';
+    text.textContent = item.text;
+    const noteBtn = document.createElement('button');
+    noteBtn.type = 'button';
+    noteBtn.className = 'task-row-note';
+    noteBtn.textContent = item.noteTitle;
+    noteBtn.addEventListener('click', ()=> openNoteFromHome(item.noteId));
+    copy.append(text, noteBtn);
+    row.append(check, copy);
+    tasksList.appendChild(row);
+  });
+}
+function cloneJson(value){
+  return JSON.parse(JSON.stringify(value));
+}
+async function toggleTaskChecked(item){
+  if(offlineReadOnly) return;
+  const note = notes.find(n=>n.id===item.noteId);
+  if(!note || note.isTrashed) return;
+  let json;
+  try{
+    json = cloneJson(typeof note.contentJson === 'string' ? JSON.parse(note.contentJson) : (note.contentJson || docFromNote(note)));
+  }catch{ return; }
+  const found = [];
+  function walk(node){
+    if(!node) return;
+    if(node.type==='taskItem') found.push(node);
+    if(Array.isArray(node.content)) node.content.forEach(walk);
+  }
+  walk(json);
+  const target = found[item.index];
+  if(!target) return;
+  target.attrs = {...(target.attrs||{}), checked: !item.checked};
+  setError('');
+  try{
+    const res = await fetchWithAuth(API_BASE + `/api/notes/${note.id}`, {
+      method:'PUT',
+      body: JSON.stringify({ contentJson: json, contentText: extractPlain(json), description: extractPlain(json) }),
+    });
+    const updated = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(updated.message || 'Could not update task');
+    const idx = notes.findIndex(n=>n.id===note.id);
+    if(idx>=0) notes[idx] = updated;
+    renderTasks();
+    if(selectedId===note.id && editor){
+      editor.commands.setContent(docFromNote(updated), false);
+    }
+  }catch(error){ setError(error.message || 'Could not update task'); }
+}
+function renderTemplates(){
+  if(!templatesGrid) return;
+  templatesGrid.innerHTML = '';
+  NOTE_TEMPLATES.forEach(tpl=>{
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'template-card tilt-3d';
+    card.disabled = offlineReadOnly;
+    card.innerHTML = `<span class="template-card-icon" aria-hidden="true">${tpl.icon}</span><strong>${escapeHtml(tpl.name)}</strong><span>${escapeHtml(tpl.blurb)}</span>`;
+    card.addEventListener('click', ()=> createNoteFromTemplate(tpl.id));
+    templatesGrid.appendChild(card);
+  });
+}
+async function createNoteFromTemplate(templateId){
+  const tpl = NOTE_TEMPLATES.find(item=>item.id===templateId);
+  if(!tpl) return createNote();
+  if(offlineReadOnly){ setSaveStatus('Offline · read only','is-error'); return; }
+  setViewChrome('notes');
+  setRouteHash('notes', true);
+  if(currentQuery) clearSearchNow(false);
+  if(currentFilter==='trash'){
+    currentFilter = 'active';
+    updateNav();
+    selectedId = null;
+    await loadNotes();
+  }
+  setError('');
+  try{
+    const res = await fetchWithAuth(API_BASE + '/api/notes', {
+      method:'POST',
+      body: JSON.stringify({
+        title: tpl.title,
+        description: templatePlain(tpl.doc),
+        contentJson: tpl.doc,
+        contentText: templatePlain(tpl.doc),
+        ...(currentNotebookId ? { notebookId: currentNotebookId } : {}),
+      }),
+    });
+    const created = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(created.message || 'Could not create note');
+    notes.unshift(created);
+    selectedId = created.id;
+    renderList();
+    selectNote(created.id);
+    setSaveStatus('Saved', 'is-saved');
+    updateCounts();
+    renderTasks();
+  }catch(error){ setError(error.message || 'Could not create note from template'); }
+}
+function jsonToMarkdown(node){
+  if(!node) return '';
+  if(node.type==='text'){
+    let t = node.text || '';
+    (node.marks||[]).forEach(mark=>{
+      if(mark.type==='bold') t = `**${t}**`;
+      else if(mark.type==='italic') t = `*${t}*`;
+      else if(mark.type==='code') t = `\`${t}\``;
+      else if(mark.type==='underline') t = `<u>${t}</u>`;
+    });
+    return t;
+  }
+  const kids = Array.isArray(node.content) ? node.content : [];
+  const inner = kids.map(jsonToMarkdown).join('');
+  switch(node.type){
+    case 'doc': return kids.map(jsonToMarkdown).join('\n\n').trim() + '\n';
+    case 'paragraph': return inner;
+    case 'heading': return `${'#'.repeat(node.attrs?.level || 1)} ${inner}`;
+    case 'blockquote': return inner.split('\n').map(line=>`> ${line}`).join('\n');
+    case 'codeBlock': return '```\n' + inner + '\n```';
+    case 'horizontalRule': return '---';
+    case 'bulletList': return kids.map(child=>`- ${jsonToMarkdown(child).trim()}`).join('\n');
+    case 'orderedList': return kids.map((child,i)=>`${i+1}. ${jsonToMarkdown(child).trim()}`).join('\n');
+    case 'taskList': return kids.map(jsonToMarkdown).join('\n');
+    case 'taskItem': return `- [${node.attrs?.checked ? 'x' : ' '}] ${inner.trim()}`;
+    case 'listItem': return inner.trim();
+    default: return inner;
+  }
+}
+function hideNoteMoreMenu(){ if(noteMoreMenu) noteMoreMenu.hidden = true; }
+async function duplicateSelectedNote(){
+  const cur = notes.find(n=>n.id===selectedId);
+  if(offlineReadOnly || !cur || cur.isTrashed) return;
+  hideNoteMoreMenu();
+  setError('');
+  try{
+    const res = await fetchWithAuth(API_BASE + '/api/notes', {
+      method:'POST',
+      body: JSON.stringify({
+        title: `${cur.title || 'Untitled'} (copy)`,
+        description: cur.description || plainFromNote(cur),
+        contentJson: docFromNote(cur),
+        contentText: plainFromNote(cur),
+        ...(cur.notebookId ? { notebookId: cur.notebookId } : {}),
+      }),
+    });
+    const created = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(created.message || 'Could not duplicate note');
+    notes.unshift(created);
+    renderList();
+    selectNote(created.id);
+    setSaveStatus('Duplicated', 'is-saved');
+    updateCounts();
+  }catch(error){ setError(error.message || 'Could not duplicate note'); }
+}
+function exportSelectedMarkdown(){
+  const cur = notes.find(n=>n.id===selectedId);
+  if(!cur) return;
+  hideNoteMoreMenu();
+  const title = cur.title || 'Untitled';
+  const md = `# ${title}\n\n${jsonToMarkdown(docFromNote(cur))}`;
+  const blob = new Blob([md], {type:'text/markdown;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const safe = title.replace(/[^\w\s-]+/g,'').trim().replace(/\s+/g,'-').slice(0,60) || 'note';
+  link.href = url;
+  link.download = `${safe}.md`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(()=> URL.revokeObjectURL(url), 1000);
+  showToast('Markdown downloaded.');
+}
+function printSelectedNote(){
+  const cur = notes.find(n=>n.id===selectedId);
+  if(!cur || !editor) return;
+  hideNoteMoreMenu();
+  const title = cur.title || 'Untitled';
+  const html = editor.getHTML();
+  const frame = document.createElement('iframe');
+  frame.setAttribute('aria-hidden','true');
+  frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+  document.body.appendChild(frame);
+  const doc = frame.contentDocument;
+  doc.open();
+  doc.write(`<!doctype html><html><head><title>${escapeHtml(title)}</title><style>body{font:16px/1.6 Inter,system-ui,sans-serif;padding:32px;color:#111}h1{font-size:28px}</style></head><body><h1>${escapeHtml(title)}</h1>${html}</body></html>`);
+  doc.close();
+  frame.contentWindow.focus();
+  frame.contentWindow.print();
+  setTimeout(()=> frame.remove(), 1000);
+}
+function openShortcutsHelp(){ if(shortcutsHelpModal) shortcutsHelpModal.hidden = false; }
+function closeShortcutsHelp(){ if(shortcutsHelpModal) shortcutsHelpModal.hidden = true; }
+
 async function openOrganizeFilter(type,id){
   listAnimateNext = true; // WP-UI-NOTES-3D-001 — notebook/tag card filter
   currentFilter='active';
@@ -909,9 +1210,9 @@ async function applyRoute(view=routeFromHash(), {focusSearch=false}={}){
     return;
   }
   if(accountModal && !accountModal.hidden) closeAccountModal();
-  if(view==='home' || view==='notes' || view==='shortcuts'){
+  if(view==='home' || view==='notes' || view==='shortcuts' || view==='tasks' || view==='templates'){
     currentFilter='active'; currentNotebookId=null; currentTagId=null;
-    if(view==='home' || view==='shortcuts') clearSearchNow(false);
+    if(view==='home' || view==='shortcuts' || view==='tasks' || view==='templates') clearSearchNow(false);
   }else if(view==='trash'){
     currentFilter='trash'; currentNotebookId=null; currentTagId=null; clearSearchNow(false);
   }else{
@@ -924,6 +1225,8 @@ async function applyRoute(view=routeFromHash(), {focusSearch=false}={}){
   if(view==='home') renderHome();
   if(view==='shortcuts') renderShortcuts();
   if(view==='notebooks' || view==='tags') renderOrganizeView();
+  if(view==='tasks') renderTasks();
+  if(view==='templates') renderTemplates();
   if(focusSearch) setTimeout(()=>searchInput?.focus(), 0);
 }
 function goToView(view, options={}){
@@ -961,12 +1264,16 @@ function updateNav(){
   if(navNotebooks) navNotebooks.classList.toggle('is-active', currentView==='notebooks');
   if(navTags) navTags.classList.toggle('is-active', currentView==='tags');
   if(navTrash) navTrash.classList.toggle('is-active', currentView==='trash');
+  if(navTasks) navTasks.classList.toggle('is-active', currentView==='tasks');
+  if(navTemplates) navTemplates.classList.toggle('is-active', currentView==='templates');
   if(navHome) navHome.setAttribute('aria-current', currentView==='home'?'page':'false');
   if(navAll) navAll.setAttribute('aria-current', currentView==='notes'?'page':'false');
   if(navShortcuts) navShortcuts.setAttribute('aria-current', currentView==='shortcuts'?'page':'false');
   if(navNotebooks) navNotebooks.setAttribute('aria-current', currentView==='notebooks'?'page':'false');
   if(navTags) navTags.setAttribute('aria-current', currentView==='tags'?'page':'false');
   if(navTrash) navTrash.setAttribute('aria-current', currentView==='trash'?'page':'false');
+  if(navTasks) navTasks.setAttribute('aria-current', currentView==='tasks'?'page':'false');
+  if(navTemplates) navTemplates.setAttribute('aria-current', currentView==='templates'?'page':'false');
   // WP-APP-005/006 — list title reflects the selected notebook/tag (Trash keeps its title)
   const nb = currentNotebookId ? notebooks.find(x=>x.id===currentNotebookId) : null;
   const tg = currentTagId ? tags.find(x=>x.id===currentTagId) : null;
@@ -996,6 +1303,7 @@ async function updateCounts(){
     }
     if(countAllEl) countAllEl.textContent = String(aCount);
     if(countTrashEl) countTrashEl.textContent = String(tCount);
+    if(countTasksEl) countTasksEl.textContent = String(allActiveTasks().filter(item=>!item.checked).length);
     if(countEl) countEl.textContent = `${currentFilter==='trash'? tCount: aCount} ${ (currentFilter==='trash'? tCount: aCount)===1?'note':'notes'}`;
   } catch{
     // fallback: use current notes length
@@ -1045,6 +1353,10 @@ function initEditor(){
         case 'bulletList': editor.chain().focus().toggleBulletList().run(); break;
         case 'orderedList': editor.chain().focus().toggleOrderedList().run(); break;
         case 'taskList': editor.chain().focus().toggleTaskList().run(); break;
+        case 'blockquote': editor.chain().focus().toggleBlockquote().run(); break;
+        case 'code': editor.chain().focus().toggleCode().run(); break;
+        case 'codeBlock': editor.chain().focus().toggleCodeBlock().run(); break;
+        case 'hr': editor.chain().focus().setHorizontalRule().run(); break;
         case 'clear': editor.chain().focus().clearNodes().unsetAllMarks().run(); break;
       }
       updateToolbar();
@@ -1067,6 +1379,9 @@ function updateToolbar(){
         case 'bulletList': active = editor.isActive('bulletList'); break;
         case 'orderedList': active = editor.isActive('orderedList'); break;
         case 'taskList': active = editor.isActive('taskList'); break;
+        case 'blockquote': active = editor.isActive('blockquote'); break;
+        case 'code': active = editor.isActive('code'); break;
+        case 'codeBlock': active = editor.isActive('codeBlock'); break;
       }
     }catch{}
     btn.classList.toggle('is-active', active);
@@ -1103,6 +1418,7 @@ async function loadNotes({append=false}={}){
     notesTotal = Number(meta.total || notes.length);
     sortNotes(notes); // WP-APP-007 — pin-aware
     renderList();
+    if(currentView==='tasks') renderTasks();
     if(loadMoreNotesBtn){
       loadMoreNotesBtn.hidden = notesPage >= notesTotalPages || notes.length===0;
       loadMoreNotesBtn.disabled = false;
@@ -1257,6 +1573,11 @@ function updateEditorForSelection(note){
   tagChips?.querySelectorAll('button').forEach(button=>{ button.disabled = readOnly; });
   // WP-APP-009 — sharing is disabled in Trash and offline.
   if(shareBtn) shareBtn.hidden = !hasSelection || isTrashed || readOnly;
+  if(noteMoreBtn){
+    noteMoreBtn.hidden = !hasSelection;
+    noteMoreBtn.disabled = !hasSelection;
+  }
+  hideNoteMoreMenu();
   if(summarizeBtn) summarizeBtn.hidden = !hasSelection || isTrashed || readOnly;
   if(askNoteBtn) askNoteBtn.hidden = !hasSelection || isTrashed || readOnly; // WP-AI-003
   if(assistBtn) assistBtn.hidden = !hasSelection || isTrashed || readOnly; // WP-AI-004
@@ -2052,6 +2373,26 @@ if(navShortcuts) navShortcuts.addEventListener('click', ()=> goToView('shortcuts
 if(navNotebooks) navNotebooks.addEventListener('click', ()=> goToView('notebooks'));
 if(navTags) navTags.addEventListener('click', ()=> goToView('tags'));
 if(navTrash) navTrash.addEventListener('click', ()=> goToView('trash'));
+if(navTasks) navTasks.addEventListener('click', ()=> goToView('tasks'));
+if(navTemplates) navTemplates.addEventListener('click', ()=> goToView('templates'));
+if(tasksNewNote) tasksNewNote.addEventListener('click', ()=> createNoteFromTemplate('todo'));
+if(templatesBlankNote) templatesBlankNote.addEventListener('click', createNote);
+if(noteMoreBtn) noteMoreBtn.addEventListener('click', (event)=>{
+  event.stopPropagation();
+  if(!noteMoreMenu) return;
+  noteMoreMenu.hidden = !noteMoreMenu.hidden;
+});
+if(noteMoreMenu) noteMoreMenu.addEventListener('click', (event)=>{
+  const action = event.target.closest('button[data-action]')?.dataset.action;
+  if(action==='duplicate') duplicateSelectedNote();
+  else if(action==='export') exportSelectedMarkdown();
+  else if(action==='print') printSelectedNote();
+});
+document.addEventListener('click', (event)=>{
+  if(noteMoreMenu && !noteMoreMenu.hidden && !event.target.closest('#noteMoreBtn, #noteMoreMenu')) hideNoteMoreMenu();
+});
+if(shortcutsHelpClose) shortcutsHelpClose.addEventListener('click', closeShortcutsHelp);
+if(shortcutsHelpBackdrop) shortcutsHelpBackdrop.addEventListener('click', closeShortcutsHelp);
 if(globalSearchForm) globalSearchForm.addEventListener('submit', (event)=>{
   event.preventDefault();
   const query=(globalSearchInput?.value||'').trim();
@@ -2102,6 +2443,16 @@ document.addEventListener('keydown', (event)=>{
   if((event.ctrlKey || event.metaKey) && event.key.toLowerCase()==='k'){
     event.preventDefault(); globalSearchInput?.focus();
   }
+  if((event.ctrlKey || event.metaKey) && event.key.toLowerCase()==='n'){
+    event.preventDefault();
+    createNote();
+  }
+  const typing = event.target && (event.target.tagName==='INPUT' || event.target.tagName==='TEXTAREA' || event.target.isContentEditable);
+  if(!event.ctrlKey && !event.metaKey && !event.altKey && event.key==='?' && !typing){
+    event.preventDefault();
+    openShortcutsHelp();
+  }
+  if(event.key==='Escape') closeShortcutsHelp();
 });
 // ── WP-APP-005 — notebooks (minimal organize: sidebar list + filter + editor picker) ──
 async function loadNotebooks(){
@@ -2751,6 +3102,8 @@ registerServiceWorker();
       if(currentView==='home') renderHome();
       if(currentView==='shortcuts') renderShortcuts();
       if(currentView==='notebooks' || currentView==='tags') renderOrganizeView();
+      if(currentView==='tasks') renderTasks();
+      if(currentView==='templates') renderTemplates();
       if(!currentUserId || !offlineSnapshot) setError('No saved notes are available for this offline session. Reconnect to sign in.');
       routeReady = true;
       return;

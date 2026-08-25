@@ -44,9 +44,11 @@
         <button class="app-nav-item is-active" id="navHome" data-route="home"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M3.5 9.5L10 4l6.5 5.5V16a1 1 0 01-1 1h-3.8v-4.4H8.3V17H4.5a1 1 0 01-1-1V9.5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span><span class="nav-label">Home</span></button>
         <button class="app-nav-item" id="navShortcuts" data-route="shortcuts"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M10 3l2.1 4.3 4.7.7-3.4 3.3.8 4.7L10 13.9l-4.2 2.1.8-4.7L3.2 8l4.7-.7L10 3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span><span class="nav-label">Shortcuts</span></button>
         <button class="app-nav-item" data-filter="active" id="navAllNotes" data-route="notes"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M5 3h8l3 3v11H5V3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M13 3v3h3M8 9h5M8 12h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="nav-label">Notes</span><span class="nav-count" id="countAll">0</span></button>
+        <button class="app-nav-item" id="navTasks" data-route="tasks"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M4 10.2l2.4 2.4L10.8 8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><rect x="3" y="3.5" width="14" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M12.2 8.2h3.3M12.2 11.8h3.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="nav-label">Tasks</span><span class="nav-count" id="countTasks">0</span></button>
         <button class="app-nav-item" data-filter="trash" id="navTrash" data-route="trash"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M4 6h12M8 6V4h4v2M6.5 6l.6 10h5.8l.6-10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="nav-label">Trash</span><span class="nav-count" id="countTrash">0</span></button>
         <button class="app-nav-item" id="navNotebooks" data-route="notebooks"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M4 4.5A1.5 1.5 0 015.5 3H16v12.5a1.5 1.5 0 01-1.5 1.5H5.5A1.5 1.5 0 014 15.5v-11z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M4 15.5A1.5 1.5 0 005.5 17H16M8 6.5h5M8 9.5h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="nav-label">Notebooks</span></button>
         <button class="app-nav-item" id="navTags" data-route="tags"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M3 4.5A1.5 1.5 0 014.5 3h5a1.5 1.5 0 011.1.4l6 6a1.5 1.5 0 010 2.1l-5 5a1.5 1.5 0 01-2.1 0l-6-6A1.5 1.5 0 013 9.5v-5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="7" cy="7" r="1.1" fill="currentColor"/></svg></span><span class="nav-label">Tags</span></button>
+        <button class="app-nav-item" id="navTemplates" data-route="templates"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><rect x="3.5" y="3.5" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M7 8h6M7 11h6M7 14h3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="nav-label">Templates</span></button>
       </nav>
       <div class="app-organize-panel" id="notebookSection" hidden>
         <div class="app-nb-head"><span class="app-nb-title">Your notebooks</span><button type="button" class="app-nb-add" id="newNotebookBtn" title="New notebook" aria-label="New notebook">+</button></div>
@@ -127,6 +129,21 @@
         <div class="organize-summary"><h2 id="organizeListTitle">Your notebooks</h2><span id="organizeCount">0 notebooks</span></div>
         <div class="organize-grid" id="organizeGrid" aria-live="polite"></div>
       </section>
+      <section class="tasks-view" id="tasksView" aria-labelledby="tasksTitle" hidden>
+        <header class="shortcuts-header">
+          <div><p class="home-eyebrow">Stay on track</p><h1 id="tasksTitle">Tasks</h1><p>Checklists from your notes, in one place.</p></div>
+          <button class="home-new-top" id="tasksNewNote" type="button">+ New to-do note</button>
+        </header>
+        <div class="shortcuts-summary"><h2>Open tasks</h2><span id="tasksCount">0 tasks</span></div>
+        <div class="tasks-list" id="tasksList" aria-live="polite"></div>
+      </section>
+      <section class="templates-view" id="templatesView" aria-labelledby="templatesTitle" hidden>
+        <header class="shortcuts-header">
+          <div><p class="home-eyebrow">Start faster</p><h1 id="templatesTitle">Templates</h1><p>Ready-made structures that become real notes you can edit.</p></div>
+          <button class="home-new-top" id="templatesBlankNote" type="button">+ Blank note</button>
+        </header>
+        <div class="templates-grid" id="templatesGrid" aria-live="polite"></div>
+      </section>
       <div class="editor-workspace" id="editorWorkspace" hidden>
     <!-- Note list ~320px -->
     <section class="app-list" aria-label="Note list">
@@ -201,6 +218,7 @@
           <!-- WP-AI-004 — writing assistant suggestions; Apply is always explicit -->
           <button type="button" class="app-ai-btn" id="assistBtn" hidden>✍ Assist</button>
           <button type="button" class="app-share-btn" id="shareBtn" hidden>Share</button>
+          <button type="button" class="app-share-btn" id="noteMoreBtn" hidden title="More note actions" aria-label="More note actions" aria-haspopup="true">⋯</button>
           <span class="app-save-status" id="saveStatus"></span>
           <button class="app-save" id="saveBtn" disabled>Save</button>
           <button class="app-btn-trash" id="trashBtn" hidden title="Move to Trash">Trash</button>
@@ -212,6 +230,11 @@
           <button type="button" data-action="rephrase">Rephrase selection</button>
           <button type="button" data-action="shorten">Shorten selection</button>
           <button type="button" data-action="expand">Expand selection</button>
+        </div>
+        <div class="app-note-more-menu" id="noteMoreMenu" hidden>
+          <button type="button" data-action="duplicate">Duplicate</button>
+          <button type="button" data-action="export">Export Markdown</button>
+          <button type="button" data-action="print">Print</button>
         </div>
       </div>
       <!-- WP-UI-NOTES-001 — empty state shown when no note is open -->
@@ -306,6 +329,11 @@
         <button type="button" class="tb-btn" data-cmd="bulletList" title="Bullet list">• List</button>
         <button type="button" class="tb-btn" data-cmd="orderedList" title="Ordered list">1. List</button>
         <button type="button" class="tb-btn" data-cmd="taskList" title="Checklist">☑</button>
+        <span class="tb-sep"></span>
+        <button type="button" class="tb-btn" data-cmd="blockquote" title="Quote">“ ”</button>
+        <button type="button" class="tb-btn" data-cmd="code" title="Inline code">&lt;/&gt;</button>
+        <button type="button" class="tb-btn" data-cmd="codeBlock" title="Code block">{ }</button>
+        <button type="button" class="tb-btn" data-cmd="hr" title="Divider">―</button>
         <span class="tb-sep"></span>
         <button type="button" class="tb-btn" data-cmd="clear" title="Clear formatting">Clear</button>
       </div>

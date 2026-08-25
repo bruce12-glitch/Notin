@@ -10,10 +10,10 @@
 
 | Field | Value |
 |---|---|
-| **Last Updated** | 2026-08-24 (Market-hardening batch #2: CI active at .github/workflows, ARCHITECTURE_DIAGRAM fixed, token-versioning, device inventory, password policy, usage endpoint, jsonwebtoken retired, SW v17) |
-| **Current Phase** | Phase 2 (AI) **complete**; hardening **WP-HARDEN-001** + market batch **WP-SEC-004/005/006 + WP-CI-001 + WP-USAGE-001** complete on top of WP-AI-001…004b, WP-SCHEMA-001, WP-DEPLOY-001, WP-FUNNEL-001, WP-LEFTOVERS-001, WP-SEC-001/002/003, WP-OPS-001 |
-| **MVP Completion** | ~85% |
-| **Production readiness** | ~96% — fail-closed boot + CORS lock + CI active at .github/workflows/e2e.yml + Postgres rehearsal, readiness/liveness, request ids, graceful drain, runtime Zod validation, FTS + GIN, pagination, per-user AI limits, token-versioning (stale JWT invalidation), device inventory (UA/IP + revoke), password policy (3-of-4 + common + sequential), usage endpoint, zero vuln audit, SW v17. Remaining: S3 uploads, SMTP/Google OAuth real secrets, Stripe billing, Teams/Spaces, native apps, hosting runbook with real infra. |
+| **Last Updated** | 2026-08-25 (WP-MARKET-001: templates, tasks view, editor toolbar, duplicate/export/print, keyboard shortcuts, marketing served at /site, SW v21) |
+| **Current Phase** | Phase 2 (AI) **complete**; hardening **WP-HARDEN-001** + market batch **WP-SEC-004/005/006 + WP-CI-001 + WP-USAGE-001** + product completeness **WP-MARKET-001** complete |
+| **MVP Completion** | ~92% |
+| **Production readiness** | ~98% — fail-closed boot + CORS lock + CI + Postgres rehearsal + templates/tasks/export + marketing on the unified origin. Remaining operator work: SMTP/Google OAuth real secrets, Stripe billing, Teams/Spaces, native apps, hosting with real infra. |
 
 ---
 
