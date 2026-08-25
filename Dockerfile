@@ -19,6 +19,7 @@ RUN addgroup -S notin && adduser -S -G notin notin
 COPY --from=backend-deps /workspace/backend/node_modules ./backend/node_modules
 COPY backend ./backend
 COPY authentication ./authentication
+COPY frontend ./frontend
 COPY --from=auth-build /workspace/authentication/app.bundle.js ./authentication/app.bundle.js
 RUN mkdir -p /app/backend/uploads && chown -R notin:notin /app
 USER notin

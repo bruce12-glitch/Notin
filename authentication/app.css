@@ -748,6 +748,58 @@ body.sidebar-collapsed .app-btn-logout::before{content:"⏻";font-size:15px}
 .app-ai-assist-bubble button:hover,.app-ai-assist-bubble button:focus-visible{outline:0;background:#2a3324;color:var(--env-green)}
 .app-ai-assist-bubble button:disabled{opacity:.5;cursor:wait}
 
+/* WP-MARKET-001 — templates, tasks, note overflow, shortcuts help */
+.home-new-top{height:38px;padding:0 16px;border:1px solid var(--env-green);border-radius:999px;background:var(--env-green);color:#15200e;font:700 13px "Inter",sans-serif;cursor:pointer;white-space:nowrap}
+.home-new-top:hover{background:#a0ef4a}
+.home-template-row{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:14px}
+.home-template-chip{height:30px;padding:0 12px;border:1px solid #3a4a2e;border-radius:999px;background:#222a18;color:var(--env-green);font:600 11.5px "Inter",sans-serif;cursor:pointer}
+.home-template-chip:hover{border-color:var(--env-green);background:#2b3821}
+.home-template-chip:disabled{opacity:.45;cursor:not-allowed}
+
+.tasks-view,.templates-view{height:100%;overflow:auto;padding:30px 34px 44px;border-radius:18px;border:1px solid var(--env-panel-border);background:radial-gradient(circle at 84% 0%,rgba(143,227,51,.04),transparent 30%),var(--env-panel);box-shadow:var(--depth-3),inset 0 1px 0 rgba(255,255,255,.045);scrollbar-width:thin;scrollbar-color:#333 transparent;animation:viewIn .28s var(--ease-out-soft)}
+.tasks-list{display:flex;flex-direction:column;gap:8px;max-width:1100px;margin:0 auto}
+.task-row{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border:1px solid #333;border-radius:12px;background:#222;color:var(--env-text);text-align:left}
+.task-row.is-done{opacity:.62}
+.task-row.is-done .task-row-text{text-decoration:line-through;color:#8a8a8a}
+.task-check-btn{width:20px;height:20px;flex:none;margin-top:2px;border:1.5px solid #5a7046;border-radius:6px;background:transparent;color:var(--env-green);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.task-check-btn[aria-pressed="true"]{background:var(--env-green);color:#15200e;border-color:var(--env-green)}
+.task-row-copy{flex:1;min-width:0}
+.task-row-text{display:block;font-size:14px;font-weight:600;color:#eee}
+.task-row-note{display:block;margin-top:4px;border:0;background:transparent;color:#8a8a8a;font-size:11.5px;cursor:pointer;padding:0;font-family:inherit;text-align:left}
+.task-row-note:hover{color:var(--env-green)}
+.tasks-empty{padding:50px 24px;border:1px dashed #383838;border-radius:12px;color:#8a8a8a;text-align:center}
+.tasks-empty strong{display:block;color:#bbb;font-size:14px}
+.tasks-empty span{display:block;margin-top:7px;font-size:12px}
+.templates-grid{display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:12px;max-width:1100px;margin:0 auto}
+.template-card{display:flex;min-height:168px;flex-direction:column;gap:10px;padding:18px;border:1px solid #333;border-radius:14px;background:#222;color:var(--env-text);text-align:left;cursor:pointer;font-family:inherit;transition:border-color .14s,background .14s,transform .14s,box-shadow .2s}
+.template-card:hover{transform:translateY(-2px);border-color:#56684a;background:#262b21;box-shadow:var(--depth-2)}
+.template-card-icon{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:10px;background:#30372b;color:var(--env-green);font-size:18px;font-weight:700}
+.template-card strong{display:block;font-size:15px}
+.template-card span{display:block;color:#8a8a8a;font-size:12px;line-height:1.5}
+.template-card:disabled{opacity:.45;cursor:not-allowed;transform:none}
+
+.app-note-more-menu{position:absolute;z-index:20;right:18px;top:calc(100% - 7px);width:190px;padding:6px;border:1px solid #46543b;border-radius:10px;background:#1b2118;box-shadow:0 12px 30px rgba(0,0,0,.34)}
+.app-note-more-menu button{display:block;width:100%;border:0;border-radius:7px;background:transparent;color:#d9e7cf;padding:8px 10px;text-align:left;font:600 12px/1.2 "Inter",sans-serif;cursor:pointer}
+.app-note-more-menu button:hover,.app-note-more-menu button:focus-visible{outline:0;background:#2a3324;color:var(--env-green)}
+.app-shortcuts-list{display:flex;flex-direction:column;gap:10px;margin:8px 0 0}
+.app-shortcuts-list > div{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:8px 0;border-bottom:1px solid #333}
+.app-shortcuts-list dt{font:600 12px "JetBrains Mono",ui-monospace,monospace;color:var(--env-green);background:#1e2616;border:1px solid #33421f;border-radius:7px;padding:4px 8px}
+.app-shortcuts-list dd{margin:0;color:#bbb;font-size:13px}
+
+@media (max-width:900px){
+  .tasks-view,.templates-view{border-radius:0;border:0}
+}
+@media (max-width:560px){
+  .templates-grid{grid-template-columns:1fr}
+  .tasks-view,.templates-view{padding:58px 14px 26px}
+}
+
+@media print{
+  .app-sidebar,.app-mobile-menu,.app-fab,.app-toolbar,.app-editor-actions,.app-list,.app-offline-banner,.app-modal,.app-share-panel,.app-ai-summary,.app-ai-title,.app-ai-tags,.app-ai-chat,.app-ai-assist,.app-tag-row,.app-attachments,.app-mobile-bar{display:none !important}
+  html,body,.app-layout,.app-stage,.editor-workspace,.app-editor,.app-editor-body{overflow:visible !important;height:auto !important;background:#fff !important;color:#111 !important}
+  .tiptap-editor{max-width:none;padding:0;color:#111}
+}
+
 /* Master motion kill-switch: this must remain the final rule in app.css. */
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important;scroll-behavior:auto !important}

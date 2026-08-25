@@ -277,6 +277,30 @@ app.use('/api/notes', noteRoutes);
 app.use('/api/notebooks', notebookRoutes);
 app.use('/api/tags', tagRoutes);
 
+// Marketing site (Green/Neon landing, legal pages) lives beside the app origin
+// at /site so a single process can ship the public funnel + authenticated app.
+const frontendStaticPath = path.join(__dirname, '../../frontend');
+const frontendStatic = express.static(frontendStaticPath, {
+  index: false,
+  etag: true,
+  setHeaders(res, filePath) {
+    if (/\.(?:js|css|png|jpg|jpeg|webp|svg|mp4|webm|woff2?)$/.test(filePath)) {
+      res.setHeader('Cache-Control', isProd ? 'public, max-age=3600' : 'no-cache');
+    }
+  },
+});
+app.use('/site', (req, res, next) => {
+  if (!['GET', 'HEAD'].includes(req.method)) return next();
+  if (/(?:^|\/)(?:package(?:-lock)?\.json|node_modules|dev-server\.mjs|input(?:-neon)?\.css)$/.test(req.path)) {
+    return res.sendStatus(404);
+  }
+  if (req.path === '/' || req.path === '') {
+    res.setHeader('X-Robots-Tag', 'index, follow');
+    return res.sendFile(path.join(frontendStaticPath, 'index.html'));
+  }
+  return frontendStatic(req, res, next);
+});
+
 app.get('/', (req, res) => {
   // If request accepts html and auth index exists, serve it; otherwise JSON
   const accept = req.headers.accept || '';
@@ -339,6 +363,7 @@ const start = async () => {
       console.log(`   Health:     http://0.0.0.0:${PORT}/health (liveness)`);
       console.log(`   Readiness:  http://0.0.0.0:${PORT}/api/health`);
       console.log(`   Auth UI:    http://0.0.0.0:${PORT}/ (index.html) + /login.html`);
+      console.log(`   Marketing:  http://0.0.0.0:${PORT}/site/`);
     });
   } catch (error) {
     console.error('❌ Database connection failed:', error);
