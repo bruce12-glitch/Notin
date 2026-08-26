@@ -491,27 +491,30 @@ if(googleBtn){
   });
 }
 
-// Apple — disabled style + inline message, no fake success
-if(appleBtn){
-  appleBtn.style.opacity = '0.72';
-  appleBtn.title = 'Coming soon';
-  // add inline message container if not exists
-  let appleMsg = document.getElementById('appleMsg');
-  if(!appleMsg){
-    appleMsg = document.createElement('div');
-    appleMsg.id='appleMsg';
-    appleMsg.className='auth-error';
-    appleMsg.setAttribute('aria-live','polite');
-    appleMsg.style.marginTop='10px';
-    // insert after social-row
-    const socialRow = document.querySelector('.social-row');
-    if(socialRow) socialRow.insertAdjacentElement('afterend', appleMsg);
-  }
-  appleBtn.addEventListener('click', ()=>{
-    appleMsg.textContent = 'Continue with Apple — coming soon.';
-    setTimeout(()=>{ if(appleMsg.textContent.includes('Apple')) appleMsg.textContent=''; }, 3200);
-  });
-}
+// WP-FUNNEL-002 — capability discovery: render only sign-in options this
+// deployment actually supports. Replaces the old dead-end "coming soon" stub.
+(async function syncAuthProviders(){
+  try{
+    const r = await fetch(apiUrl('/api/auth/providers'), { headers: { Accept: 'application/json' } });
+    if(!r.ok) return; // keep default UI on any failure
+    const p = await r.json();
+    if(googleBtn && p.google === false){
+      googleBtn.hidden = true;
+      googleBtn.setAttribute('aria-hidden','true');
+    }
+    if(appleBtn && p.apple === false){
+      appleBtn.hidden = true;
+      appleBtn.setAttribute('aria-hidden','true');
+    }
+    // If every social option is hidden, drop the whole row (and its divider)
+    if(googleBtn && appleBtn && googleBtn.hidden && appleBtn.hidden){
+      const row = document.querySelector('.social-row');
+      const divider = document.querySelector('.auth-divider, .divider');
+      if(row) row.hidden = true;
+      if(divider) divider.hidden = true;
+    }
+  }catch{ /* offline or API down — leave default UI untouched */ }
+})();
 
 // WP-SEC-006 — client-side password strength (mirrors backend validation.js)
 function evaluatePasswordStrength(pwd, email=''){
@@ -520,7 +523,6 @@ function evaluatePasswordStrength(pwd, email=''){
   const lower = pwd.toLowerCase();
   const emailLocal = String(email||'').split('@')[0].toLowerCase();
   if(pwd.length < 8) issues.push('at least 8 characters');
-  if(Buffer) {} // placeholder
   const categories = [/[a-z]/.test(pwd), /[A-Z]/.test(pwd), /[0-9]/.test(pwd), /[^A-Za-z0-9]/.test(pwd)].filter(Boolean).length;
   if(categories < 3) issues.push('3 of: lower, upper, number, symbol');
   if(/(.)\1\1/.test(pwd)) issues.push('no 3 repeating chars');
