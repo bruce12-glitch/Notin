@@ -136,6 +136,7 @@ The entire frontend is built with **vanilla JavaScript** (no React/Angular/Vue) 
 
 ### Marketing Site (Green + Neon Editions)
 - **Split hero** — Full-viewport layout with 1920×1200 product video, play-enforcer, and fallback
+- **WebGL 3D hero layer (three.js)** — Extruded floating note cards + additive particle field behind the hero, theme-aware (Green/Neon palettes), mouse-parallax camera, scroll-linked dolly/tilt; renders a static frame under `prefers-reduced-motion`, pauses off-screen/hidden, and silently skips when WebGL is unavailable
 - **CardsShowcase** — 8 exact Evernote feature cards in an infinite autoplay loop with hover circle animations
 - **3D interactions** — Mouse-parallax note cards, glowing AI badge, rotating ring, tilt-on-hover throughout
 - **Mega-menu navigation** — Features/Explore/Plans dropdowns with responsive mobile accordion
@@ -144,15 +145,31 @@ The entire frontend is built with **vanilla JavaScript** (no React/Angular/Vue) 
 - **Evernote-faithful design** — Exact typography scale, spacing rhythm, color palette, and button styles
 
 ### Note-Taking App (Post-Auth)
-- **Rich-text editor** — TipTap with bold, italic, underline, headings, bullet/ordered/checklist lists, code blocks, blockquotes
-- **Organize** — Notebooks (create/rename/delete) + Tags (create/delete, replace-set on notes) + sidebar counts
-- **Search** — Title/body search with notebook and tag filters (PostgreSQL full-text with relevance ranking in production; safe escaped-LIKE substring fallback on the SQLite dev database), plus `?page`/`?limit`/`?includeMeta` pagination
-- **Attachments** — Upload PNG/JPEG/WebP/GIF (≤5 MB, ≤10 per note), owner-only access
+- **Rich-text editor** — TipTap with bold, italic, underline, headings, bullet/ordered/checklist lists, code blocks, blockquotes, links/bookmarks
+- **Instant capture** — Ctrl+Alt+N Quick Add: type a thought, press Enter, cursor lands in the note body ready to expand
+- **Rich media** — images (paste, drag-drop, picker), PDF attachments (15 MB, opens in-app), voice recordings (🎙 in-browser MediaRecorder → auto-transcription), sketch pad (draw → PNG attachment)
+- **Bi-directional linking** — type `[[` to link any note (autocomplete picker); every note shows its Linked mentions (backlinks + outgoing)
+- **Graph view** — force-directed knowledge graph of notes and their `[[ links ]]`; drag nodes, click to open
+- **Ask AI (global Q&A)** — "talk to your notes": keyword retrieval + grounded answer with numbered, clickable sources (Groq when configured, deterministic mock otherwise)
+- **AI writing tools** — Summarize, suggest title/tags, per-note chat, streaming chat, and Assist actions: continue, rephrase, shorten, expand, **fix grammar, create outline**
+- **Audio transcription** — recordings transcribe via Groq Whisper (`whisper-large-v3`) when `GROQ_API_KEY` is set; transcript is appended to the note as plain text
+- **Web clipper** — bookmarklet that sends any page (title + selection + URL) straight into your notes via `app.html#clip?...`
+- **Focus mode** — Ctrl/Cmd+Shift+F (or the ⛶ button) hides the sidebar and list for distraction-free writing; Esc exits
+- **Undo trash** — moving a note to trash shows a 6-second toast with one-click Undo (full restore)
+- **Exports** — per-note download as Markdown, plain text, or styled HTML (plus print)
+- **Tag colors** — every tag name deterministically maps to its own hue across chips, list rows, and the sidebar
+- **Keyboard-first** — Ctrl+N new note, Ctrl+Alt+N quick add, Ctrl+K search, Ctrl+S save, ↑/↓ to move through the note list, `?` for the shortcuts cheat-sheet
+- **Search filters** — full-text search (PostgreSQL FTS with relevance ranking / SQLite LIKE fallback) plus a date filter (today / 7 days / 30 days)
+- **Live save status** — "Saved · just now / Xm ago" keeps the autosave state honest
+- **Organize** — Notebooks (folders) + Tags (multi-tagging) + `[[ links ]]` — hybrid structure that works however your brain does
+- **Attachments** — PNG/JPEG/WebP/GIF (≤5 MB), PDF (≤15 MB), audio (≤25 MB), ≤10 per note, magic-byte validated, owner-only access
 - **Public sharing** — Cryptographically secure share links (32-byte random tokens, SHA-256 at rest), scoped to note
 - **Trash management** — Trash → restore → delete-forever (trash-first guard)
 - **Pin notes** — Pinned-first sorting with hover-revealed pin control
 - **Auto-save** — 900ms debounced persistence + manual save + Ctrl/Cmd+S
 - **Account export/delete** — Full JSON export and complete account cascade deletion
+
+> **Roadmap** (needs external services or native tooling): OCR/PDF text extraction in search, embedding-based semantic search, native desktop/mobile builds, full offline write-sync queue, calendar integration.
 
 ### AI Features
 - **Summarize** — `POST /api/notes/:id/summarize` with Groq integration (mock when key unset)
@@ -308,6 +325,7 @@ PORT=3000 API_TARGET=http://localhost:5000 node dev-server.mjs
 | DELETE | `/api/auth/sessions/:familyId` | Revoke a session by familyId |
 | POST | `/api/auth/cleanup` | Cleanup expired OTP/reset/revoked tokens (Bearer, returns counts) |
 | POST | `/api/auth/password-strength` | Evaluate password strength (public, returns score/label/issues) |
+| GET | `/api/auth/providers` | Public capability discovery — `{ google, apple, otp, password, demoOtp }` so sign-in UIs render only supported options |
 | GET | `/api/auth/health` | Auth health (demo mode status) |
 
 ### Users (`/api/users`)
