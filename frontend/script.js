@@ -130,7 +130,7 @@ if (navToggle && mobilePanel) {
     const cta = document.createElement('a');
     cta.href   = notinAppOrigin() + '/';
     cta.textContent = 'Start for free';
-    cta.className = 'rounded-full bg-gradient-to-r from-brand-500 to-brand-400 px-5 py-2.5 text-center text-[15px] font-semibold text-[#2c2d2a] shadow-[0_8px_20px_rgba(255,125,66,0.35)]';
+    cta.className = 'rounded-full bg-gradient-to-r from-brand-500 to-brand-400 px-5 py-2.5 text-center text-[15px] font-semibold text-[#2c2d2a] shadow-[0_8px_20px_rgba(0,168,45,0.35)]';
     mobilePanel.append(login, cta);
   };
   buildMobile();
