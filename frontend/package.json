@@ -2,7 +2,9 @@
   "name": "notin-landing",
   "version": "1.0.0",
   "main": "script.js",
-  "engines": { "node": ">=22.5.0" },
+  "engines": {
+    "node": ">=22.5.0"
+  },
   "scripts": {
     "check": "node --check script.js && node --check dev-server.mjs",
     "test": "npm run check"
@@ -16,6 +18,7 @@
     "tailwindcss": "^4.3.3"
   },
   "dependencies": {
-    "lottie-web": "^5.13.0"
+    "lottie-web": "^5.13.0",
+    "three": "^0.185.1"
   }
 }
