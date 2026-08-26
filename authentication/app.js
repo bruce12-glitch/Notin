@@ -6,6 +6,7 @@ import Underline from '@tiptap/extension-underline';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import Placeholder from '@tiptap/extension-placeholder';
+import Link from '@tiptap/extension-link';
 
 const API_BASE = (window.NOTIN_API || '').replace(/\/$/, '') || '';
 
@@ -741,7 +742,7 @@ if(aiTagChips) aiTagChips.addEventListener('click', async (event)=>{
         hideAiTags();
         hideAiAssist(); // WP-AI-004
       }
-      setSaveStatus('Saved', 'is-saved');
+      markSaved();
     }
     await loadTags();
   }catch(error){
@@ -752,7 +753,7 @@ if(aiTagChips) aiTagChips.addEventListener('click', async (event)=>{
 if(aiTagDismiss) aiTagDismiss.addEventListener('click', ()=>{ hideAiTags(); hideAiAssist(); });
 
 // ── WP-UI-HOME-001 — authenticated view router + Home dashboard ──
-const APP_ROUTES = new Set(['home','notes','shortcuts','notebooks','tags','trash','tasks','templates','account']);
+const APP_ROUTES = new Set(['home','notes','shortcuts','notebooks','tags','trash','tasks','templates','account','graph','ask']);
 function routeFromHash(){
   const value = location.hash.replace(/^#\/?/, '').split('/')[0].toLowerCase();
   return APP_ROUTES.has(value) ? value : 'home';
@@ -782,22 +783,29 @@ function setViewChrome(view){
   const showOrganize = currentView==='notebooks' || currentView==='tags';
   const showTasks = currentView==='tasks';
   const showTemplates = currentView==='templates';
+  const showGraph = currentView==='graph';
+  const showAsk = currentView==='ask';
   if(homeView) homeView.hidden = !showHome;
   if(shortcutsView) shortcutsView.hidden = !showShortcuts;
   if(organizeView) organizeView.hidden = !showOrganize;
   if(tasksView) tasksView.hidden = !showTasks;
   if(templatesView) templatesView.hidden = !showTemplates;
-  if(editorWorkspace) editorWorkspace.hidden = showHome || showShortcuts || showOrganize || showTasks || showTemplates;
+  const graphView = document.getElementById('graphView');
+  const askView = document.getElementById('askView');
+  if(graphView) graphView.hidden = !showGraph;
+  if(askView) askView.hidden = !showAsk;
+  if(editorWorkspace) editorWorkspace.hidden = showHome || showShortcuts || showOrganize || showTasks || showTemplates || showGraph || showAsk;
+  if(showGraph) renderGraph();
   if(layout){
     layout.classList.toggle('is-home', showHome);
     layout.classList.toggle('is-shortcuts', showShortcuts);
     layout.classList.toggle('is-organize', showOrganize);
     layout.classList.toggle('is-tasks', showTasks);
     layout.classList.toggle('is-templates', showTemplates);
-    if(showHome || showShortcuts || showOrganize || showTasks || showTemplates){ layout.classList.remove('is-list','is-editor'); }
+    if(showHome || showShortcuts || showOrganize || showTasks || showTemplates || showGraph || showAsk){ layout.classList.remove('is-list','is-editor'); }
     else if(!layout.classList.contains('is-editor')) layout.classList.add('is-list');
   }
-  [navHome,navAll,navShortcuts,navNotebooks,navTags,navTrash,navTasks,navTemplates].forEach(el=>{
+  [navHome,navAll,navShortcuts,navNotebooks,navTags,navTrash,navTasks,navTemplates,document.getElementById('navGraph'),document.getElementById('navAsk')].forEach(el=>{
     if(!el) return;
     const active = (el===navHome && currentView==='home')
       || (el===navAll && currentView==='notes')
@@ -806,7 +814,9 @@ function setViewChrome(view){
       || (el===navTags && currentView==='tags')
       || (el===navTrash && currentView==='trash')
       || (el===navTasks && currentView==='tasks')
-      || (el===navTemplates && currentView==='templates');
+      || (el===navTemplates && currentView==='templates')
+      || (el.id==='navGraph' && currentView==='graph')
+      || (el.id==='navAsk' && currentView==='ask');
     el.classList.toggle('is-active', active);
     el.setAttribute('aria-current', active ? 'page' : 'false');
   });
@@ -1064,7 +1074,7 @@ async function createNoteFromTemplate(templateId){
     selectedId = created.id;
     renderList();
     selectNote(created.id);
-    setSaveStatus('Saved', 'is-saved');
+    markSaved();
     updateCounts();
     renderTasks();
   }catch(error){ setError(error.message || 'Could not create note from template'); }
@@ -1124,23 +1134,46 @@ async function duplicateSelectedNote(){
     updateCounts();
   }catch(error){ setError(error.message || 'Could not duplicate note'); }
 }
+// WP-UX-005 — shared download helper (Markdown / Text / HTML exports)
+function downloadBlob(filename, blob){
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(()=> URL.revokeObjectURL(url), 1000);
+}
+function exportFileBaseName(cur){
+  return (cur.title || 'Untitled').replace(/[^\w\s-]+/g,'').trim().replace(/\s+/g,'-').slice(0,60) || 'note';
+}
 function exportSelectedMarkdown(){
   const cur = notes.find(n=>n.id===selectedId);
   if(!cur) return;
   hideNoteMoreMenu();
   const title = cur.title || 'Untitled';
   const md = `# ${title}\n\n${jsonToMarkdown(docFromNote(cur))}`;
-  const blob = new Blob([md], {type:'text/markdown;charset=utf-8'});
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  const safe = title.replace(/[^\w\s-]+/g,'').trim().replace(/\s+/g,'-').slice(0,60) || 'note';
-  link.href = url;
-  link.download = `${safe}.md`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  setTimeout(()=> URL.revokeObjectURL(url), 1000);
+  downloadBlob(`${exportFileBaseName(cur)}.md`, new Blob([md], {type:'text/markdown;charset=utf-8'}));
   showToast('Markdown downloaded.');
+}
+function exportSelectedText(){
+  const cur = notes.find(n=>n.id===selectedId);
+  if(!cur) return;
+  hideNoteMoreMenu();
+  const title = cur.title || 'Untitled';
+  const txt = `${title}\n\n${plainFromNote(cur)}`;
+  downloadBlob(`${exportFileBaseName(cur)}.txt`, new Blob([txt], {type:'text/plain;charset=utf-8'}));
+  showToast('Text file downloaded.');
+}
+function exportSelectedHtml(){
+  const cur = notes.find(n=>n.id===selectedId);
+  if(!cur || !editor) return;
+  hideNoteMoreMenu();
+  const title = cur.title || 'Untitled';
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>body{font:16px/1.6 Inter,system-ui,sans-serif;max-width:760px;margin:40px auto;padding:0 24px;color:#111}h1{font-size:28px}img{max-width:100%}</style></head><body><h1>${escapeHtml(title)}</h1>${editor.getHTML()}</body></html>`;
+  downloadBlob(`${exportFileBaseName(cur)}.html`, new Blob([html], {type:'text/html;charset=utf-8'}));
+  showToast('HTML downloaded.');
 }
 function printSelectedNote(){
   const cur = notes.find(n=>n.id===selectedId);
@@ -1162,6 +1195,28 @@ function printSelectedNote(){
 }
 function openShortcutsHelp(){ if(shortcutsHelpModal) shortcutsHelpModal.hidden = false; }
 function closeShortcutsHelp(){ if(shortcutsHelpModal) shortcutsHelpModal.hidden = true; }
+
+// ── WP-UX-003 — distraction-free focus mode ──────────────────────────────────
+// Hides the sidebar and note list so the editor fills the screen. Ctrl+Shift+F
+// toggles, Esc exits. State is intentionally NOT persisted: focus mode is a
+// per-session posture, and a hidden sidebar on a cold load reads as a bug.
+const focusModeBtn = document.getElementById('focusModeBtn');
+const focusExitBtn = document.getElementById('focusExit');
+function isFocusMode(){ return document.body.classList.contains('focus-mode'); }
+function setFocusMode(on){
+  if(on && (offlineReadOnly || currentView!=='notes')){
+    showToast('Open a note to use focus mode');
+    return;
+  }
+  document.body.classList.toggle('focus-mode', on);
+  if(focusModeBtn) focusModeBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  if(focusExitBtn) focusExitBtn.hidden = !on;
+  if(on && editor) editor.commands.focus();
+}
+function toggleFocusMode(){ setFocusMode(!isFocusMode()); }
+function exitFocusMode(){ if(isFocusMode()) setFocusMode(false); }
+if(focusModeBtn) focusModeBtn.addEventListener('click', toggleFocusMode);
+if(focusExitBtn) focusExitBtn.addEventListener('click', exitFocusMode);
 
 async function openOrganizeFilter(type,id){
   listAnimateNext = true; // WP-UI-NOTES-3D-001 — notebook/tag card filter
@@ -1239,12 +1294,56 @@ function openNoteFromHome(id){
   setRouteHash('notes', true);
   selectNote(id);
 }
-function showToast(message){
+let soonToastAction = null; // WP-UX-001 — optional undo/redo action on the toast
+// WP-UX-006 — "Saved · Xm ago" — the save status stays honest about recency.
+let lastSavedAt = 0;
+function formatSavedAgo(ts){
+  const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+  if(s < 15) return 'just now';
+  if(s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if(m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  return `${h}h ago`;
+}
+function markSaved(){
+  lastSavedAt = Date.now();
+  setSaveStatus('Saved · just now', 'is-saved');
+}
+setInterval(()=>{
+  if(!lastSavedAt || !saveStatus) return;
+  if(saveStatus.textContent.startsWith('Saved ·')) saveStatus.textContent = `Saved · ${formatSavedAgo(lastSavedAt)}`;
+}, 15000);
+function showToast(message, opts){
   if(!soonToast) return;
   soonToast.textContent = message;
+  // Remove any previous action button
+  const prevBtn = soonToast.querySelector('.app-toast-action');
+  if(prevBtn) prevBtn.remove();
+  soonToastAction = null;
+  if(opts && opts.action && typeof opts.onAction === 'function'){
+    soonToastAction = opts.onAction;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'app-toast-action';
+    btn.textContent = opts.action;
+    btn.addEventListener('click', ()=>{
+      clearTimeout(soonToastTimer);
+      soonToast.hidden = true;
+      const fn = soonToastAction;
+      soonToastAction = null;
+      if(fn) fn();
+    });
+    soonToast.appendChild(btn);
+  }
   soonToast.hidden = false;
   clearTimeout(soonToastTimer);
-  soonToastTimer = setTimeout(()=>{ soonToast.hidden=true; }, 2200);
+  soonToastTimer = setTimeout(()=>{
+    soonToast.hidden = true;
+    soonToastAction = null;
+    const btn = soonToast.querySelector('.app-toast-action');
+    if(btn) btn.remove();
+  }, (opts && opts.duration) || 2200);
 }
 function initScratchPad(){
   if(!scratchPad || !currentUserId) return;
@@ -1326,8 +1425,31 @@ function initEditor(){
       TaskList,
       TaskItem.configure({ nested: true }),
       Placeholder.configure({ placeholder: 'Start writing…' }),
+      // WP-MEDIA-003 — bookmarks/links (open safely in a new tab)
+      Link.configure({ openOnClick: false, autolink: true, protocols: ['http', 'https', 'mailto'] }),
     ],
     content: createEmptyDoc(),
+    // WP-UX-002 — paste or drop images straight into the editor: they upload
+    // as attachments on the open note instead of being swallowed silently.
+    editorProps: {
+      handlePaste: (_view, event) => {
+        const files = [...((event.clipboardData && event.clipboardData.files) || [])]
+          .filter((f) => f && f.type && f.type.startsWith('image/'));
+        if(!files.length) return false;
+        event.preventDefault();
+        uploadNoteImages(files);
+        return true;
+      },
+      handleDrop: (_view, event, _slice, moved) => {
+        if(moved) return false; // internal drag — let TipTap handle it
+        const files = [...((event.dataTransfer && event.dataTransfer.files) || [])]
+          .filter((f) => f && f.type && f.type.startsWith('image/'));
+        if(!files.length) return false;
+        event.preventDefault();
+        uploadNoteImages(files);
+        return true;
+      },
+    },
     onUpdate: ({ editor }) => {
       if(!selectedId) return;
       const cur = notes.find(n=>n.id===selectedId);
@@ -1336,8 +1458,27 @@ function initEditor(){
     },
     onCreate: () => { updateToolbar(); },
     onSelectionUpdate: () => { updateToolbar(); syncAssistBubble(); }, // WP-AI-004b — bubble follows selection
-    onBlur: () => { if(aiBubbleMenu) aiBubbleMenu.hidden = true; }, // WP-AI-004b — mousedown-preventDefault keeps blur rare
+    onBlur: () => {
+      if(aiBubbleMenu) aiBubbleMenu.hidden = true; // WP-AI-004b
+      hideWikiPicker(); // WP-LINKS-002
+    },
   });
+  // WP-UX-FIX - deleting all content (Ctrl+A + Backspace) makes Chrome drop
+  // focus to <body> silently (no blur/focusout fires). After a delete key,
+  // if focus fell to body with an empty doc, recapture the caret.
+  document.addEventListener('keyup', (event)=>{
+    if(event.key !== 'Backspace' && event.key !== 'Delete') return;
+    if(!editor || editor.isDestroyed) return;
+    setTimeout(()=>{
+      try{
+        if(document.activeElement !== document.body) return;
+        if(!editor.isFocused && editor.state.doc.textContent === '' && editor.state.doc.childCount <= 1){
+          editor.commands.focus('start');
+        }
+      }catch{ /* editor tearing down */ }
+    }, 0);
+  });
+
   const toolbar = document.getElementById('toolbar');
   if(toolbar){
     toolbar.addEventListener('click', (e)=>{
@@ -1356,6 +1497,18 @@ function initEditor(){
         case 'blockquote': editor.chain().focus().toggleBlockquote().run(); break;
         case 'code': editor.chain().focus().toggleCode().run(); break;
         case 'codeBlock': editor.chain().focus().toggleCodeBlock().run(); break;
+        case 'link': {
+          // WP-MEDIA-003 — bookmark a URL (selection becomes the label)
+          const prev = editor.getAttributes('link').href || '';
+          const url = window.prompt('Link or bookmark URL (https://…)', prev || 'https://');
+          if(url === null) break;
+          if(url === '' || url === 'https://'){ editor.chain().focus().extendMarkRange('link').unsetLink().run(); }
+          else {
+            const safe = /^(https?:\/\/|mailto:)/i.test(url) ? url : `https://${url}`;
+            editor.chain().focus().extendMarkRange('link').setLink({ href: safe, target: '_blank', rel: 'noopener noreferrer' }).run();
+          }
+          break;
+        }
         case 'hr': editor.chain().focus().setHorizontalRule().run(); break;
         case 'clear': editor.chain().focus().clearNodes().unsetAllMarks().run(); break;
       }
@@ -1382,6 +1535,7 @@ function updateToolbar(){
         case 'blockquote': active = editor.isActive('blockquote'); break;
         case 'code': active = editor.isActive('code'); break;
         case 'codeBlock': active = editor.isActive('codeBlock'); break;
+        case 'link': active = editor.isActive('link'); break;
       }
     }catch{}
     btn.classList.toggle('is-active', active);
@@ -1506,7 +1660,7 @@ function renderList(){
       : `<button type="button" class="app-note-pin${pinned?' is-on':''}" title="${pinned?'Unpin note':'Pin note'}" aria-label="${pinned?'Unpin':'Pin'}: ${escapeHtml(n.title || 'Untitled')}" aria-pressed="${pinned?'true':'false'}">${PIN_SVG}</button>`;
     // WP-UI-NOTES-001 — richer row: 2-line snippet, tag chips, date + notebook meta
     const rowTags = (n.tags && n.tags.length)
-      ? `<div class="app-note-tags">${n.tags.slice(0,3).map(t=>`<span class="app-note-tag">${escapeHtml(t.name)}</span>`).join('')}${n.tags.length>3?`<span class="app-note-tag app-note-tag-more">+${n.tags.length-3}</span>`:''}</div>`
+      ? `<div class="app-note-tags">${n.tags.slice(0,3).map(t=>`<span class="app-note-tag" style="--tag-h:${tagHue(t.name)}">${escapeHtml(t.name)}</span>`).join('')}${n.tags.length>3?`<span class="app-note-tag app-note-tag-more">+${n.tags.length-3}</span>`:''}</div>`
       : '';
     btn.innerHTML = `
       ${pinCtl}
@@ -1527,6 +1681,17 @@ function renderList(){
 function escapeHtml(s){
   return String(s).replace(/[&<>"']/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+// WP-UX-007 — ↑/↓ moves between note rows, Enter/Space opens (rows are focusable divs)
+if(listEl) listEl.addEventListener('keydown', (e)=>{
+  if(e.key!=='ArrowDown' && e.key!=='ArrowUp') return;
+  const rows = [...listEl.querySelectorAll('.app-note-item')];
+  if(!rows.length) return;
+  const idx = rows.indexOf(document.activeElement);
+  e.preventDefault();
+  if(idx===-1){ rows[0].focus(); return; }
+  const next = e.key==='ArrowDown' ? Math.min(idx+1, rows.length-1) : Math.max(idx-1, 0);
+  rows[next].focus();
+});
 // WP-UI-NOTES-001 — editor meta strip (edited time + live word count) and
 // the "no note open" empty state. Pure presentation; never touches save flow.
 function updateEditorMeta(note){
@@ -1544,6 +1709,7 @@ function updateEditorMeta(note){
     const words = text ? text.split(/\s+/).length : 0;
     wordsEl.textContent = `${words} ${words===1?'word':'words'}`;
   }
+  updateBacklinks(); // WP-LINKS-001 — linked mentions follow the open note
 }
 function updateEditorForSelection(note){
   const isTrashed = !!(note && note.isTrashed);
@@ -1587,9 +1753,9 @@ function updateEditorForSelection(note){
   }
   // WP-APP-008 — attachments remain visible in Trash; uploads are disabled offline.
   if(attachmentRow) attachmentRow.hidden = !hasSelection;
-  if(attachImageBtn){
-    attachImageBtn.hidden = !hasSelection || isTrashed || readOnly;
-    attachImageBtn.disabled = !hasSelection || isTrashed || readOnly;
+  const mediaHidden = !hasSelection || isTrashed || readOnly;
+  for(const btn of [attachImageBtn, document.getElementById('attachPdfBtn'), document.getElementById('recordAudioBtn'), document.getElementById('sketchBtn')]){
+    if(btn){ btn.hidden = mediaHidden; btn.disabled = mediaHidden; }
   }
   if(!hasSelection) clearAttachmentGallery();
   // WP-APP-007 — editor pin control mirrors the selected note (hidden in Trash/no selection)
@@ -1602,6 +1768,11 @@ function updateEditorForSelection(note){
     pinBtn.title = pinned ? 'Unpin note' : 'Pin note';
     const lbl = pinBtn.querySelector('.app-pin-toggle-label');
     if(lbl) lbl.textContent = pinned ? 'Pinned' : 'Pin';
+  }
+  // WP-UX-003 — focus mode is available whenever a note is open
+  if(focusModeBtn){
+    focusModeBtn.hidden = !hasSelection;
+    focusModeBtn.disabled = !hasSelection;
   }
   // Buttons
   if(trashBtn) trashBtn.hidden = !hasSelection || isTrashed || readOnly;
@@ -1890,10 +2061,10 @@ if(assistBtn) assistBtn.addEventListener('click', ()=>{
 // WP-AI-004/004b — ONE shared action runner. The toolbar dropdown and the
 // floating selection bubble both funnel through runAssist() and end at the
 // SAME review/Apply bar; only explicit Apply mutates the editor.
-const ASSIST_LABELS = { continue:'✍ Continue suggestion', rephrase:'✍ Rephrase suggestion', shorten:'✍ Shorten suggestion', expand:'✍ Expand suggestion' };
+const ASSIST_LABELS = { continue:'✍ Continue suggestion', rephrase:'✍ Rephrase suggestion', shorten:'✍ Shorten suggestion', expand:'✍ Expand suggestion', grammar:'✍ Grammar fix', outline:'✍ Outline suggestion' };
 async function runAssist(action){
   if(assistInFlight || !editor || !selectedId) return;
-  if(!['continue','rephrase','shorten','expand'].includes(action)) return;
+  if(!['continue','rephrase','shorten','expand','grammar','outline'].includes(action)) return;
   const noteId = selectedId;
   const note = notes.find(item=>item.id===noteId);
   if(!note || note.isTrashed || offlineReadOnly) return;
@@ -2047,20 +2218,62 @@ async function loadAttachments(note){
   if(!attachmentGallery || !note) return;
   if(offlineReadOnly){
     clearAttachmentGallery();
-    if(attachmentStatus) attachmentStatus.textContent = 'Images are unavailable offline';
+    if(attachmentStatus) attachmentStatus.textContent = 'Attachments are unavailable offline';
     return;
   }
   const version = ++attachmentLoadVersion;
   attachmentObjectUrls.forEach(url=> URL.revokeObjectURL(url));
   attachmentObjectUrls = [];
   attachmentGallery.innerHTML = '';
-  if(attachmentStatus) attachmentStatus.textContent = 'Loading images…';
+  if(attachmentStatus) attachmentStatus.textContent = 'Loading attachments…';
   try{
     const res = await fetchWithAuth(API_BASE + `/api/notes/${note.id}/attachments`, {method:'GET'});
     const items = await res.json().catch(()=>[]);
-    if(!res.ok) throw new Error(items.message || `Image list failed ${res.status}`);
+    if(!res.ok) throw new Error(items.message || `Attachment list failed ${res.status}`);
     if(version!==attachmentLoadVersion || selectedId!==note.id) return;
     for(const item of items){
+      const mime = String(item.mime || '');
+      const isImage = mime.startsWith('image/');
+      const isPdf = mime === 'application/pdf';
+      const isAudio = mime.startsWith('audio/');
+      // PDFs and audio: metadata card first, bytes fetched lazily on demand —
+      // a 15MB PDF should not download just to show one row in the gallery.
+      if(isPdf || isAudio){
+        const card = document.createElement('div');
+        card.className = 'app-attachment-item app-attachment-file';
+        card.dataset.attachmentId = item.id;
+        const safeName = escapeHtml(item.filename || (isPdf ? 'document.pdf' : 'recording'));
+        const icon = isPdf ? '📄' : '🎙';
+        card.innerHTML = `<span class="app-attachment-fileicon" aria-hidden="true">${icon}</span><span class="app-attachment-name" title="${safeName}">${safeName}</span><button type="button" class="app-attachment-open" title="Open">${isPdf ? 'Open' : 'Play'}</button>${note.isTrashed ? '' : `<button type="button" class="app-attachment-remove" aria-label="Remove ${safeName}" title="Remove">×</button>`}`;
+        card.querySelector('.app-attachment-open').addEventListener('click', async ()=>{
+          const btn = card.querySelector('.app-attachment-open');
+          btn.disabled = true;
+          try{
+            const fileRes = await fetchWithAuth(API_BASE + item.url, {method:'GET'});
+            if(!fileRes.ok) throw new Error('Could not load file');
+            const blob = await fileRes.blob();
+            const objectUrl = URL.createObjectURL(blob);
+            attachmentObjectUrls.push(objectUrl);
+            if(isPdf){ window.open(objectUrl, '_blank', 'noopener'); }
+            else {
+              let player = card.querySelector('audio');
+              if(!player){
+                player = document.createElement('audio');
+                player.controls = true;
+                card.appendChild(player);
+              }
+              player.src = objectUrl;
+              player.play().catch(()=>{});
+              btn.textContent = 'Open';
+            }
+          }catch(e){ showToast(e.message || 'Could not open file'); }
+          finally{ btn.disabled = false; }
+        });
+        const remove = card.querySelector('.app-attachment-remove');
+        if(remove) remove.addEventListener('click', ()=> removeAttachment(item.id, note));
+        attachmentGallery.appendChild(card);
+        continue;
+      }
       const fileRes = await fetchWithAuth(API_BASE + item.url, {method:'GET'});
       if(!fileRes.ok) continue;
       const blob = await fileRes.blob();
@@ -2077,9 +2290,9 @@ async function loadAttachments(note){
       if(remove) remove.addEventListener('click', ()=> removeAttachment(item.id, note));
       attachmentGallery.appendChild(card);
     }
-    if(attachmentStatus) attachmentStatus.textContent = items.length ? `${items.length} ${items.length===1?'image':'images'}` : 'No images';
+    if(attachmentStatus) attachmentStatus.textContent = items.length ? `${items.length} ${items.length===1?'file':'files'}` : 'No attachments';
   }catch(e){
-    if(version===attachmentLoadVersion && attachmentStatus) attachmentStatus.textContent = e.message || 'Could not load images';
+    if(version===attachmentLoadVersion && attachmentStatus) attachmentStatus.textContent = e.message || 'Could not load attachments';
   }
 }
 async function removeAttachment(id, note){
@@ -2092,12 +2305,13 @@ async function removeAttachment(id, note){
   }catch(e){ if(attachmentStatus) attachmentStatus.textContent = e.message || 'Could not remove image'; }
 }
 if(attachImageBtn) attachImageBtn.addEventListener('click', ()=> attachImageInput?.click());
-if(attachImageInput) attachImageInput.addEventListener('change', async ()=>{
+// WP-UX-002 — shared image upload used by the file picker AND paste/drop in the editor
+async function uploadNoteImages(files){
   const cur = notes.find(n=>n.id===selectedId);
-  const files = [...(attachImageInput.files || [])];
-  if(offlineReadOnly || !cur || cur.isTrashed || !files.length) return;
+  const list = [...(files || [])];
+  if(offlineReadOnly || !cur || cur.isTrashed || !list.length) return false;
   const form = new FormData();
-  files.forEach(file=> form.append('images', file));
+  list.forEach(file=> form.append('images', file));
   if(attachmentStatus) attachmentStatus.textContent = 'Uploading…';
   if(attachImageBtn) attachImageBtn.disabled = true;
   try{
@@ -2105,11 +2319,20 @@ if(attachImageInput) attachImageInput.addEventListener('change', async ()=>{
     const j = await res.json().catch(()=>({}));
     if(!res.ok) throw new Error(j.message || `Upload failed ${res.status}`);
     await loadAttachments(cur);
-  }catch(e){ if(attachmentStatus) attachmentStatus.textContent = e.message || 'Image upload failed'; }
-  finally{
-    attachImageInput.value = '';
+    showToast(list.length===1 ? 'Image attached' : `${list.length} images attached`);
+    return true;
+  }catch(e){
+    if(attachmentStatus) attachmentStatus.textContent = e.message || 'Image upload failed';
+    showToast(e.message || 'Image upload failed');
+    return false;
+  }finally{
     if(attachImageBtn) attachImageBtn.disabled = false;
   }
+}
+if(attachImageInput) attachImageInput.addEventListener('change', async ()=>{
+  const files = [...(attachImageInput.files || [])];
+  attachImageInput.value = '';
+  await uploadNoteImages(files);
 });
 
 async function createNote(){
@@ -2149,7 +2372,7 @@ async function createNote(){
     selectedId = created.id;
     renderList();
     selectNote(created.id);
-    setSaveStatus('Saved', 'is-saved');
+    markSaved();
     updateCounts();
   } catch(e){
     setError(e.message || 'Could not create note');
@@ -2194,7 +2417,7 @@ async function saveNote(){
     dirty = editRevision !== revisionAtStart;
     sortNotes(notes); // WP-APP-007 — pin-aware
     renderList();
-    if(selectedId===noteId) setSaveStatus(dirty ? 'Unsaved' : 'Saved', dirty ? '' : 'is-saved');
+    if(selectedId===noteId){ if(dirty){ setSaveStatus('Unsaved',''); } else { markSaved(); } }
     updateCounts();
   } catch(e){
     dirty = true;
@@ -2232,6 +2455,8 @@ async function moveToTrash(){
       throw new Error(j.message || 'Could not move to trash');
     }
     const updated = await res.json().catch(()=>({}));
+    const trashedId = cur.id;
+    const trashedTitle = cur.title || 'Untitled';
     // Remove from current active list
     notes = notes.filter(n=>n.id!==selectedId);
     selectedId = null;
@@ -2245,36 +2470,34 @@ async function moveToTrash(){
     if(notes.length===0){
       updateEditorDisabled(true);
     }
+    // WP-UX-001 — undo snackbar: restore straight from the toast
+    showToast(`"${trashedTitle}" moved to trash`, {
+      action: 'Undo',
+      duration: 6000,
+      onAction: ()=> restoreById(trashedId),
+    });
   } catch(e){
     setError(e.message || 'Move to trash failed');
     setSaveStatus('Error','is-error');
   }
 }
-async function restoreNote(){
-  if(!selectedId) return;
-  const cur = notes.find(n=>n.id===selectedId);
-  if(!cur || !cur.isTrashed) return;
+// WP-UX-001 — restore a note by id regardless of the current selection
+// (shared by the Trash view action and the toast Undo control).
+async function restoreById(id){
+  if(offlineReadOnly || !id) return;
   setError('');
   setSaveStatus('Restoring…','is-saving');
   try{
-    let res = await fetchWithAuth(API_BASE + `/api/notes/${selectedId}/restore`, {method:'POST'});
+    let res = await fetchWithAuth(API_BASE + `/api/notes/${id}/restore`, {method:'POST'});
     if(!res.ok){
-      res = await fetchWithAuth(API_BASE + `/api/notes/${selectedId}`, {method:'PATCH', body: JSON.stringify({ isTrashed: false })});
+      res = await fetchWithAuth(API_BASE + `/api/notes/${id}`, {method:'PATCH', body: JSON.stringify({ isTrashed: false })});
     }
     if(!res.ok){
       const j = await res.json().catch(()=>({}));
       throw new Error(j.message || 'Could not restore');
     }
     const restored = await res.json().catch(()=>({}));
-    // Remove from trash list
-    notes = notes.filter(n=>n.id!==selectedId);
-    selectedId = null;
-    titleInput.value = '';
-    if(editor) editor.commands.setContent(createEmptyDoc(), false);
-    updateEditorForSelection(null);
-    renderList();
-    setSaveStatus('Restored','is-saved');
-    updateCounts();
+    showToast('Note restored');
     // Switch to Notes to show the restored item.
     currentFilter = 'active';
     currentView = 'notes';
@@ -2283,10 +2506,17 @@ async function restoreNote(){
     updateNav();
     await loadNotes();
     if(restored && restored.id) selectNote(restored.id);
-  } catch(e){
+    setSaveStatus('Restored','is-saved');
+  }catch(e){
     setError(e.message || 'Restore failed');
     setSaveStatus('Error','is-error');
   }
+}
+async function restoreNote(){
+  if(!selectedId) return;
+  const cur = notes.find(n=>n.id===selectedId);
+  if(!cur || !cur.isTrashed) return;
+  await restoreById(cur.id);
 }
 function showDeleteModal(){
   if(!deleteModal) return;
@@ -2344,6 +2574,7 @@ function onEdit(){
 }
 function onEditorUpdate(){
   onEdit();
+  updateWikiPicker(); // WP-LINKS-002 — [[ autocomplete follows the caret
 }
 if(titleInput) titleInput.addEventListener('input', onEdit);
 if(saveBtn) saveBtn.addEventListener('click', async ()=>{
@@ -2375,6 +2606,8 @@ if(navTags) navTags.addEventListener('click', ()=> goToView('tags'));
 if(navTrash) navTrash.addEventListener('click', ()=> goToView('trash'));
 if(navTasks) navTasks.addEventListener('click', ()=> goToView('tasks'));
 if(navTemplates) navTemplates.addEventListener('click', ()=> goToView('templates'));
+if(navGraph) navGraph.addEventListener('click', ()=> goToView('graph'));
+if(navAsk) navAsk.addEventListener('click', ()=> goToView('ask'));
 if(tasksNewNote) tasksNewNote.addEventListener('click', ()=> createNoteFromTemplate('todo'));
 if(templatesBlankNote) templatesBlankNote.addEventListener('click', createNote);
 if(noteMoreBtn) noteMoreBtn.addEventListener('click', (event)=>{
@@ -2386,6 +2619,8 @@ if(noteMoreMenu) noteMoreMenu.addEventListener('click', (event)=>{
   const action = event.target.closest('button[data-action]')?.dataset.action;
   if(action==='duplicate') duplicateSelectedNote();
   else if(action==='export') exportSelectedMarkdown();
+  else if(action==='export-text') exportSelectedText();
+  else if(action==='export-html') exportSelectedHtml();
   else if(action==='print') printSelectedNote();
 });
 document.addEventListener('click', (event)=>{
@@ -2453,6 +2688,15 @@ document.addEventListener('keydown', (event)=>{
     openShortcutsHelp();
   }
   if(event.key==='Escape') closeShortcutsHelp();
+  // WP-UX-003 — focus mode: Ctrl/Cmd+Shift+F toggles, Esc exits
+  if((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase()==='f'){
+    event.preventDefault();
+    toggleFocusMode();
+  }
+  if(event.key==='Escape' && isFocusMode()){
+    const modalOpen = !shortcutsHelpModal?.hidden || !deleteModal?.hidden || !accountModal?.hidden;
+    if(!modalOpen){ event.preventDefault(); exitFocusMode(); }
+  }
 });
 // ── WP-APP-005 — notebooks (minimal organize: sidebar list + filter + editor picker) ──
 async function loadNotebooks(){
@@ -2587,7 +2831,7 @@ if(nbSelect) nbSelect.addEventListener('change', async ()=>{
     if(!res.ok) throw new Error(j.message || `Move failed ${res.status}`);
     const idx = notes.findIndex(n=>n.id===selectedId);
     if(idx>=0) notes[idx] = j;
-    setSaveStatus('Saved', 'is-saved');
+    markSaved();
     await loadNotebooks(); // sidebar counts
     await loadNotes();     // note may drop out of the active notebook filter
   }catch(e){ setError(e.message || 'Could not move note'); }
@@ -2610,6 +2854,15 @@ async function loadTags(){
   const cur = notes.find(n=>n.id===selectedId);
   renderTagChips(cur || null); // add-select options may have changed
 }
+// WP-UX-004 — deterministic tag color: same tag name always gets the same hue
+// (FNV-1a → 0..359). Skips the muddy green/brown band by remapping into a
+// brighter arc so chips stay readable on the dark UI.
+function tagHue(name){
+  const s = String(name || '');
+  let h = 2166136261;
+  for(let i=0;i<s.length;i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return ((h >>> 0) % 360);
+}
 function renderTags(){
   if(!tagListEl) return;
   tagListEl.innerHTML = '';
@@ -2624,6 +2877,7 @@ function renderTags(){
     const row = document.createElement('div');
     row.className = 'app-nb-item' + (currentTagId===t.id ? ' is-active' : '');
     row.dataset.id = t.id;
+    row.style.setProperty('--tag-h', String(tagHue(t.name)));
     row.innerHTML = `
       <button type="button" class="app-nb-open" title="Show notes tagged #${escapeHtml(t.name)}">
         <span class="app-tag-hash" aria-hidden="true">#</span>
@@ -2713,7 +2967,7 @@ async function saveNoteTagIds(tagIds){
   if(!res.ok) throw new Error(j.message || `Tag update failed ${res.status}`);
   const idx = notes.findIndex(n=>n.id===selectedId);
   if(idx>=0) notes[idx] = j;
-  setSaveStatus('Saved', 'is-saved');
+  markSaved();
   await loadTags();  // sidebar counts
   await loadNotes(); // note may drop out of the active tag filter
 }
@@ -2727,6 +2981,7 @@ function renderTagChips(note){
   noteTags.forEach(t=>{
     const chip = document.createElement('span');
     chip.className = 'app-chip';
+    chip.style.setProperty('--tag-h', String(tagHue(t.name)));
     chip.innerHTML = `<span class="app-chip-hash" aria-hidden="true">#</span>${escapeHtml(t.name)}<button type="button" class="app-chip-x" title="Remove tag" aria-label="Remove tag ${escapeHtml(t.name)}">×</button>`;
     chip.querySelector('.app-chip-x').addEventListener('click', async ()=>{
       try{
@@ -3128,8 +3383,14 @@ registerServiceWorker();
   initScratchPad();
   renderHome();
   routeReady = true;
+  handleClipParams(); // WP-CLIP-001 — bookmarklet intake (after boot, token ready)
 })();
-window.addEventListener('hashchange', ()=>{ if(routeReady) applyRoute(routeFromHash()); });
+window.addEventListener('hashchange', ()=>{
+  // WP-CLIP-001 — a bookmarklet landing on an already-open app is a
+  // same-document navigation: only hashchange fires, boot never re-runs.
+  if(routeReady && location.hash.startsWith('#clip')){ handleClipParams(); return; }
+  if(routeReady) applyRoute(routeFromHash());
+});
 
 try{
   const has = Object.keys(localStorage).some(k=> /token/i.test(k) && localStorage.getItem(k)?.startsWith('eyJ'));
@@ -3191,3 +3452,529 @@ try{
   window.addEventListener('blur', resetTilt);
   reducedMotionQuery.addEventListener('change', resetTilt);
 })();
+
+// ============================================================================
+// WP-FEATURES � capture, multimedia, bi-directional links, graph, global AI
+// ============================================================================
+
+// -- WP-CAPTURE-001 � Quick Add (Ctrl+Alt+N): thought ? note in one keystroke -
+const quickAddModal = document.getElementById('quickAddModal');
+const quickAddBackdrop = document.getElementById('quickAddBackdrop');
+const quickAddInput = document.getElementById('quickAddInput');
+function openQuickAdd(){
+  if(offlineReadOnly){ setSaveStatus('Offline \u00b7 read only','is-error'); return; }
+  if(!quickAddModal) return;
+  quickAddModal.hidden = false;
+  if(quickAddInput){ quickAddInput.value = ''; quickAddInput.focus(); }
+}
+function closeQuickAdd(){ if(quickAddModal) quickAddModal.hidden = true; }
+async function submitQuickAdd(){
+  const text = String(quickAddInput?.value || '').trim();
+  if(!text) { closeQuickAdd(); return; }
+  const firstLine = text.split('\n')[0].slice(0, 80);
+  const title = firstLine.length > 60 ? firstLine.slice(0, 57) + '\u2026' : firstLine;
+  setError('');
+  try{
+    const res = await fetchWithAuth(API_BASE + '/api/notes', {
+      method:'POST',
+      body: JSON.stringify({ title, contentText: text, description: text }),
+    });
+    const created = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(created.message || 'Could not create note');
+    closeQuickAdd();
+    setViewChrome('notes');
+    setRouteHash('notes', true);
+    notes.unshift(created);
+    renderList();
+    selectNote(created.id);
+    markSaved();
+    updateCounts();
+    // Instant capture: cursor lands in the body, ready to expand the thought
+    if(editor) setTimeout(()=> editor.commands.focus('end'), 60);
+    showToast('Note captured');
+  }catch(e){ setError(e.message || 'Quick add failed'); }
+}
+if(quickAddBackdrop) quickAddBackdrop.addEventListener('click', closeQuickAdd);
+if(quickAddInput) quickAddInput.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter'){ e.preventDefault(); submitQuickAdd(); }
+  if(e.key==='Escape') closeQuickAdd();
+});
+
+// -- WP-MEDIA-001 � PDF picker + audio recorder + sketch pad ------------------
+const attachPdfBtn = document.getElementById('attachPdfBtn');
+const attachPdfInput = document.createElement('input');
+attachPdfInput.type = 'file';
+attachPdfInput.accept = 'application/pdf';
+attachPdfInput.hidden = true;
+document.body.appendChild(attachPdfInput);
+if(attachPdfBtn) attachPdfBtn.addEventListener('click', ()=> attachPdfInput.click());
+if(attachPdfInput) attachPdfInput.addEventListener('change', async ()=>{
+  const files = [...(attachPdfInput.files || [])];
+  attachPdfInput.value = '';
+  await uploadNoteImages(files);
+});
+
+const recordAudioBtn = document.getElementById('recordAudioBtn');
+let mediaRecorder = null;
+let mediaChunks = [];
+let mediaStream = null;
+if(recordAudioBtn) recordAudioBtn.addEventListener('click', async ()=>{
+  if(mediaRecorder && mediaRecorder.state === 'recording'){
+    mediaRecorder.stopAt = Date.now();
+    mediaRecorder.stop(); // second click stops + saves
+    return;
+  }
+  if(!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined'){
+    showToast('Audio recording is not supported in this browser');
+    return;
+  }
+  const cur = notes.find(n=>n.id===selectedId);
+  if(offlineReadOnly || !cur || cur.isTrashed) return;
+  try{
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  }catch{ showToast('Microphone permission denied'); return; }
+  mediaChunks = [];
+  const mimeCandidates = ['audio/webm;codecs=opus','audio/webm','audio/mp4'];
+  const mimeType = mimeCandidates.find((m)=> MediaRecorder.isTypeSupported(m)) || '';
+  mediaRecorder = mimeType ? new MediaRecorder(mediaStream, { mimeType }) : new MediaRecorder(mediaStream);
+  mediaRecorder.ondataavailable = (e)=>{ if(e.data && e.data.size) mediaChunks.push(e.data); };
+  mediaRecorder.onstop = async ()=>{
+    mediaStream?.getTracks().forEach((t)=> t.stop());
+    const blob = new Blob(mediaChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+    const durationSec = Math.max(1, Math.round(((mediaRecorder.stopAt || Date.now()) - mediaRecorder.startAt) / 1000));
+    mediaRecorder = null;
+    if(blob.size < 100){ showToast('Recording was too short'); return; }
+    const ext = (mediaRecorder.mimeType || 'audio/webm').includes('mp4') ? 'm4a' : 'webm';
+    const file = new File([blob], `recording-${Date.now()}.${ext}`, { type: blob.type });
+    if(recordAudioBtn){ recordAudioBtn.textContent = '\ud83c\udf99 Record'; recordAudioBtn.classList.remove('is-recording'); }
+    if(attachmentStatus) attachmentStatus.textContent = 'Transcribing\u2026';
+    const form = new FormData();
+    form.append('audio', file);
+    form.append('durationSec', String(durationSec));
+    try{
+      const res = await fetchWithAuth(API_BASE + `/api/notes/${selectedId}/transcribe`, { method:'POST', body: form });
+      const j = await res.json().catch(()=>({}));
+      if(!res.ok) throw new Error(j.message || 'Transcription failed');
+      await loadAttachments(notes.find(n=>n.id===selectedId) || cur);
+      // Pull the server-appended transcript into the open editor
+      const fresh = await fetchWithAuth(API_BASE + '/api/notes', { method:'GET' });
+      if(fresh.ok){
+        const data = await fresh.json().catch(()=>[]);
+        const items = Array.isArray(data) ? data : (data.items || []);
+        const updated = items.find((n)=> n.id===selectedId);
+        if(updated){
+          const idx = notes.findIndex((n)=> n.id===selectedId);
+          if(idx>=0) notes[idx] = updated;
+          if(editor) editor.commands.setContent(docFromNote(updated), false);
+        }
+      }
+      showToast(j.provider === 'groq' ? 'Transcribed with Whisper' : 'Recording saved (mock transcript \u2014 set GROQ_API_KEY for real transcription)');
+    }catch(e){
+      showToast(e.message || 'Transcription failed');
+      if(attachmentStatus) attachmentStatus.textContent = '';
+      if(recordAudioBtn){ recordAudioBtn.textContent = '\ud83c\udf99 Record'; recordAudioBtn.classList.remove('is-recording'); }
+    }
+  };
+  mediaRecorder.startAt = Date.now();
+  mediaRecorder.start();
+  mediaRecorder.stopAt = Date.now(); // refreshed just before .stop() below
+  if(recordAudioBtn){ recordAudioBtn.textContent = '\u23f8 Stop'; recordAudioBtn.classList.add('is-recording'); }
+  showToast('Recording\u2026 click again to stop & transcribe');
+});
+
+// Sketch pad
+const sketchBtn = document.getElementById('sketchBtn');
+const sketchModal = document.getElementById('sketchModal');
+const sketchBackdrop = document.getElementById('sketchBackdrop');
+const sketchCanvas = document.getElementById('sketchCanvas');
+const sketchColor = document.getElementById('sketchColor');
+const sketchSize = document.getElementById('sketchSize');
+const sketchClearBtn = document.getElementById('sketchClear');
+const sketchCloseBtn = document.getElementById('sketchClose');
+const sketchSaveBtn = document.getElementById('sketchSave');
+let sketchDrawing = false;
+function openSketch(){
+  if(offlineReadOnly || !selectedId){ showToast('Open a note to sketch'); return; }
+  if(sketchModal) sketchModal.hidden = false;
+  if(sketchCanvas){
+    const ctx = sketchCanvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, sketchCanvas.width, sketchCanvas.height);
+  }
+}
+function closeSketch(){ if(sketchModal) sketchModal.hidden = true; }
+function sketchPos(e){
+  const r = sketchCanvas.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * (sketchCanvas.width / r.width), y: (e.clientY - r.top) * (sketchCanvas.height / r.height) };
+}
+if(sketchCanvas){
+  sketchCanvas.addEventListener('pointerdown', (e)=>{
+    sketchDrawing = true;
+    const ctx = sketchCanvas.getContext('2d');
+    const p = sketchPos(e);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+  });
+  sketchCanvas.addEventListener('pointermove', (e)=>{
+    if(!sketchDrawing) return;
+    const ctx = sketchCanvas.getContext('2d');
+    const p = sketchPos(e);
+    ctx.strokeStyle = sketchColor?.value || '#222';
+    ctx.lineWidth = Number(sketchSize?.value || 4);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  });
+  ['pointerup','pointerleave'].forEach((ev)=> sketchCanvas.addEventListener(ev, ()=>{ sketchDrawing = false; }));
+}
+if(sketchBtn) sketchBtn.addEventListener('click', openSketch);
+if(sketchBackdrop) sketchBackdrop.addEventListener('click', closeSketch);
+if(sketchCloseBtn) sketchCloseBtn.addEventListener('click', closeSketch);
+if(sketchClearBtn) sketchClearBtn.addEventListener('click', ()=>{
+  if(!sketchCanvas) return;
+  const ctx = sketchCanvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, sketchCanvas.width, sketchCanvas.height);
+});
+if(sketchSaveBtn) sketchSaveBtn.addEventListener('click', ()=>{
+  if(!sketchCanvas) return;
+  sketchCanvas.toBlob(async (blob)=>{
+    if(!blob) return;
+    closeSketch();
+    const file = new File([blob], `sketch-${Date.now()}.png`, { type: 'image/png' });
+    await uploadNoteImages([file]);
+  }, 'image/png');
+});
+
+// -- WP-LINKS-001 � [[ note links: picker, insert, backlinks panel ------------
+const wikiPicker = document.getElementById('wikiPicker');
+const wikiPickerList = document.getElementById('wikiPickerList');
+let wikiRange = null; // { from, to } of the active [[query
+let wikiItems = [];
+let wikiActive = -1;
+function hideWikiPicker(){ if(wikiPicker) wikiPicker.hidden = true; wikiRange = null; wikiItems = []; wikiActive = -1; }
+function renderWikiPicker(){
+  if(!wikiPickerList) return;
+  wikiPickerList.innerHTML = '';
+  wikiItems.forEach((n, i)=>{
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.setAttribute('role', 'option');
+    item.className = 'app-wikilink-item' + (i===wikiActive ? ' is-active' : '');
+    item.innerHTML = `<strong>${escapeHtml(n.title || 'Untitled')}</strong><span>${escapeHtml(formatDate(n.updatedAt || n.createdAt))}</span>`;
+    item.addEventListener('mousedown', (e)=>{ e.preventDefault(); insertWikiLink(n); });
+    wikiPickerList.appendChild(item);
+  });
+  if(wikiPicker){
+    wikiPicker.hidden = wikiItems.length === 0;
+    // park the picker at the caret
+    try{
+      if(editor && wikiRange){
+        const coords = editor.view.coordsAtPos(wikiRange.from);
+        const host = editor.view.dom.closest('.app-editor') || document.body;
+        const hostRect = host.getBoundingClientRect();
+        wikiPicker.style.left = `${Math.max(8, coords.left - hostRect.left)}px`;
+        wikiPicker.style.top = `${Math.min(hostRect.height - 180, coords.bottom - hostRect.top + 6)}px`;
+      }
+    }catch{ /* keep default position */ }
+  }
+}
+function insertWikiLink(n){
+  if(!editor || !wikiRange) return;
+  const label = `[[${n.title || 'Untitled'}]]`;
+  editor.chain().focus()
+    .insertContentAt({ from: wikiRange.from, to: wikiRange.to }, label)
+    .run();
+  hideWikiPicker();
+}
+// Wired into the editor's onUpdate path (patched into onEditorUpdate below).
+function updateWikiPicker(){
+  if(!editor || !wikiPicker){ return; }
+  const state = editor.state.selection ? editor.state : null;
+  if(!state) { hideWikiPicker(); return; }
+  const from = state.selection.from;
+  const textBefore = state.doc.textBetween(Math.max(0, from - 80), from, '\n', '\u0000');
+  const open = textBefore.lastIndexOf('[[');
+  if(open === -1){ hideWikiPicker(); return; }
+  const query = textBefore.slice(open + 2);
+  if(/[\]\n]/.test(query)){ hideWikiPicker(); return; } // closed or multiline � not a link
+  wikiRange = { from: from - query.length - 2, to: from }; // include the opening [[
+  const lower = query.toLowerCase();
+  wikiItems = notes
+    .filter((n)=> !n.isTrashed && n.id !== selectedId)
+    .filter((n)=> (n.title || 'untitled').toLowerCase().includes(lower))
+    .slice(0, 6);
+  wikiActive = wikiItems.length ? 0 : -1;
+  renderWikiPicker();
+}
+// (hooked into onEditorUpdate below)
+// Keyboard control while the [[ picker is open (capture — beats editor Enter)
+document.addEventListener('keydown', (e)=>{
+  if(!wikiPicker || wikiPicker.hidden || !wikiItems.length) return;
+  if(e.key==='ArrowDown'){ e.preventDefault(); wikiActive = (wikiActive + 1) % wikiItems.length; renderWikiPicker(); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); wikiActive = (wikiActive - 1 + wikiItems.length) % wikiItems.length; renderWikiPicker(); }
+  else if(e.key==='Enter'){ e.preventDefault(); if(wikiActive >= 0) insertWikiLink(wikiItems[wikiActive]); }
+  else if(e.key==='Escape'){ e.preventDefault(); hideWikiPicker(); }
+}, true);
+
+// Backlinks panel � linked mentions of the open note
+const backlinksPanel = document.getElementById('backlinksPanel');
+const backlinksList = document.getElementById('backlinksList');
+const backlinksCount = document.getElementById('backlinksCount');
+function updateBacklinks(){
+  if(!backlinksPanel) return;
+  const cur = notes.find((n)=> n.id===selectedId);
+  const title = (cur?.title || '').trim();
+  if(!cur || !title || cur.isTrashed){ backlinksPanel.hidden = true; return; }
+  const needle = `[[${title.toLowerCase()}]]`;
+  const outgoingNeedles = [...String(plainFromNote(cur)).matchAll(/\[\[([^\]]+)\]\]/g)].map((m)=> m[1].toLowerCase());
+  const incoming = notes.filter((n)=> n.id!==cur.id && !n.isTrashed && String(plainFromNote(n)).toLowerCase().includes(needle));
+  const outgoing = notes.filter((n)=> n.id!==cur.id && !n.isTrashed && outgoingNeedles.includes((n.title || '').toLowerCase()));
+  const rows = [
+    ...incoming.map((n)=> ({ n, kind: 'mentioned by' })),
+    ...outgoing.map((n)=> ({ n, kind: 'links to' })),
+  ];
+  backlinksPanel.hidden = rows.length === 0;
+  if(backlinksCount) backlinksCount.textContent = rows.length ? String(rows.length) : '';
+  if(!backlinksList) return;
+  backlinksList.innerHTML = '';
+  for(const row of rows.slice(0, 8)){
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'app-backlink-item';
+    item.innerHTML = `<strong>${escapeHtml(row.n.title || 'Untitled')}</strong><span class="app-backlink-kind">${row.kind}</span>`;
+    item.addEventListener('click', ()=> selectNote(row.n.id));
+    backlinksList.appendChild(item);
+  }
+}
+// updateBacklinks is invoked from updateEditorMeta (patched at its call site).
+
+// -- WP-GRAPH-001 � knowledge graph (force-directed, zero deps) ---------------
+const graphCanvas = document.getElementById('graphCanvas');
+const graphStats = document.getElementById('graphStats');
+let graphState = null; // { nodes, edges, sim }
+function extractLinks(text){
+  return [...String(text || '').matchAll(/\[\[([^\]]+)\]\]/g)].map((m)=> m[1].trim().toLowerCase());
+}
+function buildGraphData(){
+  const visible = notes.filter((n)=> !n.isTrashed).slice(0, 150);
+  const byTitle = new Map(visible.map((n)=> [(n.title || 'untitled').trim().toLowerCase(), n]));
+  const nodes = visible.map((n)=> ({
+    id: n.id,
+    label: (n.title || 'Untitled').slice(0, 28),
+    degree: 0,
+    x: 300 + (Math.random() - 0.5) * 380,
+    y: 260 + (Math.random() - 0.5) * 300,
+    vx: 0, vy: 0,
+  }));
+  const nodeById = new Map(nodes.map((n)=> [n.id, n]));
+  const edges = [];
+  const seen = new Set();
+  for(const n of visible){
+    const targets = extractLinks(plainFromNote(n));
+    for(const t of targets){
+      const target = byTitle.get(t);
+      if(!target || target.id === n.id) continue;
+      const key = [n.id, target.id].sort().join('|');
+      if(seen.has(key)) continue;
+      seen.add(key);
+      edges.push({ a: nodeById.get(n.id), b: nodeById.get(target.id) });
+      nodeById.get(n.id).degree += 1;
+      nodeById.get(target.id).degree += 1;
+    }
+  }
+  return { nodes, edges };
+}
+function renderGraph(){
+  if(!graphCanvas) return;
+  graphState = buildGraphData();
+  if(graphStats) graphStats.textContent = `${graphState.nodes.length} notes \u00b7 ${graphState.edges.length} links`;
+  // seed simulation ticks so the layout is settled on first paint
+  for(let i = 0; i < 120; i++) graphTick(graphState, 1);
+  graphDraw();
+}
+function graphTick(g, strength){
+  const nodes = g.nodes;
+  // repulsion (sampled for large graphs)
+  for(let i = 0; i < nodes.length; i++){
+    for(let j = i + 1; j < nodes.length; j++){
+      const a = nodes[i], b = nodes[j];
+      let dx = b.x - a.x, dy = b.y - a.y;
+      let d2 = dx * dx + dy * dy;
+      if(d2 < 1){ dx = Math.random() - 0.5; dy = Math.random() - 0.5; d2 = 1; }
+      if(d2 > 40000) continue;
+      const f = (2600 * strength) / d2;
+      const d = Math.sqrt(d2);
+      const fx = (dx / d) * f, fy = (dy / d) * f;
+      a.vx -= fx; a.vy -= fy;
+      b.vx += fx; b.vy += fy;
+    }
+  }
+  // springs along edges
+  for(const e of g.edges){
+    const dx = e.b.x - e.a.x, dy = e.b.y - e.a.y;
+    const d = Math.max(1, Math.hypot(dx, dy));
+    const f = ((d - 130) * 0.012) * strength;
+    const fx = (dx / d) * f, fy = (dy / d) * f;
+    e.a.vx += fx; e.a.vy += fy;
+    e.b.vx -= fx; e.b.vy -= fy;
+  }
+  // integrate + gentle centering
+  for(const n of nodes){
+    n.vx += (400 - n.x) * 0.0015;
+    n.vy += (300 - n.y) * 0.0015;
+    n.vx *= 0.86; n.vy *= 0.86;
+    n.x += Math.max(-14, Math.min(14, n.vx));
+    n.y += Math.max(-14, Math.min(14, n.vy));
+  }
+}
+function graphDraw(){
+  if(!graphCanvas || !graphState) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const wrap = graphCanvas.parentElement;
+  const w = Math.max(320, wrap ? wrap.clientWidth : 700);
+  const h = Math.max(320, wrap ? Math.min(560, Math.max(380, window.innerHeight - 260)) : 480);
+  graphCanvas.width = w * dpr;
+  graphCanvas.height = h * dpr;
+  graphCanvas.style.width = w + 'px';
+  graphCanvas.style.height = h + 'px';
+  const ctx = graphCanvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.strokeStyle = 'rgba(150,190,90,0.32)';
+  ctx.lineWidth = 1;
+  for(const e of graphState.edges){
+    ctx.beginPath();
+    ctx.moveTo(e.a.x, e.a.y);
+    ctx.lineTo(e.b.x, e.b.y);
+    ctx.stroke();
+  }
+  for(const n of graphState.nodes){
+    const r = 5 + Math.min(8, n.degree * 2);
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = n.degree > 0 ? '#a5d64f' : '#4f7a3a';
+    ctx.fill();
+    ctx.fillStyle = 'rgba(235,240,225,0.92)';
+    ctx.font = '11px Inter, system-ui, sans-serif';
+    ctx.fillText(n.label, n.x + r + 4, n.y + 4);
+  }
+}
+if(graphCanvas){
+  let dragNode = null;
+  graphCanvas.addEventListener('pointerdown', (e)=>{
+    if(!graphState) return;
+    const r = graphCanvas.getBoundingClientRect();
+    const x = e.clientX - r.left, y = e.clientY - r.top;
+    dragNode = graphState.nodes.find((n)=> Math.hypot(n.x - x, n.y - y) < 14) || null;
+    if(dragNode) graphCanvas.setPointerCapture(e.pointerId);
+  });
+  graphCanvas.addEventListener('pointermove', (e)=>{
+    if(!dragNode || !graphCanvas) return;
+    const r = graphCanvas.getBoundingClientRect();
+    dragNode.x = e.clientX - r.left;
+    dragNode.y = e.clientY - r.top;
+    graphDraw();
+  });
+  graphCanvas.addEventListener('pointerup', ()=>{ dragNode = null; });
+  graphCanvas.addEventListener('click', (e)=>{
+    if(!graphState) return;
+    const r = graphCanvas.getBoundingClientRect();
+    const x = e.clientX - r.left, y = e.clientY - r.top;
+    const hit = graphState.nodes.find((n)=> Math.hypot(n.x - x, n.y - y) < 14);
+    if(hit){ goToView('notes'); selectNote(hit.id); }
+  });
+  window.addEventListener('resize', ()=>{ if(currentView==='graph') graphDraw(); });
+}
+
+// -- WP-AI-007 � Ask-my-notes view --------------------------------------------
+const askForm = document.getElementById('askForm');
+const askInput = document.getElementById('askInput');
+const askSubmitBtn = document.getElementById('askSubmit');
+const askResult = document.getElementById('askResult');
+const askAnswerEl = document.getElementById('askAnswer');
+const askSourcesEl = document.getElementById('askSources');
+if(askForm) askForm.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  if(!askInput) return;
+  const question = askInput.value.trim();
+  if(!question) return;
+  setError('');
+  if(askSubmitBtn){ askSubmitBtn.disabled = true; askSubmitBtn.textContent = 'Thinking\u2026'; }
+  if(askResult) askResult.hidden = true;
+  try{
+    const res = await fetchWithAuth(API_BASE + '/api/ai/ask', { method:'POST', body: JSON.stringify({ question }) });
+    const j = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(j.message || 'Could not answer that');
+    if(askResult) askResult.hidden = false;
+    if(askAnswerEl) askAnswerEl.textContent = j.answer || '';
+    if(askSourcesEl){
+      askSourcesEl.innerHTML = '';
+      for(const src of (j.sources || [])){
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'ask-source';
+        chip.innerHTML = `<span class="ask-source-idx">[${src.index}]</span> ${escapeHtml(src.title || 'Untitled')}`;
+        chip.addEventListener('click', ()=>{ goToView('notes'); selectNote(src.noteId); });
+        askSourcesEl.appendChild(chip);
+      }
+      if(!(j.sources || []).length) askSourcesEl.innerHTML = '<span class="ask-source-empty">No matching notes</span>';
+    }
+  }catch(err){ setError(err.message || 'Ask failed'); }
+  finally{
+    if(askSubmitBtn){ askSubmitBtn.disabled = false; askSubmitBtn.textContent = 'Ask'; }
+  }
+});
+
+// -- WP-SEARCH-002 � date filter (client-side on the loaded list) -------------
+const dateFilter = document.getElementById('dateFilter');
+function applyDateFilter(list){
+  if(!dateFilter || dateFilter.value === 'all') return list;
+  const cutoff = Date.now() - ({ today: 86400000, week: 7 * 86400000, month: 30 * 86400000 }[dateFilter.value] || 0);
+  return list.filter((n)=> new Date(n.updatedAt || n.createdAt || 0).getTime() >= cutoff);
+}
+if(dateFilter) dateFilter.addEventListener('change', ()=>{
+  const filtered = applyDateFilter(notes);
+  if(countEl) countEl.textContent = `${filtered.length} ${filtered.length===1?'note':'notes'}${filtered.length !== notes.length ? ` (of ${notes.length})` : ''}`;
+  for(const row of listEl?.querySelectorAll('.app-note-item') || []){
+    const n = notes.find((x)=> x.id === row.dataset.id);
+    if(n) row.style.display = filtered.includes(n) ? '' : 'none';
+  }
+});
+
+// -- WP-CAPTURE-002 � keyboard: Ctrl+Alt+N quick add --------------------------
+document.addEventListener('keydown', (event)=>{
+  if((event.ctrlKey || event.metaKey) && event.altKey && event.key.toLowerCase()==='n'){
+    event.preventDefault();
+    openQuickAdd();
+  }
+});
+
+// -- WP-CLIP-001 � web clipper intake (bookmarklet lands on #clip?...) --------
+  async function handleClipParams(){
+    try{
+    if(!location.hash.startsWith('#clip')) return;
+    const params = new URLSearchParams(location.hash.slice('#clip'.length + 1));
+    const url = params.get('url') || '';
+    const title = (params.get('title') || 'Clipped page').slice(0, 300);
+    const text = (params.get('text') || '').slice(0, 50000);
+    history.replaceState(null, '', location.pathname); // clean the address bar
+    if(offlineReadOnly){ showToast('Clip saved locally \u2014 go online to sync'); return; }
+    const bodyText = [text, url ? `Source: ${url}` : ''].filter(Boolean).join('\n\n');
+    const res = await fetchWithAuth(API_BASE + '/api/notes', {
+      method: 'POST',
+      body: JSON.stringify({ title, contentText: bodyText, description: bodyText.slice(0, 2000) }),
+    });
+    const created = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(created.message || 'Could not save clip');
+    setViewChrome('notes');
+    setRouteHash('notes', true);
+    notes.unshift(created);
+    renderList();
+    selectNote(created.id);
+    markSaved();
+    updateCounts();
+    showToast('Page clipped to your notes');
+  }catch(e){ showToast(e.message || 'Could not save clip'); }
+}

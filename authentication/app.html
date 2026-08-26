@@ -49,6 +49,8 @@
         <button class="app-nav-item" id="navNotebooks" data-route="notebooks"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M4 4.5A1.5 1.5 0 015.5 3H16v12.5a1.5 1.5 0 01-1.5 1.5H5.5A1.5 1.5 0 014 15.5v-11z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M4 15.5A1.5 1.5 0 005.5 17H16M8 6.5h5M8 9.5h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="nav-label">Notebooks</span></button>
         <button class="app-nav-item" id="navTags" data-route="tags"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M3 4.5A1.5 1.5 0 014.5 3h5a1.5 1.5 0 011.1.4l6 6a1.5 1.5 0 010 2.1l-5 5a1.5 1.5 0 01-2.1 0l-6-6A1.5 1.5 0 013 9.5v-5z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><circle cx="7" cy="7" r="1.1" fill="currentColor"/></svg></span><span class="nav-label">Tags</span></button>
         <button class="app-nav-item" id="navTemplates" data-route="templates"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><rect x="3.5" y="3.5" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M7 8h6M7 11h6M7 14h3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span><span class="nav-label">Templates</span></button>
+        <button class="app-nav-item" id="navGraph" data-route="graph"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><circle cx="5" cy="5" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="15" cy="7" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="15" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M6.8 6.1l6.3 0.6M6.5 6.8l1 6.2M13.4 8.7l-3.6 4.8" stroke="currentColor" stroke-width="1.2"/></svg></span><span class="nav-label">Graph</span></button>
+        <button class="app-nav-item" id="navAsk" data-route="ask"><span class="nav-icon" aria-hidden="true"><svg viewBox="0 0 20 20" fill="none"><path d="M10 2l1.6 4.4L16 8l-4.4 1.6L10 14l-1.6-4.4L4 8l4.4-1.6L10 2z" fill="currentColor"/><path d="M4 14.5h8M4 17h5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></span><span class="nav-label">Ask AI</span></button>
       </nav>
       <div class="app-organize-panel" id="notebookSection" hidden>
         <div class="app-nb-head"><span class="app-nb-title">Your notebooks</span><button type="button" class="app-nb-add" id="newNotebookBtn" title="New notebook" aria-label="New notebook">+</button></div>
@@ -144,6 +146,28 @@
         </header>
         <div class="templates-grid" id="templatesGrid" aria-live="polite"></div>
       </section>
+      <!-- WP-GRAPH-001 — knowledge graph view -->
+      <section class="graph-view" id="graphView" aria-labelledby="graphTitle" hidden>
+        <header class="shortcuts-header">
+          <div><p class="home-eyebrow">How ideas connect</p><h1 id="graphTitle">Graph</h1><p>Notes and their [[ links ]] — drag nodes, click to open.</p></div>
+          <span class="graph-stats" id="graphStats"></span>
+        </header>
+        <div class="graph-canvas-wrap"><canvas id="graphCanvas" aria-label="Knowledge graph of your notes"></canvas></div>
+      </section>
+      <!-- WP-AI-007 — ask your notes (global Q&A) -->
+      <section class="ask-view" id="askView" aria-labelledby="askTitle" hidden>
+        <header class="shortcuts-header">
+          <div><p class="home-eyebrow">Talk to your notes</p><h1 id="askTitle">Ask AI</h1><p>Answers come from your own notes, with sources.</p></div>
+        </header>
+        <form class="ask-form" id="askForm">
+          <input id="askInput" type="text" maxlength="1000" autocomplete="off" placeholder="e.g. What did I decide about project X?" aria-label="Ask your notes">
+          <button type="submit" id="askSubmit">Ask</button>
+        </form>
+        <div class="ask-result" id="askResult" hidden>
+          <div class="ask-answer" id="askAnswer"></div>
+          <div class="ask-sources" id="askSources"></div>
+        </div>
+      </section>
       <div class="editor-workspace" id="editorWorkspace" hidden>
     <!-- Note list ~320px -->
     <section class="app-list" aria-label="Note list">
@@ -155,6 +179,13 @@
             <option value="updated">Updated</option>
             <option value="created">Created</option>
             <option value="title">Title</option>
+          </select>
+          <!-- WP-SEARCH-002 — date filter -->
+          <select class="app-sort" id="dateFilter" title="Filter by date" aria-label="Filter by date">
+            <option value="all">Any time</option>
+            <option value="today">Today</option>
+            <option value="week">Last 7 days</option>
+            <option value="month">Last 30 days</option>
           </select>
           <div class="app-list-count" id="noteCount">0 notes</div>
         </div>
@@ -204,6 +235,10 @@
           </div>
         </div>
         <div class="app-editor-actions">
+          <!-- WP-UX-001 — distraction-free focus mode -->
+          <button type="button" class="app-focus-toggle" id="focusModeBtn" hidden title="Focus mode (Ctrl+Shift+F)" aria-label="Focus mode" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M4 4h6v2H6v4H4V4zm10 0h6v6h-2V6h-4V4zM4 14h2v4h4v2H4v-6zm14 0h2v6h-6v-2h4v-4z"/></svg>
+          </button>
           <!-- WP-APP-007 — pin/unpin the open note -->
           <button class="app-pin-toggle" id="pinBtn" hidden title="Pin note" aria-label="Pin note" aria-pressed="false">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M16 9V4h1c.55 0 1-.45 1-1s-.45-1-1-1H7c-.55 0-1 .45-1 1s.45 1 1 1h1v5c0 1.66-1.34 3-3 3v2h5.97v7l1 1 1-1v-7H16v-2c-1.66 0-3-1.34-3-3z"/></svg>
@@ -230,10 +265,14 @@
           <button type="button" data-action="rephrase">Rephrase selection</button>
           <button type="button" data-action="shorten">Shorten selection</button>
           <button type="button" data-action="expand">Expand selection</button>
+          <button type="button" data-action="grammar">Fix grammar</button>
+          <button type="button" data-action="outline">Create outline</button>
         </div>
         <div class="app-note-more-menu" id="noteMoreMenu" hidden>
           <button type="button" data-action="duplicate">Duplicate</button>
           <button type="button" data-action="export">Export Markdown</button>
+          <button type="button" data-action="export-text">Export Text (.txt)</button>
+          <button type="button" data-action="export-html">Export HTML</button>
           <button type="button" data-action="print">Print</button>
         </div>
       </div>
@@ -308,10 +347,23 @@
           <option value="">+ Tag</option>
         </select>
       </div>
+      <!-- WP-LINKS-001 — bi-directional links: [[ mentions of this note ]] -->
+      <div class="app-backlinks" id="backlinksPanel" hidden>
+        <div class="app-backlinks-head"><span>🔗 Linked mentions</span><span class="app-backlinks-count" id="backlinksCount"></span></div>
+        <div class="app-backlinks-list" id="backlinksList"></div>
+      </div>
+      <!-- WP-LINKS-002 — [[ note picker popup (autocomplete for [[) -->
+      <div class="app-wikilink-picker" id="wikiPicker" hidden>
+        <div class="app-wikilink-hint">Link to a note…</div>
+        <div class="app-wikilink-list" id="wikiPickerList" role="listbox"></div>
+      </div>
       <!-- WP-APP-008 — image attachments (local-disk backed, protected API) -->
       <div class="app-attachments" id="attachmentRow" hidden>
         <div class="app-attachment-actions">
           <button type="button" class="app-attach-btn" id="attachImageBtn">+ Image</button>
+          <button type="button" class="app-attach-btn" id="attachPdfBtn" title="Attach a PDF">+ PDF</button>
+          <button type="button" class="app-attach-btn" id="recordAudioBtn" title="Record a voice note">🎙 Record</button>
+          <button type="button" class="app-attach-btn" id="sketchBtn" title="Draw a sketch">✏️ Sketch</button>
           <input id="attachImageInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
           <span class="app-attachment-status" id="attachmentStatus" aria-live="polite"></span>
         </div>
@@ -333,6 +385,7 @@
         <button type="button" class="tb-btn" data-cmd="blockquote" title="Quote">“ ”</button>
         <button type="button" class="tb-btn" data-cmd="code" title="Inline code">&lt;/&gt;</button>
         <button type="button" class="tb-btn" data-cmd="codeBlock" title="Code block">{ }</button>
+        <button type="button" class="tb-btn" data-cmd="link" title="Add link / bookmark">🔗</button>
         <button type="button" class="tb-btn" data-cmd="hr" title="Divider">―</button>
         <span class="tb-sep"></span>
         <button type="button" class="tb-btn" data-cmd="clear" title="Clear formatting">Clear</button>
@@ -389,6 +442,59 @@
       <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:18px;">
         <button class="btn-social" id="modalCancel" style="height:36px; padding:0 14px;">Cancel</button>
         <button class="app-btn-delete" id="modalConfirm" style="height:36px; padding:0 14px; background:#d93025; border-color:#d93025; color:#fff;">Delete forever</button>
+      </div>
+    </div>
+  </div>
+  <!-- WP-UX-001 — keyboard shortcuts help (was referenced in JS but missing from markup) -->
+  <div class="app-modal" id="shortcutsHelpModal" hidden>
+    <div class="app-modal-backdrop" id="shortcutsHelpBackdrop"></div>
+    <div class="app-modal-card app-shortcuts-card" role="dialog" aria-modal="true" aria-labelledby="shortcutsHelpTitle">
+      <div class="app-shortcuts-head">
+        <h3 id="shortcutsHelpTitle">Keyboard shortcuts</h3>
+        <button type="button" class="app-shortcuts-close" id="shortcutsHelpClose" aria-label="Close shortcuts">×</button>
+      </div>
+      <div class="app-shortcuts-grid">
+        <div class="app-shortcuts-row"><span>New note</span><span class="app-kbd"><kbd>Ctrl</kbd><kbd>N</kbd></span></div>
+        <div class="app-shortcuts-row"><span>Quick add (capture)</span><span class="app-kbd"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>N</kbd></span></div>
+        <div class="app-shortcuts-row"><span>Search</span><span class="app-kbd"><kbd>Ctrl</kbd><kbd>K</kbd></span></div>
+        <div class="app-shortcuts-row"><span>Save note</span><span class="app-kbd"><kbd>Ctrl</kbd><kbd>S</kbd></span></div>
+        <div class="app-shortcuts-row"><span>Focus mode</span><span class="app-kbd"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>F</kbd></span></div>
+        <div class="app-shortcuts-row"><span>Exit focus mode</span><span class="app-kbd"><kbd>Esc</kbd></span></div>
+        <div class="app-shortcuts-row"><span>Move through note list</span><span class="app-kbd"><kbd>↑</kbd><kbd>↓</kbd></span></div>
+        <div class="app-shortcuts-row"><span>Open selected note</span><span class="app-kbd"><kbd>Enter</kbd></span></div>
+        <div class="app-shortcuts-row"><span>Link a note</span><span class="app-kbd"><kbd>[[</kbd></span></div>
+        <div class="app-shortcuts-row"><span>Show this help</span><span class="app-kbd"><kbd>?</kbd></span></div>
+      </div>
+      <p class="app-shortcuts-tip">Tip: type <strong>[[</strong> to link notes, paste or drag images/PDFs straight into the editor, and record voice notes with 🎙 — they transcribe automatically.</p>
+    </div>
+  </div>
+  <!-- WP-UX-001 — focus mode exit pill -->
+  <button type="button" class="app-focus-exit" id="focusExit" hidden>Exit focus mode · Esc</button>
+  <!-- WP-CAPTURE-001 — quick add: capture a thought in under a second -->
+  <div class="app-modal" id="quickAddModal" hidden>
+    <div class="app-modal-backdrop" id="quickAddBackdrop"></div>
+    <div class="app-modal-card app-quick-card" role="dialog" aria-modal="true" aria-labelledby="quickAddTitle">
+      <h3 id="quickAddTitle" class="app-quick-title">Quick note</h3>
+      <input id="quickAddInput" type="text" maxlength="500" autocomplete="off" placeholder="Type a thought… Enter to save" aria-label="Quick note text">
+      <p class="app-quick-hint">Enter saves and opens the note · Esc cancels</p>
+    </div>
+  </div>
+  <!-- WP-MEDIA-002 — sketch pad: draw, save as PNG attachment -->
+  <div class="app-modal" id="sketchModal" hidden>
+    <div class="app-modal-backdrop" id="sketchBackdrop"></div>
+    <div class="app-modal-card app-sketch-card" role="dialog" aria-modal="true" aria-labelledby="sketchTitle">
+      <div class="app-sketch-head">
+        <h3 id="sketchTitle">Sketch</h3>
+        <span class="app-sketch-tools">
+          <label class="app-sketch-tool">Color <input type="color" id="sketchColor" value="#7bd44a"></label>
+          <label class="app-sketch-tool">Size <input type="range" id="sketchSize" min="2" max="18" value="4"></label>
+          <button type="button" class="app-sketch-btn" id="sketchClear">Clear</button>
+          <button type="button" class="app-sketch-btn" id="sketchClose">×</button>
+        </span>
+      </div>
+      <canvas id="sketchCanvas" width="720" height="440" aria-label="Drawing canvas"></canvas>
+      <div class="app-sketch-foot">
+        <button type="button" class="app-sketch-save" id="sketchSave">Save to note</button>
       </div>
     </div>
   </div>
