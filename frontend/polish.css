@@ -1615,3 +1615,30 @@ footer[data-sentry-component="Footer"] a:hover {
     transform: none !important;
   }
 }
+
+/* ============================================================
+   WEBGL HERO LAYER (three.js) — stage, canvas & motion accents
+   ============================================================ */
+.hero-webgl-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 1;
+  transition: opacity .18s linear;
+}
+#heroWebGL {
+  position: absolute;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+/* keep DOM hero content + floating cards above the WebGL layer */
+.hero-section .hero-grid { position: relative; z-index: 2; }
+.hero-visual .hero-frame-wrap { position: relative; z-index: 3; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-webgl-stage { transition: none; }
+}

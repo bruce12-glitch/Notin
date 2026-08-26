@@ -928,29 +928,7 @@
   })();
 </script>
 <script src="script.js"></script>
+<script type="module" src="three-hero.js"></script>
 </body>
 </html>
-"https://evernote.cdn.prismic.io/evernote/BAhQ26f0Iw3kMeEC_BSP_WatermelonVideoRepurpose_EN_169_V03_compressed.mp4"></video>
-    </div>
-    <p class="video-modal-caption">Notin — your productivity, supercharged.</p>
-  </div>
-</div>
 
-<script>
-  // ===== Theme switcher: Green (styles.css) ⇄ Neon (styles-neon.css) =====
-  (function () {
-    var btn = document.getElementById('themeToggle');
-    if (!btn) return;
-    var label = document.getElementById('themeToggleLabel');
-    var isNeon = location.pathname.indexOf('neon') !== -1 || document.cookie.indexOf('neon=1') !== -1;
-    var switchTo = function (neon) {
-      document.cookie = 'neon=' + (neon ? 1 : 0) + '; path=/; max-age=31536000';
-      location.href = neon ? 'index-neon.html' : 'index.html';
-    };
-    btn.addEventListener('click', function () { switchTo(!isNeon); });
-    if (label) label.textContent = isNeon ? 'Switch to Green' : 'Switch to Neon';
-  })();
-</script>
-<script src="script.js"></script>
-</body>
-</html>
