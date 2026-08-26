@@ -72,9 +72,9 @@ test('MVP journey: OTP, note persistence, organize, search, share, pin, trash, r
   await expect(page.locator('#globalSearchInput')).toHaveAttribute('placeholder', 'Search');
   await expect(page.locator('.app-sidebar-actions .app-create-note')).toContainText('Note');
   await expect(page.locator('.app-sidebar-actions .app-icon-btn')).toHaveCount(2);
-  await expect(page.locator('.app-nav .app-nav-item')).toHaveCount(8);
+  await expect(page.locator('.app-nav .app-nav-item')).toHaveCount(10);
   const navLabels = await page.locator('.app-nav .nav-label').allTextContents();
-  expect(navLabels).toEqual(['Home', 'Shortcuts', 'Notes', 'Tasks', 'Trash', 'Notebooks', 'Tags', 'Templates']);
+  expect(navLabels).toEqual(['Home', 'Shortcuts', 'Notes', 'Tasks', 'Trash', 'Notebooks', 'Tags', 'Templates', 'Graph', 'Ask AI']);
   await expect(page.locator('#syncNotesBtn')).toBeEnabled();
   await expect(page.locator('#openAiToolsBtn')).toBeEnabled();
   await expect(page.locator('#sidebarCollapse')).toBeVisible();
@@ -132,7 +132,7 @@ test('MVP journey: OTP, note persistence, organize, search, share, pin, trash, r
   await expect(editor).toBeEditable();
   await editor.fill(noteBody);
   await page.locator('#saveBtn').click();
-  await expect(page.locator('#saveStatus')).toHaveText('Saved');
+  await expect(page.locator('#saveStatus')).toHaveText(/^Saved( · .+)?$/);
   await expect(noteRow(page)).toBeVisible();
   await page.locator('#noteNotebookSelect').selectOption({ label: notebookName });
   await expect(page.locator('#noteNotebookSelect')).toHaveValue(/.+/);
