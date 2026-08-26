@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /site/
+Disallow: /api/
+Disallow: /app.html
+Disallow: /index.html
+Disallow: /login.html
+Disallow: /share.html

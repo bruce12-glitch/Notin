@@ -324,6 +324,21 @@ app.get('/', (req, res) => {
 // Fallback for SPA history? Serve index.html for unknown GET html
 app.get('/login.html', (req, res) => res.sendFile(path.join(authStaticPath, 'login.html')));
 
+// WP-OPS-002 — crawler directives at the root (crawlers never look in /site/)
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain');
+  res.sendFile(path.join(__dirname, 'static/robots.txt'));
+});
+
+// WP-OPS-002 — friendly 404 for everything unmatched: JSON for the API,
+// a styled page for browsers. Never leaks internals.
+app.use((req, res) => {
+  if (req.path.startsWith('/api/') || req.path.startsWith('/auth/')) {
+    return res.status(404).json({ message: 'Not found' });
+  }
+  res.status(404).type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Page not found — Notin</title><style>body{font-family:Inter,system-ui,sans-serif;background:#f6f5f0;color:#2c2d2a;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;text-align:center}a{color:#00a82d;font-weight:600}h1{font-size:56px;margin:0 0 8px}</style></head><body><div><h1>404</h1><p>That page doesn't exist.</p><p><a href="/site/">Go to Notin</a></p></div></body></html>`);
+});
+
 app.use((err, req, res, next) => {
   if (err?.type === 'entity.parse.failed' || (err instanceof SyntaxError && err?.status === 400)) {
     return res.status(400).json({
