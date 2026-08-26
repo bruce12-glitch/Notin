@@ -22,6 +22,9 @@ import {
   MAX_ASSIST_CONTEXT_CHARS,
   MAX_ASSIST_INPUT_CHARS,
   MAX_ASSIST_OUTPUT_CHARS,
+  ASK_SYSTEM,
+  askUserPrompt,
+  MAX_ASK_QUESTION_CHARS,
 } from './prompts.js';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -531,6 +534,23 @@ function mockAssist(action, input) {
   if (action === 'expand') {
     return `${sentences[0]} Because it anchors the plan, restate it in your own words, add one concrete detail, and give it an owner and a date.`;
   }
+  // WP-AI-008 — grammar + outline (deterministic mocks)
+  if (action === 'grammar') {
+    const cleaned = String(input)
+      .replace(/\s+/g, ' ')
+      .replace(/\s+([,.!?;:])/g, '$1')
+      .replace(/([,.!?;:])(?=[^\s\d])/g, '$1 ')
+      .trim();
+    return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  }
+  if (action === 'outline') {
+    const lines = [`Overview: ${sentences[0].slice(0, 120).trim()}`];
+    for (const sentence of sentences.slice(1, 6)) {
+      lines.push(`- ${sentence.slice(0, 110).trim()}`);
+    }
+    if (lines.length === 1) lines.push('- (add more detail to build out this outline)');
+    return lines.join('\n');
+  }
   const normalized = String(input).replace(/\s+/g, ' ').trim();
   const maxLength = Math.max(1, Math.floor(normalized.length / 2));
   return sentences[0].slice(0, maxLength).trim();
@@ -586,4 +606,119 @@ export async function assistWrite(action, text) {
 
   console.log(`[AI] assist via ${provider}`);
   return { suggestion, provider };
+}
+
+// ── WP-AI-007 — global "ask my notes": grounded answer over retrieved extracts ─
+function mockAskAnswer(extracts, question) {
+  const lowerQuestion = String(question).toLowerCase();
+  const keywords = (lowerQuestion.match(/[a-z][a-z0-9'-]{2,}/g) || [])
+    .filter((word) => !CHAT_STOPWORDS.has(word));
+  for (const extract of extracts) {
+    const sentences = (String(extract.text).match(/[^.!?]+[.!?]+/g) || [])
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const hit = sentences.find((sentence) => {
+      const lower = sentence.toLowerCase();
+      return keywords.some((word) => lower.includes(word));
+    });
+    if (hit) return `${hit} [${extract.index}]`;
+  }
+  const first = extracts[0];
+  if (first) return `Closest match — "${first.title}": ${String(first.text).slice(0, 180).trim()} [${first.index}]`;
+  return 'I could not find anything about that in your notes.';
+}
+
+async function askWithGroq(extracts, question, apiKey) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(GROQ_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        temperature: 0.2,
+        max_tokens: 500,
+        messages: [
+          { role: 'system', content: ASK_SYSTEM },
+          { role: 'user', content: askUserPrompt(extracts, question) },
+        ],
+      }),
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error('AI_PROVIDER_ERROR');
+    const payload = await response.json();
+    const answer = payload?.choices?.[0]?.message?.content?.trim();
+    if (!answer) throw new Error('AI_PROVIDER_ERROR');
+    return answer.slice(0, MAX_CHAT_ANSWER_CHARS * 2);
+  } catch (error) {
+    if (error?.message === 'AI_PROVIDER_ERROR') throw error;
+    throw new Error('AI_PROVIDER_ERROR');
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+// extracts: [{ index, title, text }] — retrieval + ranking happen in the controller.
+export async function askAcrossNotes(extracts, question) {
+  const q = String(question ?? '').trim().slice(0, MAX_ASK_QUESTION_CHARS);
+  let provider;
+  let answer;
+
+  if (process.env.GROQ_API_KEY) {
+    provider = 'groq';
+    answer = await askWithGroq(extracts, q, process.env.GROQ_API_KEY);
+  } else {
+    provider = 'mock';
+    answer = mockAskAnswer(extracts, q);
+  }
+
+  console.log(`[AI] ask via ${provider} over ${extracts.length} extract(s)`);
+  return { answer, provider };
+}
+
+// ── WP-AI-009 — audio transcription (Groq Whisper when configured, mock otherwise) ─
+const GROQ_TRANSCRIBE_URL = 'https://api.groq.com/openai/v1/audio/transcriptions';
+const GROQ_TRANSCRIBE_MODEL = 'whisper-large-v3';
+const MAX_TRANSCRIPT_CHARS = 24000;
+
+function mockTranscript(durationHintSec) {
+  const seconds = Number.isFinite(durationHintSec) ? Math.max(1, Math.round(durationHintSec)) : 30;
+  return `[Mock transcription — configure GROQ_API_KEY for real Whisper transcription.]\n` +
+    `Recording received (${seconds}s of audio). In production this line would be the full ` +
+    `transcript of your lecture or meeting, followed by suggested action items.`;
+}
+
+export async function transcribeAudio({ buffer, mime, filename, durationHintSec }) {
+  if (process.env.GROQ_API_KEY) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60_000);
+    try {
+      const form = new FormData();
+      form.append('file', new Blob([buffer], { type: mime || 'audio/webm' }), filename || 'recording.webm');
+      form.append('model', GROQ_TRANSCRIBE_MODEL);
+      form.append('response_format', 'text');
+      const response = await fetch(GROQ_TRANSCRIBE_URL, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
+        body: form,
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error('AI_PROVIDER_ERROR');
+      const text = (await response.text()).trim();
+      if (!text) throw new Error('AI_PROVIDER_ERROR');
+      console.log(`[AI] transcribe via groq (${Math.round(buffer.length / 1024)}KB)`);
+      return { transcript: text.slice(0, MAX_TRANSCRIPT_CHARS), provider: 'groq' };
+    } catch (error) {
+      if (error?.message === 'AI_PROVIDER_ERROR') throw error;
+      throw new Error('AI_PROVIDER_ERROR');
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+  console.log('[AI] transcribe via mock');
+  return { transcript: mockTranscript(durationHintSec), provider: 'mock' };
 }

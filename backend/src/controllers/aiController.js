@@ -7,6 +7,7 @@ import {
   chatWithNote,
   chatWithNoteStream,
   assistWrite,
+  askAcrossNotes,
 } from '../lib/ai/provider.js';
 import {
   MAX_CHAT_QUESTION_CHARS,
@@ -14,9 +15,20 @@ import {
   MAX_ASSIST_CONTEXT_CHARS,
   MAX_ASSIST_INPUT_CHARS,
   MIN_ASSIST_NOTE_CHARS,
+  MAX_ASK_QUESTION_CHARS,
+  MAX_ASK_CONTEXT_CHARS,
+  MAX_ASK_SOURCES,
+  ASK_SNIPPET_CHARS,
 } from '../lib/ai/prompts.js';
 import { chatBodySchema, zodDetails } from '../lib/validation.js';
 import { sendValidationError, sendInternalError } from '../lib/apiResponse.js';
+
+// WP-AI-007 - question words that must not drive retrieval
+const STOPWORDS = new Set([
+  'the', 'and', 'for', 'with', 'this', 'that', 'what', 'when', 'where', 'who',
+  'how', 'does', 'did', 'can', 'you', 'your', 'are', 'was', 'were', 'is',
+  'about', 'last', 'month', 'have', 'has', 'had', 'from', 'into', 'own',
+]);
 
 function isTrashed(value) {
   return value === true || value === 1 || value === '1' || value === 't' || value === 'true';
@@ -310,5 +322,85 @@ export async function assistNoteController(req, res) {
       return res.status(503).json({ message: 'AI is busy right now — try again in a moment' });
     }
     return sendInternalError(req, res, error, 'Could not assist with that text', 'assistNoteController');
+  }
+}
+
+// -- WP-AI-007 � "ask my notes": retrieve ? rank ? grounded answer ------------
+// Retrieval uses the same search paths as GET /api/notes?q= (Postgres FTS or
+// escaped SQLite LIKE � both parameterized). The top extracts are numbered and
+// sent as read-only context; nothing is persisted anywhere.
+export async function askMyNotesController(req, res) {
+  try {
+    const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
+    const question = typeof body.question === 'string' ? body.question.trim() : '';
+    if (!question || question.length > MAX_ASK_QUESTION_CHARS) {
+      return res.status(400).json({ message: `Ask a question (1\u2013${MAX_ASK_QUESTION_CHARS} characters)` });
+    }
+
+    // Relevance pass 1 - per-keyword OR search across the user's non-trashed
+    // notes (a raw question never appears verbatim in a note). Dialect-aware:
+    // Postgres ILIKE + boolean literal; SQLite LIKE + integer literal.
+    const rawKeywords = (question.toLowerCase().match(/[a-z][a-z0-9']{2,}/g) || [])
+      .filter((w) => !STOPWORDS.has(w));
+    const keywords = [...new Set(rawKeywords)].slice(0, 8);
+    let searched = [];
+    if (keywords.length) {
+      const likeOp = db.usePostgres ? 'ILIKE' : 'LIKE';
+      const notTrashed = db.usePostgres ? '"isTrashed" = FALSE' : '"isTrashed" = 0';
+      const conditions = keywords.map((_, i) => `(title ${likeOp} $${i + 2} OR COALESCE("contentText", '') ${likeOp} $${i + 2} OR COALESCE(description, '') ${likeOp} $${i + 2})`).join(' OR ');
+      const params = keywords.map((w) => `%${w.replace(/[%_\\]/g, (m) => '\\' + m)}%`);
+      const { rows } = await db.query(
+        `SELECT id, title, COALESCE("contentText", description, '') AS body
+         FROM "Note"
+         WHERE "userId" = $1 AND ${notTrashed} AND (${conditions})
+         LIMIT ${MAX_ASK_SOURCES * 3}`,
+        [req.userId, ...params],
+      );
+      searched = rows;
+    }
+
+    // Relevance pass 2 � keyword overlap ranking so weak substring hits don't
+    // crowd out notes that actually answer the question.
+    const ranked = searched
+      .map((row) => {
+        const hay = `${row.title} ${row.body}`.toLowerCase();
+        const score = keywords.reduce((acc, word) => acc + (hay.includes(word) ? 1 : 0), 0);
+        return { ...row, score };
+      })
+      .sort((a, b) => b.score - a.score)
+      .slice(0, MAX_ASK_SOURCES);
+
+    if (!ranked.length) {
+      return res.status(200).json({
+        answer: 'I could not find any notes matching that question. Try different words, or create a note about it first.',
+        sources: [],
+        provider: 'none',
+      });
+    }
+
+    const extracts = ranked.map((row, i) => {
+      const text = String(row.body || '').replace(/\s+/g, ' ').trim();
+      const start = text.length > ASK_SNIPPET_CHARS
+        ? Math.max(0, text.toLowerCase().indexOf(keywords[0] || '') - 40)
+        : 0;
+      return {
+        index: i + 1,
+        noteId: row.id,
+        title: String(row.title || 'Untitled'),
+        text: (start > 0 ? '\u2026' : '') + text.slice(start, start + MAX_ASK_CONTEXT_CHARS),
+      };
+    });
+
+    const { answer, provider } = await askAcrossNotes(extracts, question);
+    return res.status(200).json({
+      answer,
+      provider,
+      sources: extracts.map((e) => ({ index: e.index, noteId: e.noteId, title: e.title })),
+    });
+  } catch (error) {
+    if (error?.message === 'AI_PROVIDER_ERROR') {
+      return res.status(503).json({ message: 'AI is busy right now \u2014 try again in a moment' });
+    }
+    return sendInternalError(req, res, error, 'Could not answer that question', 'askMyNotesController');
   }
 }

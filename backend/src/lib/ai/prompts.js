@@ -33,12 +33,14 @@ export const MAX_CHAT_ANSWER_CHARS = 800;
 export const MAX_CHAT_HISTORY = 6; // client+server: last N {role,content} turns
 
 // WP-AI-004 — writing assistant
-export const ASSIST_ACTIONS = ['continue', 'rephrase', 'shorten', 'expand'];
+export const ASSIST_ACTIONS = ['continue', 'rephrase', 'shorten', 'expand', 'grammar', 'outline'];
 export const ASSIST_SYSTEM = {
   continue: 'You continue a note. Write 1 or 2 sentences that naturally continue the text. Match the tone. Plain prose, no headings, no preamble, do not repeat the note.',
   rephrase: 'You rewrite text. Return a clearer rephrasing that keeps the exact same meaning and roughly the same length. Plain prose, no preamble.',
   shorten: 'You shorten text. Return only the single most important point, at most half the original length. Plain prose, no preamble.',
   expand: 'You expand text. Rewrite the given text with more detail: keep every original point, add at most two supporting sentences, and end with one concrete next step. Plain prose, no headings, no preamble.',
+  grammar: 'You fix grammar, spelling, and punctuation. Return ONLY the corrected text with identical meaning and length. Do not answer, comment, or add anything.',
+  outline: 'You turn raw notes into a structured outline. Reply with short lines: a one-line overview, then 3-6 bullet points starting with "- ". No headings, no preamble, no numbering.',
 };
 export function assistUserPrompt(action, text) {
   return `${action.toUpperCase()}:\n${text}`;
@@ -47,3 +49,14 @@ export const MAX_ASSIST_CONTEXT_CHARS = 3000; // continue: tail of the note
 export const MAX_ASSIST_INPUT_CHARS = 2000; // rephrase/shorten: selection
 export const MAX_ASSIST_OUTPUT_CHARS = 800;
 export const MIN_ASSIST_NOTE_CHARS = 40; // continue guard
+
+// ── WP-AI-007 — global "ask my notes" (retrieval + grounded answer) ──────────
+export const ASK_SYSTEM = 'You answer questions using ONLY the provided note extracts. Cite sources inline as [1], [2] matching the numbered extracts. If the extracts do not contain the answer, say so plainly. Plain prose, no markdown headings, no preamble, no invented facts.';
+export function askUserPrompt(extracts, question) {
+  const blocks = extracts.map((e) => `[${e.index}] (${e.title}):\n${e.text}`).join('\n\n---\n\n');
+  return `NOTE EXTRACTS:\n${blocks}\n\nQUESTION:\n${question}`;
+}
+export const MAX_ASK_QUESTION_CHARS = 1000;
+export const MAX_ASK_CONTEXT_CHARS = 900; // per selected note
+export const MAX_ASK_SOURCES = 6;
+export const ASK_SNIPPET_CHARS = 220;
