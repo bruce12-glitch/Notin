@@ -19,6 +19,7 @@ import {
   revokeOtherSessions,
   cleanupTokens,
   passwordStrength,
+  providers,
   health,
 } from '../controllers/authController.js';
 
@@ -93,6 +94,8 @@ const pwStrengthLimit = rateLimit({
   legacyHeaders: false,
 });
 router.post('/password-strength', pwStrengthLimit, passwordStrength);
+// WP-FUNNEL-002 — capability discovery for sign-in UIs (public, no-store)
+router.get('/providers', providers);
 router.get('/health', health);
 
 export default router;

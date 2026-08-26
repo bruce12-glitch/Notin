@@ -631,16 +631,24 @@ export async function listSessions(req, res) {
        ORDER BY COALESCE(last_active_at, created_at) DESC`,
       [userId]
     );
-    const sessions = rows.map(r => ({
-      id: r.family_id,
-      familyId: r.family_id,
-      userAgent: r.user_agent || null,
-      ipAddress: r.ip_address || null,
-      lastActiveAt: r.last_active_at || r.created_at,
-      createdAt: r.created_at,
-      expiresAt: r.expires_at,
-      isCurrent: currentFamilyId ? r.family_id === currentFamilyId : false,
-    }));
+    const sessions = [];
+    const seenFamilies = new Set();
+    for (const r of rows) {
+      // WP-SEC-001 — a family can briefly hold two live tokens (rotation
+      // grace sibling). One device = one entry: keep the newest row per family.
+      if (seenFamilies.has(r.family_id)) continue;
+      seenFamilies.add(r.family_id);
+      sessions.push({
+        id: r.family_id,
+        familyId: r.family_id,
+        userAgent: r.user_agent || null,
+        ipAddress: r.ip_address || null,
+        lastActiveAt: r.last_active_at || r.created_at,
+        createdAt: r.created_at,
+        expiresAt: r.expires_at,
+        isCurrent: currentFamilyId ? r.family_id === currentFamilyId : false,
+      });
+    }
     res.json({ sessions });
   } catch (e) {
     return res.status(500).json({ message: 'Could not list sessions' });
@@ -654,22 +662,17 @@ export async function revokeSession(req, res) {
     if (!familyId) return res.status(400).json({ message: 'Family id required' });
     if (!/^[A-Za-z0-9_-]{1,128}$/.test(familyId)) return res.status(400).json({ message: 'Invalid family id' });
     const now = nowIso();
-    const { rowCount, rows: checkRows } = await db.query(
-      `SELECT family_id FROM refresh_tokens WHERE family_id = $1 AND user_id = $2 AND revoked_at IS NULL LIMIT 1`,
-      [familyId, userId]
-    ).then(r => ({ rowCount: r.rowCount, rows: r.rows })).catch(() => ({ rowCount: 0, rows: [] }));
-    // Actually use UPDATE to revoke
     const result = await db.query(
       `UPDATE refresh_tokens SET revoked_at = $1, revoke_reason = 'user-revoke' WHERE family_id = $2 AND user_id = $3 AND revoked_at IS NULL`,
       [now, familyId, userId]
     );
     if (result.rowCount === 0) return res.status(404).json({ message: 'Session not found' });
-    // If revoking current session, clear cookies
+    // Clear cookies only when the revoked session IS the current one —
+    // revoking another device must not log this browser out.
     const raw = req.cookies?.notin_refresh;
     if (raw) {
-      const { rows } = await db.query(`SELECT family_id FROM refresh_tokens WHERE hash = $1 LIMIT 1`, [hashToken(raw)]);
-      // After revoke, the cookie's family is now revoked, so clear
-      if (rows[0]?.family_id === familyId || !rows[0]) {
+      const { rows } = await db.query(`SELECT family_id FROM refresh_tokens WHERE hash = $1 AND user_id = $2 LIMIT 1`, [hashToken(raw), userId]);
+      if (rows[0]?.family_id === familyId) {
         res.clearCookie('notin_refresh', cookieOpts);
         res.clearCookie('notin_refresh', cookieOptsLegacy);
         res.clearCookie('notin_csrf', csrfCookieOpts);
@@ -752,5 +755,20 @@ export async function health(req, res) {
     smtpConfigured,
     demoMode: emailAuthEnabled && !smtpConfigured && !isProduction,
     hint: emailAuthEnabled && !smtpConfigured && !isProduction ? 'SMTP not configured — use POST /api/auth/otp/demo-request with {email} then verify with code 123456' : undefined,
+  });
+}
+
+// WP-FUNNEL-002 — public capability discovery so clients can render only the
+// sign-in options this deployment actually supports (no dead-end buttons).
+export async function providers(req, res) {
+  const google = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_REDIRECT_URI);
+  const smtpConfigured = Boolean(mailer);
+  res.set('Cache-Control', 'no-store');
+  res.json({
+    google,
+    apple: false,
+    otp: emailAuthEnabled,
+    password: emailAuthEnabled && (env.ALLOW_PASSWORD_SIGNUP === 'true' || (!isProduction && env.ALLOW_PASSWORD_SIGNUP !== 'false')),
+    demoOtp: emailAuthEnabled && !smtpConfigured && !isProduction,
   });
 }
