@@ -10,8 +10,11 @@ const accountLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHe
 // Coarse IP budgets complement the database-backed per-email throttles. Values
 // are intentionally high enough for shared networks while stopping unbounded
 // account creation and credential spraying from one source.
-const signupIpLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 60, standardHeaders: true, legacyHeaders: false });
-const signinIpLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, standardHeaders: true, legacyHeaders: false });
+// WP-SEC-007 — exported so the /api/auth/signup|signin aliases in server.js
+// draw from the SAME per-IP budgets as these canonical routes (an alias must
+// never be a rate-limit escape hatch).
+export const signupIpLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 60, standardHeaders: true, legacyHeaders: false });
+export const signinIpLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, standardHeaders: true, legacyHeaders: false });
 
 router.post('/signup', signupIpLimit, signup);
 router.post('/signin', signinIpLimit, signin);

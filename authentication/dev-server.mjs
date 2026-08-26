@@ -93,8 +93,12 @@ function serveStatic(req, res) {
   let pathname = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (pathname === '/') pathname = '/index.html';
 
+  // Resolve and confine to this directory. The separator suffix defeats the
+  // classic startsWith prefix bypass (a sibling like "<dir>-backup" would
+  // otherwise pass a bare prefix comparison).
   const filePath = path.normalize(path.join(__dirname, pathname));
-  if (!filePath.startsWith(__dirname)) {
+  const root = __dirname.endsWith(path.sep) ? __dirname : __dirname + path.sep;
+  if (filePath !== __dirname && !filePath.startsWith(root)) {
     res.writeHead(403, { 'content-type': 'text/plain' });
     return res.end('Forbidden');
   }

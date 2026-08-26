@@ -11,13 +11,14 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import db from './config/db.js';
 
-import userRoutes from './routes/userRoutes.js';
+import userRoutes, { signupIpLimit, signinIpLimit } from './routes/userRoutes.js';
 import noteRoutes from './routes/noteRoutes.js';
 import notebookRoutes from './routes/notebookRoutes.js';
 import tagRoutes from './routes/tagRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import attachmentRoutes from './routes/attachmentRoutes.js';
 import publicShareRoutes from './routes/publicShareRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
 import { signup, signin } from './controllers/userController.js';
 import storage from './lib/storage.js';
 import { cleanupExpiredTokens } from './lib/cleanup.js';
@@ -265,8 +266,10 @@ app.use('/auth', authRoutes);
 // Keep /api/users as legacy path — now shares table with OTP/Google
 app.use('/api/users', userRoutes);
 // Spec also allows /api/auth/signup and /api/auth/signin as aliases (same handler)
-app.post('/api/auth/signup', signup);
-app.post('/api/auth/signin', signin);
+// WP-SEC-007 — aliases share the canonical per-IP limiter instances so the
+// alias paths cannot bypass the signup/signin budgets.
+app.post('/api/auth/signup', signupIpLimit, signup);
+app.post('/api/auth/signin', signinIpLimit, signin);
 
 // Public share reads are token-gated rather than account-authenticated. Keep a
 // light IP limit to reduce token probing without affecting normal image loads.
@@ -274,6 +277,7 @@ const publicShareLimit = rateLimit({ windowMs: 15 * 60 * 1000, limit: 180, stand
 app.use('/api/public/share', publicShareLimit, publicShareRoutes);
 app.use('/api', attachmentRoutes);
 app.use('/api/notes', noteRoutes);
+app.use('/api/ai', aiRoutes);
 app.use('/api/notebooks', notebookRoutes);
 app.use('/api/tags', tagRoutes);
 
