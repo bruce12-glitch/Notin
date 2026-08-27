@@ -379,6 +379,14 @@ PORT=3000 API_TARGET=http://localhost:5000 node dev-server.mjs
 | POST | `/api/notes/:id/chat/stream` | Streaming chat (SSE) |
 | POST | `/api/notes/:id/assist` | Writing assistant (continue/rephrase/shorten/expand) |
 
+### Billing (protected — config-gated)
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/billing` | Current plan + effective entitlements |
+| POST | `/api/billing/checkout` | Stripe Checkout session for Pro (`{plan:"pro"}`) |
+| POST | `/api/billing/portal` | Stripe billing-portal session URL |
+| POST | `/api/billing/webhook` | Signed Stripe events — the only plan-mutation path (raw body) |
+
 ### Public Sharing (no auth)
 | Method | Path | Description |
 |---|---|---|
@@ -409,6 +417,7 @@ npm run test:e2e
 | `ai-title-smoke.spec.js` | Title suggestions |
 | `auth-csrf.spec.js` | CSRF protection verification |
 | `auth-refresh-replay.spec.js` | Refresh token replay attack prevention |
+| `billing-smoke.spec.js` | Billing contract — config-gating, signed webhook plan flips, replay idempotency, signature rejection, past_due/cancel entitlements (self-hosted instance + mock Stripe) |
 
 Tests use throwaway data on every run. Failure-only screenshots and retained traces are written to ignored artifact directories.
 
@@ -440,6 +449,7 @@ The project implements several security-hardening measures:
 | **Rate limiting** | IP-based rate limits on auth endpoints and public share reads |
 | **Device inventory** | Active sessions with UA/IP/lastActive, revoke per device or revoke-others |
 | **Share tokens** | 32-byte cryptographically random tokens; only SHA-256 hashes stored |
+| **Billing (Stripe)** | Config-gated: plan changes only via HMAC-verified webhook signatures (`timingSafeEqual`, ±5 min tolerance); checkout redirects alone never grant Pro; per-plan quotas enforced server-side |
 | **Input sanitization** | SQL injection prevention via parameterized queries; XSS prevention in editor output |
 | **Attachment validation** | File type whitelist (PNG/JPEG/WebP/GIF), size limits, random filenames |
 | **Sentry privacy** | Request data, users, extras, and breadcrumbs intentionally stripped |

@@ -26,6 +26,11 @@ const auth = async (req, res, next) => {
     const payloadTv = Number.isFinite(Number(payload.tv)) ? Number(payload.tv) : 0;
     const userTv = Number.isFinite(Number(user.tokenVersion)) ? Number(user.tokenVersion) : 0;
     if (payloadTv !== userTv) throw new Error('Stale token version');
+    // WP-BILLING-001 — the user row is already in hand; carry the plan so
+    // per-plan quotas (notes, attachment storage, AI budgets) need no extra
+    // query anywhere downstream.
+    req.userPlan = String(user.plan || 'free').toLowerCase() === 'pro' ? 'pro' : 'free';
+    req.userPlanStatus = user.planStatus ?? null;
     next();
   } catch (error) {
     return res.status(401).json({ message: 'Unauthorized' });

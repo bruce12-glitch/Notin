@@ -164,6 +164,10 @@ const usageStats = document.getElementById('usageStats');
 const sessionsList = document.getElementById('sessionsList');
 const revokeOthersBtn = document.getElementById('revokeOthersBtn');
 const refreshSessionsBtn = document.getElementById('refreshSessionsBtn');
+// WP-BILLING-001 — plan summary + checkout/portal entry points
+const planSummary = document.getElementById('planSummary');
+const upgradeBtn = document.getElementById('upgradeBtn');
+const manageBillingBtn = document.getElementById('manageBillingBtn');
 const offlineBanner = document.getElementById('offlineBanner');
 const errorBanner = document.getElementById('appError');
 const mobileBar = document.getElementById('mobileBar');
@@ -3232,6 +3236,102 @@ function openAccountModal(){
   exportDataBtn?.focus();
   loadUsage();
   loadSessions();
+  loadPlan(); // WP-BILLING-001
+}
+
+// -- WP-BILLING-001 — plan summary + Stripe checkout/portal -------------------
+function formatMb(bytes){
+  const n = Number(bytes) || 0;
+  return n >= 1024 * 1024 * 1024 ? `${Math.round(n / (1024 * 1024 * 1024))} GB` : `${Math.round(n / (1024 * 1024))} MB`;
+}
+
+async function loadPlan(){
+  if(!planSummary || !upgradeBtn) return;
+  planSummary.textContent = 'Loading plan…';
+  upgradeBtn.hidden = true;
+  manageBillingBtn.hidden = true;
+  try{
+    const res = await fetchWithAuth(API_BASE + '/api/billing', { method: 'GET' });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.message || 'Could not load plan');
+    const isPro = data.plan === 'pro';
+    const active = data.status == null || ['active','trialing'].includes(String(data.status));
+    const ent = data.entitlements || {};
+    if(isPro){
+      const renews = data.renewsAt ? new Date(data.renewsAt).toLocaleDateString() : '';
+      const label = active
+        ? `Notin Pro — active${renews ? ` · renews ${renews}` : ''}`
+        : `Notin Pro — ${data.status || 'paused'} · renew payment to restore Pro limits`;
+      planSummary.innerHTML = `<div style="font-weight:600; color:${active ? '#00A82D' : '#DD6B20'};">${escapeHtml(label)}</div>
+        <div style="margin-top:4px;">${formatMb(ent.storageQuota)} image storage · ${Number(ent.maxNotes||0).toLocaleString()} notes · ${ent.aiChatPer15Min||0} AI chats / 15 min</div>`;
+      upgradeBtn.hidden = true;
+      manageBillingBtn.hidden = !data.configured;
+    }else{
+      planSummary.innerHTML = `<div style="font-weight:600;">Free plan</div>
+        <div style="margin-top:4px;">${formatMb(ent.storageQuota)} image storage · ${Number(ent.maxNotes||0).toLocaleString()} notes · ${ent.aiChatPer15Min||0} AI chats / 15 min</div>`;
+      upgradeBtn.hidden = !data.configured;
+      upgradeBtn.disabled = !data.configured;
+      upgradeBtn.title = data.configured ? 'Upgrade to Notin Pro' : 'Billing is not set up on this deployment';
+      manageBillingBtn.hidden = true;
+      if(!data.configured && accountStatus) accountStatus.textContent = 'Online billing isn\u2019t set up on this deployment yet.';
+    }
+  }catch(e){
+    planSummary.textContent = e.message || 'Could not load plan';
+  }
+}
+
+async function startCheckout(){
+  if(!upgradeBtn) return;
+  upgradeBtn.disabled = true;
+  const prev = upgradeBtn.textContent;
+  upgradeBtn.textContent = 'Opening checkout…';
+  try{
+    const res = await fetchWithAuth(API_BASE + '/api/billing/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan: 'pro' }),
+    });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.message || 'Could not start checkout');
+    if(!data.url) throw new Error('Checkout did not return a payment link');
+    window.location.assign(data.url); // Stripe-hosted payment page
+  }catch(e){
+    if(accountStatus) accountStatus.textContent = e.message || 'Could not start checkout';
+    upgradeBtn.disabled = false;
+    upgradeBtn.textContent = prev;
+  }
+}
+
+async function openPortal(){
+  if(!manageBillingBtn) return;
+  manageBillingBtn.disabled = true;
+  const prev = manageBillingBtn.textContent;
+  manageBillingBtn.textContent = 'Opening…';
+  try{
+    const res = await fetchWithAuth(API_BASE + '/api/billing/portal', { method: 'POST' });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.message || 'Could not open the billing portal');
+    if(!data.url) throw new Error('Portal did not return a link');
+    window.location.assign(data.url);
+  }catch(e){
+    if(accountStatus) accountStatus.textContent = e.message || 'Could not open the billing portal';
+    manageBillingBtn.disabled = false;
+    manageBillingBtn.textContent = prev;
+  }
+}
+
+// Post-checkout return: the WEBHOOK flips the plan server-side, so the redirect
+// alone proves nothing — the toast stays honest about the async activation.
+function handleBillingReturnParams(){
+  try{
+    const params = new URLSearchParams(location.search);
+    const state = params.get('billing');
+    if(!state) return;
+    history.replaceState(null, '', location.pathname); // clean the address bar
+    if(state === 'success') showToast('Payment received \u2014 Pro unlocks automatically within a minute. No need to wait here.');
+    else if(state === 'canceled') showToast('Checkout canceled \u2014 you were not charged.');
+    else if(state === 'portal') showToast('Billing changes can take a moment to appear.');
+  }catch{}
 }
 function closeAccountModal(){
   if(accountModal) accountModal.hidden = true;
@@ -3240,6 +3340,9 @@ function closeAccountModal(){
   if(deleteAccountBtn) deleteAccountBtn.disabled = true;
 }
 if(accountBtn) accountBtn.addEventListener('click', ()=> goToView('account'));
+// WP-BILLING-001 — checkout/portal entry points
+if(upgradeBtn) upgradeBtn.addEventListener('click', ()=> startCheckout());
+if(manageBillingBtn) manageBillingBtn.addEventListener('click', ()=> openPortal());
 if(accountModalClose) accountModalClose.addEventListener('click', ()=> goToView('home'));
 if(accountModalBackdrop) accountModalBackdrop.addEventListener('click', ()=> goToView('home'));
 if(deleteAccountConfirm) deleteAccountConfirm.addEventListener('input', ()=>{
@@ -3384,6 +3487,7 @@ registerServiceWorker();
   renderHome();
   routeReady = true;
   handleClipParams(); // WP-CLIP-001 — bookmarklet intake (after boot, token ready)
+  handleBillingReturnParams(); // WP-BILLING-001 — post-checkout return toast
 })();
 window.addEventListener('hashchange', ()=>{
   // WP-CLIP-001 — a bookmarklet landing on an already-open app is a

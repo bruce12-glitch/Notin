@@ -11,6 +11,7 @@ import { otpRequestAllowed } from '../lib/throttle.js';
 import { logError } from '../lib/logging.js';
 import { otpEmailSchema, otpVerifySchema, forgotPasswordSchema, resetPasswordSchema, EMAIL_RE } from '../lib/validation.js';
 import { sendInternalError } from '../lib/apiResponse.js';
+import { isBillingConfigured } from '../lib/billing.js';
 
 const env = process.env;
 // APP_ORIGIN may contain a comma-separated CORS allowlist. Redirects and links
@@ -770,5 +771,8 @@ export async function providers(req, res) {
     otp: emailAuthEnabled,
     password: emailAuthEnabled && (env.ALLOW_PASSWORD_SIGNUP === 'true' || (!isProduction && env.ALLOW_PASSWORD_SIGNUP !== 'false')),
     demoOtp: emailAuthEnabled && !smtpConfigured && !isProduction,
+    // WP-BILLING-001 — capability flag so the app renders the Upgrade entry
+    // only on deployments where checkout actually works.
+    billing: isBillingConfigured(),
   });
 }

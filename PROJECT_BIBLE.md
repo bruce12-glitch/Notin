@@ -10,10 +10,10 @@
 
 | Field | Value |
 |---|---|
-| **Last Updated** | 2026-08-25 (WP-MARKET-001: templates, tasks view, editor toolbar, duplicate/export/print, keyboard shortcuts, marketing served at /site, SW v21) |
-| **Current Phase** | Phase 2 (AI) **complete**; hardening **WP-HARDEN-001** + market batch **WP-SEC-004/005/006 + WP-CI-001 + WP-USAGE-001** + product completeness **WP-MARKET-001** complete |
-| **MVP Completion** | ~92% |
-| **Production readiness** | ~98% — fail-closed boot + CORS lock + CI + Postgres rehearsal + templates/tasks/export + marketing on the unified origin. Remaining operator work: SMTP/Google OAuth real secrets, Stripe billing, Teams/Spaces, native apps, hosting with real infra. |
+| **Last Updated** | 2026-08-27 (WP-BILLING-001: config-gated Stripe billing — checkout/portal/webhook, plan entitlements on notes/storage/AI, account-modal plan UI, SW v23) |
+| **Current Phase** | Phase 2 (AI) **complete**; hardening **WP-HARDEN-001** + market batch **WP-SEC-004/005/006 + WP-CI-001 + WP-USAGE-001** + product completeness **WP-MARKET-001** + billing **WP-BILLING-001** complete |
+| **MVP Completion** | ~94% |
+| **Production readiness** | ~98% — fail-closed boot + CORS lock + CI + Postgres rehearsal + templates/tasks/export + marketing on the unified origin + Stripe billing (config-gated). Remaining operator work: SMTP/Google OAuth real secrets, STRIPE_* keys in the Stripe dashboard, Teams/Spaces, native apps, hosting with real infra. |
 
 ---
 
@@ -34,6 +34,7 @@
 
 ## COMPLETED FEATURES (live-verified)
 
+- → **WP-BILLING-001 (2026-08-27): config-gated Stripe billing.** `User` gains `plan`/`planStatus`/`stripeCustomerId` (unique)/`stripeSubscriptionId`/`planRenewsAt` (`2026-08-27-billing-plan-v1`, both dialects; `prisma` mirror updated). ZERO new npm deps — a small fetch client (`lib/billing.js`) POSTs form-encoded bodies to Stripe REST (customers, checkout sessions, billing portal sessions) with a 15 s abort budget; `STRIPE_API_BASE` override exists for tests. Routes: `GET /api/billing` (plan + effective entitlements), `POST /api/billing/checkout` (409 when already Pro; reuses the stored customer), `POST /api/billing/portal` (409 until a customer exists), `POST /api/billing/webhook` — mounted in server.js **before** `express.json` with `express.raw` so the signature sees exact bytes; HMAC-SHA256 over `t.payload` verified with `timingSafeEqual` + ±5 min tolerance; replayed events apply idempotently; unknown types/users acknowledged-and-ignored; unconfigured secret → 503, bad signature → flat 400. **The webhook is the only plan-mutation path** — the checkout redirect alone grants nothing, so a crafted success_url cannot self-upgrade. `checkout.session.completed` → pro; `customer.subscription.updated/deleted` → status sync, `past_due/unpaid` keeps the Pro label but entitlements fall back to free quotas, `canceled/incomplete_expired` returns to free. Entitlements (`entitlementsForPlan`) now drive the REAL limits: note quota (noteController), attachment storage (ensureAttachmentCapacity/uploadImages), and AI budgets (auth middleware stamps `req.userPlan` from the already-fetched user row — no extra query). Capability discovery: `/api/auth/providers` reports `billing`. UI: account modal gains a Plan section — Free/Pro summary with live quota numbers, `Upgrade to Pro` (redirects to the Stripe-hosted checkout) and `Manage billing` (portal), both hidden while billing is unconfigured; `?billing=success|canceled` returns show an honest async-activation toast and clean the query string. Shell cache v22→v23; bundle rebuilt. New `billing-smoke.spec.js` (8 tests): unconfigured contract (401/503/400 validation/free defaults/providers flag) + a SELF-HOSTED instance against a local mock Stripe covering checkout→signed webhook→pro, replay idempotency, wrong-secret/tampered/stale/garbage/missing signature 400s, past_due downgrade + recovery, cancel→free, and portal-after-customer. Verified 8/8 passed + 49 request-spec passes with no regressions (24 hardening + 25 auth/ai/ops). ✅
 - → Auth: password + OTP + Google stub, refresh rotation, reset w/ session revocation, account-existence check per request ✅
 - → Notes: CRUD, trash/restore, delete-only-from-trash, pin (pinned-first), search, notebook/tag filters ✅
 - → Notebooks & Tags: CRUD, assignment (`tagIds` replace-set), counts, dup-name 409 ✅
@@ -72,8 +73,8 @@
 
 ## IN PROGRESS
 
-- → Market-hardening batch #2 complete (WP-CI-001, WP-ARCH-001, WP-LEGACY-001, WP-SEC-004/005/006, WP-USAGE-001). Next: remaining backlog items — S3 storage abstraction, SMTP/Google real config, Stripe billing, Teams/Spaces, native apps/web clipper, account modal UI polish, E2E for new session endpoints.
-- → Current shell cache: `notin-shell-v17` after device inventory + account modal changes.
+- → Market-hardening batch #2 + WP-BILLING-001 complete. Remaining backlog: SMTP/Google real secrets (operator), Teams/Spaces, native apps/web clipper, real two-way sync. ~~Stripe billing~~ **DONE 2026-08-27 (WP-BILLING-001)**; ~~S3 storage abstraction~~, ~~account modal UI polish~~, ~~E2E for session endpoints~~ already shipped (earlier WPs).
+- → Current shell cache: `notin-shell-v23` after WP-BILLING-001 (plan section in the account modal).
 
 ## ARCHITECTURE DECISIONS LOCKED
 
@@ -99,8 +100,8 @@
 
 ## DATABASE SCHEMA VERSION
 
-- → `migrate.js` is the real source of truth. Tables: `User(+tokenVersion), Note(+notebookId,+isPinned), Notebook, Tag, NoteTag, Attachment, NoteShare, otp_challenges, refresh_tokens(+family_id,+revoke_reason,+user_agent,+ip_address,+last_active_at), password_reset_tokens, auth_throttle`.
-- → Latest migrations: `2026-08-24-device-inventory-v1` (device inventory), `2026-08-24-token-versioning-v1` (tokenVersion), `2026-08-22-market-hardening-v1`, `auth_throttle` (WP-SEC-003). All idempotent on both drivers.
+- → `migrate.js` is the real source of truth. Tables: `User(+tokenVersion,+plan,+planStatus,+stripeCustomerId,+stripeSubscriptionId,+planRenewsAt), Note(+notebookId,+isPinned), Notebook, Tag, NoteTag, Attachment, NoteShare, otp_challenges, refresh_tokens(+family_id,+revoke_reason,+user_agent,+ip_address,+last_active_at), password_reset_tokens, auth_throttle`.
+- → Latest migrations: `2026-08-27-billing-plan-v1` (WP-BILLING-001 plan + Stripe linkage + unique `User_stripeCustomerId_key`), `2026-08-24-device-inventory-v1` (device inventory), `2026-08-24-token-versioning-v1` (tokenVersion), `2026-08-22-market-hardening-v1`, `auth_throttle` (WP-SEC-003). All idempotent on both drivers.
 - → `prisma/schema.prisma` is a **documented mirror** of that schema (synced by WP-SCHEMA-001); `migrate.js` remains the only applicator. The repo does not run `prisma generate` and has no `@prisma/client` dependency — keep the mirror updated by hand whenever migrate.js gains a column.
 
 ## API ENDPOINTS BUILT
@@ -112,6 +113,7 @@
 - → Attachments: `GET/POST /api/notes/:id/attachments` · `GET /api/attachments/:id/file` · `DELETE /api/attachments/:id` ✅
 - → Users: `POST /api/users/signup|signin` · `GET /api/users/me/export` · `DELETE /api/users/me` ✅
 - → Auth: `/api/auth/google(+callback) · otp/resend · otp/demo-request · otp/verify · forgot-password · reset-password · refresh · logout · sessions (list/revoke/revoke-others) · health` ✅ (mounted at `/api/auth` + legacy `/auth`)
+- → Billing (WP-BILLING-001): `GET /api/billing` (plan + entitlements) · `POST /api/billing/checkout` (Stripe Checkout URL) · `POST /api/billing/portal` (portal URL) · `POST /api/billing/webhook` (raw-body signed Stripe events; the ONLY plan-mutation path; mounted before express.json) ✅
 - → Users: `POST /api/users/signup|signin` · `GET /api/users/me/export` · `GET /api/users/me/usage` · `GET /api/users/me/sessions` · `DELETE /api/users/me` ✅
 - → `GET /health` (liveness, no DB) · `GET /api/health` (readiness, `SELECT 1`) · `GET /api/health/deep` (readiness + upload writability) ✅
 

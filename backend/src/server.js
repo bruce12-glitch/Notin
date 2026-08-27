@@ -19,6 +19,9 @@ import authRoutes from './routes/authRoutes.js';
 import attachmentRoutes from './routes/attachmentRoutes.js';
 import publicShareRoutes from './routes/publicShareRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
+import billingRoutes from './routes/billingRoutes.js';
+import { handleStripeWebhook } from './controllers/billingController.js';
+import { isBillingConfigured, isWebhookConfigured } from './lib/billing.js';
 import { signup, signin } from './controllers/userController.js';
 import storage from './lib/storage.js';
 import { cleanupExpiredTokens } from './lib/cleanup.js';
@@ -232,6 +235,13 @@ app.use((req, res, next) => {
   return authStatic(req, res, next);
 });
 
+// WP-BILLING-001 — the Stripe webhook must see the RAW request bytes for
+// signature verification, so it is mounted BEFORE the global express.json
+// parser. Its response also deliberately never echoes verification detail.
+// The rest of /api/billing (status/checkout/portal) is mounted below with the
+// other API routers and uses the normal JSON pipeline.
+app.post('/api/billing/webhook', express.raw({ type: '*/*', limit: '1mb' }), handleStripeWebhook);
+
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
@@ -278,6 +288,7 @@ app.use('/api/public/share', publicShareLimit, publicShareRoutes);
 app.use('/api', attachmentRoutes);
 app.use('/api/notes', noteRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/billing', billingRoutes);
 app.use('/api/notebooks', notebookRoutes);
 app.use('/api/tags', tagRoutes);
 
@@ -383,6 +394,7 @@ const start = async () => {
       console.log(`   Readiness:  http://0.0.0.0:${PORT}/api/health`);
       console.log(`   Auth UI:    http://0.0.0.0:${PORT}/ (index.html) + /login.html`);
       console.log(`   Marketing:  http://0.0.0.0:${PORT}/site/`);
+      console.log(`   Billing:    ${isBillingConfigured() ? 'Stripe checkout enabled' : 'not configured (checkout returns 503)'}${isBillingConfigured() ? (isWebhookConfigured() ? ', webhook signature verification on' : ', WEBHOOK SECRET MISSING — plan changes will not apply') : ''}`);
     });
   } catch (error) {
     console.error('❌ Database connection failed:', error);

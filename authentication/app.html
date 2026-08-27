@@ -410,6 +410,17 @@
         <h4>Usage</h4>
         <div id="usageStats" style="font-size:13px; color:#444; line-height:1.6;">Loading usage…</div>
       </section>
+      <!-- WP-BILLING-001 — plan summary + Stripe checkout / portal entry points.
+           Buttons stay honest: with billing unconfigured the Upgrade button is
+           disabled with an explanatory status line instead of failing blindly. -->
+      <section class="app-account-section" id="planSection">
+        <h4>Plan</h4>
+        <div id="planSummary" style="font-size:13px; color:#444; line-height:1.6;">Loading plan…</div>
+        <div style="margin-top:10px; display:flex; gap:8px;">
+          <button type="button" class="app-account-export" id="upgradeBtn" style="height:36px;" hidden>Upgrade to Pro</button>
+          <button type="button" class="app-account-export" id="manageBillingBtn" style="height:36px;" hidden>Manage billing</button>
+        </div>
+      </section>
       <section class="app-account-section">
         <h4>Export your data</h4>
         <p>Download notes, notebooks, tags, and image metadata as JSON. Image files are not included.</p>
