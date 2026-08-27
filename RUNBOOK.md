@@ -83,6 +83,32 @@ Token versioning: `User.tokenVersion` increments on password reset (`POST /api/a
 
 `DELETE /api/users/me` requires the exact JSON body `{ "confirm": "DELETE" }`. The app requires typing `DELETE`. A successful deletion removes notes, notebooks, tags, shares, OTP/reset/refresh records, attachment rows and local files, then clears refresh cookies. Remaining access tokens fail immediately because protected requests verify that the user still exists and token version. This operation is irreversible; export and verify backups first.
 
+## Billing (Pro subscriptions) — WP-BILLING-001
+
+Billing is **config-gated**: with `STRIPE_SECRET_KEY` unset nothing changes (checkout/portal return 503, the app shows an honest "not set up" state). With keys set, Pro is granted **only** by the signed webhook — never by the checkout redirect — so a crafted success URL cannot self-upgrade.
+
+Environment:
+
+| Variable | Purpose |
+|---|---|
+| `STRIPE_SECRET_KEY` | `sk_test_…`/`sk_live_…`; empty disables billing |
+| `STRIPE_PRICE_PRO_MONTHLY` | The Pro `price_…` used for checkout |
+| `STRIPE_WEBHOOK_SECRET` | `whsec_…` used to verify `Stripe-Signature` (required for plan changes) |
+| `MAX_NOTES_PER_USER_PRO`, `MAX_ATTACHMENT_STORAGE_BYTES_PRO`, `AI_CHAT_LIMIT_PRO`, `AI_ASSIST_LIMIT_PRO` | Pro entitlement ceilings (defaults: 50 000 notes, 10 GB, 60/15 min) |
+
+Setup:
+
+1. Create the Pro product/price in Stripe and copy the price id.
+2. Add a webhook endpoint pointing at `POST https://<host>/api/billing/webhook` subscribed to `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`; copy the signing secret.
+3. Boot log reports `Billing: Stripe checkout enabled` (+ webhook state). Verify `GET /api/auth/providers` shows `"billing": true`.
+
+Behavior notes:
+
+- `POST /api/billing/webhook` receives the **raw** body (mounted before the JSON parser) and rejects anything that fails `Stripe-Signature` verification with a flat 400. Events apply idempotently; unknown users/types are acknowledged and ignored.
+- `past_due`/`unpaid` keeps the Pro label but entitlements fall back to free quotas until Stripe reports `active`/`trialing` again. `canceled`/`incomplete_expired` returns the account to the free plan.
+- Status is `GET /api/billing` (Bearer): `{configured, plan, status, renewsAt, entitlements}`. Usage (`/api/users/me/usage`) and the upload/note/AI limits all enforce the caller's plan.
+- Test locally without real keys: the E2E spec `billing-smoke.spec.js` boots its own instance against a local mock Stripe (`STRIPE_API_BASE`) and exercises the full money path.
+
 ## Optional Sentry monitoring
 
 Set `SENTRY_DSN` in the backend environment to enable `@sentry/node`. Leave it empty in development if you do not want monitoring noise. `SENTRY_ENVIRONMENT` is optional and otherwise follows `NODE_ENV`.
@@ -127,6 +153,7 @@ The full journey requires development demo OTP conditions. If demo OTP is disabl
 - [ ] Configure a real PostgreSQL `DATABASE_URL`, run `npm run db:migrate`, and verify `/api/health` returns 200 with `"driver":"PostgreSQL"` and `"reachable":true`. Point the load balancer at `/api/health` (readiness), not `/health` (liveness).
 - [ ] Configure SMTP (`SMTP_HOST`, port, user, password, sender) so OTP and reset mail can be delivered. Verify demo OTP is disabled.
 - [ ] Configure Google OAuth client credentials and an exact HTTPS `GOOGLE_REDIRECT_URI` if Google sign-in is offered.
+- [ ] To sell Pro: set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_PRO_MONTHLY`, and `STRIPE_WEBHOOK_SECRET`; register the webhook endpoint (see Billing section); verify `GET /api/billing` reports `"configured": true` and a test checkout completes end-to-end.
 - [ ] Set the public HTTPS `APP_ORIGIN` and `PUBLIC_APP_URL`; verify secure HTTP-only refresh cookies through the proxy.
 - [ ] Configure the two-origin routing contract: marketing at `notin.app`, app/API at `app.notin.app` (see `deploy/nginx.conf.example`).
 - [ ] Keep `AUTH_EMAIL_ENABLED=true` only with working SMTP; production boot enforces this.

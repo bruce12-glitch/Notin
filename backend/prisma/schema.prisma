@@ -19,6 +19,14 @@ model User {
   password     String?
   googleSub    String?  @unique @map("google_sub")
   tokenVersion Int      @default(0) @map("tokenVersion")
+  // WP-BILLING-001 — Stripe billing (config-gated). plan is 'free' | 'pro';
+  // planStatus mirrors the Stripe subscription status (active, trialing,
+  // past_due, canceled, …). Only the signed webhook mutates these columns.
+  plan                 String   @default("free")
+  planStatus           String?  @map("planStatus")
+  stripeCustomerId     String?  @unique @map("stripeCustomerId")
+  stripeSubscriptionId String?  @map("stripeSubscriptionId")
+  planRenewsAt         DateTime? @map("planRenewsAt")
   createdAt    DateTime @default(now()) @map("createdAt")
   updatedAt    DateTime @updatedAt @map("updatedAt")
 

@@ -3,6 +3,7 @@ import path from 'node:path';
 import db from '../config/db.js';
 import { uploadDir } from './attachmentController.js';
 import { logError } from '../lib/logging.js';
+import { entitlementsForPlan } from '../lib/billing.js';
 
 const isTrue = (value) => value === true || value === 1 || value === '1' || value === 't';
 
@@ -25,16 +26,25 @@ function clearSessionCookies(res) {
 export async function getUsage(req, res) {
   try {
     const userId = req.userId;
-    const [noteCountRes, attachmentRes, notebookRes, tagRes, sessionRes] = await Promise.all([
+    const [noteCountRes, attachmentRes, notebookRes, tagRes, sessionRes, userRes] = await Promise.all([
       db.query(`SELECT COUNT(*) as total FROM "Note" WHERE "userId" = $1`, [userId]),
       db.query(`SELECT COUNT(*) as count, COALESCE(SUM(size),0) as bytes FROM "Attachment" WHERE "userId" = $1`, [userId]),
       db.query(`SELECT COUNT(*) as total FROM "Notebook" WHERE "userId" = $1`, [userId]),
       db.query(`SELECT COUNT(*) as total FROM "Tag" WHERE "userId" = $1`, [userId]),
       db.query(`SELECT COUNT(DISTINCT family_id) as total FROM refresh_tokens WHERE user_id = $1 AND revoked_at IS NULL`, [userId]),
+      db.user.findById(userId),
     ]);
-    const maxNotes = Number.parseInt(process.env.MAX_NOTES_PER_USER || '5000', 10) || 5000;
-    const maxStorage = Number.parseInt(process.env.MAX_ATTACHMENT_STORAGE_BYTES || String(250*1024*1024), 10) || 250*1024*1024;
+    // WP-BILLING-001 — quotas follow the caller's plan (free vs pro), so the
+    // Account usage panel can never show a number the server doesn't enforce.
+    const entitlements = entitlementsForPlan(userRes?.plan, userRes?.planStatus);
+    const maxNotes = entitlements.maxNotes;
+    const maxStorage = entitlements.storageQuota;
     res.json({
+      plan: {
+        id: String(userRes?.plan || 'free').toLowerCase() === 'pro' ? 'pro' : 'free',
+        status: userRes?.planStatus || null,
+        renewsAt: userRes?.planRenewsAt || null,
+      },
       notes: { count: Number(noteCountRes.rows[0]?.total || 0), quota: maxNotes },
       notebooks: { count: Number(notebookRes.rows[0]?.total || 0) },
       tags: { count: Number(tagRes.rows[0]?.total || 0) },

@@ -307,6 +307,16 @@ export const resetPasswordSchema = z
   })
   .strict();
 
+// ── Billing (WP-BILLING-001) ─────────────────────────────────────────────────
+// The only client-settable billing input is which plan to check out. Everything
+// else (customer, price, URLs, subscription state) is server- or webhook-owned.
+
+export const checkoutSchema = z
+  .object({
+    plan: z.literal('pro', { invalid_type_error: 'Unsupported plan', required_error: 'Plan is required' }),
+  })
+  .strict();
+
 // ── AI ───────────────────────────────────────────────────────────────────────
 
 export const MAX_CHAT_HISTORY_TURNS = 6;

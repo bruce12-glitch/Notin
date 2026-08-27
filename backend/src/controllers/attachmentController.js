@@ -7,6 +7,7 @@ import { logError } from '../lib/logging.js';
 import { ID_RE } from '../lib/validation.js';
 import { sendInternalError } from '../lib/apiResponse.js';
 import attachmentStorage, { uploadDir, MAX_IMAGE_BYTES, MAX_IMAGES_PER_NOTE, MAX_ATTACHMENT_STORAGE_BYTES } from '../lib/storage.js';
+import { entitlementsForPlan } from '../lib/billing.js';
 
 export { uploadDir, MAX_IMAGE_BYTES, MAX_IMAGES_PER_NOTE, MAX_ATTACHMENT_STORAGE_BYTES };
 // WP-HARDEN-001 â€” route params are user input too: reject ids that cannot
@@ -164,6 +165,9 @@ export async function ensureAttachmentCapacity(req, res, next) {
     ]);
     req.attachmentCount = Number(noteRows[0]?.count || 0);
     req.attachmentStorageBytes = Number(usageRows[0]?.bytes || 0);
+    // WP-BILLING-001 â€” the storage ceiling follows the caller's plan; the
+    // enforcement in uploadImages reads it from here, never the raw constant.
+    req.attachmentStorageQuota = entitlementsForPlan(req.userPlan, req.userPlanStatus).storageQuota;
     next();
   } catch (error) {
     return sendInternalError(req, res, error, 'Could not prepare image upload', 'ensureAttachmentCapacity');
@@ -181,7 +185,8 @@ export async function uploadImages(req, res) {
     }
 
     const uploadedBytes = files.reduce((sum, file) => sum + Number(file.size || 0), 0);
-    if ((req.attachmentStorageBytes || 0) + uploadedBytes > MAX_ATTACHMENT_STORAGE_BYTES) {
+    const storageQuota = Number(req.attachmentStorageQuota) > 0 ? Number(req.attachmentStorageQuota) : MAX_ATTACHMENT_STORAGE_BYTES;
+    if ((req.attachmentStorageBytes || 0) + uploadedBytes > storageQuota) {
       await removeFiles(files);
       return res.status(403).json({ message: 'Attachment storage limit reached', code: 'STORAGE_QUOTA_REACHED' });
     }
@@ -327,7 +332,7 @@ export function handleUploadError(error, req, res, next) {
   next(error);
 }
 
-// -- WP-AI-009 — record/upload audio, store it, transcribe it (Groq Whisper or
+// -- WP-AI-009 ï¿½ record/upload audio, store it, transcribe it (Groq Whisper or
 // deterministic mock), and append the transcript to the note. The audio stays
 // a normal attachment; the transcript is plain note text (export-friendly).
 import { transcribeAudio } from '../lib/ai/provider.js';
@@ -358,7 +363,7 @@ export async function transcribeUpload(req, res) {
       [id, req.params.noteId, req.userId, originalName, file.mimetype, file.size, file.filename, now],
     );
 
-    // Transcribe. A provider failure keeps the attachment but reports 503 —
+    // Transcribe. A provider failure keeps the attachment but reports 503 ï¿½
     // the bytes are safe, only the text step failed.
     let transcript;
     let provider;

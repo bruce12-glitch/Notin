@@ -340,20 +340,37 @@ const db = {
   get usePostgres() { return usePostgres; },
   get sqlitePath() { return sqlitePath; },
   user: {
+    // WP-BILLING-001 — every read includes the plan fields so auth/usage/
+    // billing surfaces can apply entitlements without a second query.
     async findUnique({ where: { email } }) {
       if (!email) return null;
-      const { rows } = await query('SELECT id, username, email, password, google_sub as "googleSub", "tokenVersion", "createdAt", "updatedAt" FROM "User" WHERE email = $1 LIMIT 1', [email.trim().toLowerCase()]);
+      const { rows } = await query('SELECT id, username, email, password, google_sub as "googleSub", "tokenVersion", plan, "planStatus", "stripeCustomerId", "stripeSubscriptionId", "planRenewsAt", "createdAt", "updatedAt" FROM "User" WHERE email = $1 LIMIT 1', [email.trim().toLowerCase()]);
       if (rows[0]) rows[0].tokenVersion = Number(rows[0].tokenVersion || 0);
       return rows[0] || null;
     },
     async findById(id) {
-      const { rows } = await query('SELECT id, username, email, password, google_sub as "googleSub", "tokenVersion", "createdAt", "updatedAt" FROM "User" WHERE id = $1 LIMIT 1', [id]);
+      const { rows } = await query('SELECT id, username, email, password, google_sub as "googleSub", "tokenVersion", plan, "planStatus", "stripeCustomerId", "stripeSubscriptionId", "planRenewsAt", "createdAt", "updatedAt" FROM "User" WHERE id = $1 LIMIT 1', [id]);
       if (rows[0]) rows[0].tokenVersion = Number(rows[0].tokenVersion || 0);
       return rows[0] || null;
     },
     async findByGoogleSub(googleSub) {
       if (!googleSub) return null;
-      const { rows } = await query('SELECT id, username, email, password, google_sub as "googleSub", "tokenVersion", "createdAt", "updatedAt" FROM "User" WHERE google_sub = $1 LIMIT 1', [googleSub]);
+      const { rows } = await query('SELECT id, username, email, password, google_sub as "googleSub", "tokenVersion", plan, "planStatus", "stripeCustomerId", "stripeSubscriptionId", "planRenewsAt", "createdAt", "updatedAt" FROM "User" WHERE google_sub = $1 LIMIT 1', [googleSub]);
+      if (rows[0]) rows[0].tokenVersion = Number(rows[0].tokenVersion || 0);
+      return rows[0] || null;
+    },
+    // WP-BILLING-001 — webhook lookups by Stripe identifiers. The metadata
+    // userId is the primary key path; customer id is the fallback when a
+    // subscription event arrives without resolvable metadata.
+    async findByStripeCustomerId(stripeCustomerId) {
+      if (!stripeCustomerId) return null;
+      const { rows } = await query('SELECT id, username, email, password, google_sub as "googleSub", "tokenVersion", plan, "planStatus", "stripeCustomerId", "stripeSubscriptionId", "planRenewsAt", "createdAt", "updatedAt" FROM "User" WHERE "stripeCustomerId" = $1 LIMIT 1', [stripeCustomerId]);
+      if (rows[0]) rows[0].tokenVersion = Number(rows[0].tokenVersion || 0);
+      return rows[0] || null;
+    },
+    async findByStripeSubscriptionId(stripeSubscriptionId) {
+      if (!stripeSubscriptionId) return null;
+      const { rows } = await query('SELECT id, username, email, password, google_sub as "googleSub", "tokenVersion", plan, "planStatus", "stripeCustomerId", "stripeSubscriptionId", "planRenewsAt", "createdAt", "updatedAt" FROM "User" WHERE "stripeSubscriptionId" = $1 LIMIT 1', [stripeSubscriptionId]);
       if (rows[0]) rows[0].tokenVersion = Number(rows[0].tokenVersion || 0);
       return rows[0] || null;
     },

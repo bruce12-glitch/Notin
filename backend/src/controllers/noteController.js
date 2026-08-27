@@ -8,12 +8,20 @@ import {
   NOTE_QUERY_MAX,
 } from '../lib/validation.js';
 import { sendValidationError, sendInternalError } from '../lib/apiResponse.js';
+import { entitlementsForPlan } from '../lib/billing.js';
 
 const DEFAULT_LIMIT = 100;
 const configuredNoteQuota = Number.parseInt(process.env.MAX_NOTES_PER_USER || '5000', 10);
 const MAX_NOTES_PER_USER = Number.isSafeInteger(configuredNoteQuota) && configuredNoteQuota > 0
   ? configuredNoteQuota
   : 5000;
+
+// WP-BILLING-001 — the enforced note quota follows the caller's plan. Free
+// stays MAX_NOTES_PER_USER; an active Pro subscription uses the Pro ceiling.
+function noteQuotaFor(req) {
+  const entitlements = entitlementsForPlan(req.userPlan, req.userPlanStatus);
+  return entitlements.maxNotes || MAX_NOTES_PER_USER;
+}
 
 // WP-HARDEN-001 — pagination query parsing for GET /api/notes.
 // Returns null after sending a 400 when any argument is invalid.
@@ -84,9 +92,10 @@ export const createNote = async (req, res) => {
 
   try {
     const noteCount = await prisma.note.count({ where: { userId } });
-    if (noteCount >= MAX_NOTES_PER_USER) {
+    const noteQuota = noteQuotaFor(req);
+    if (noteCount >= noteQuota) {
       return res.status(403).json({
-        message: `Note limit reached (${MAX_NOTES_PER_USER})`,
+        message: `Note limit reached (${noteQuota})`,
         code: 'NOTE_QUOTA_REACHED',
       });
     }

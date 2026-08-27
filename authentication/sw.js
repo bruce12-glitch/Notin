@@ -3,7 +3,7 @@
 // per-user note snapshots live in IndexedDB and are managed by app.js.
 // Bump CACHE_NAME whenever any shell asset changes (app.bundle.js etc.) or
 // existing installs keep serving the stale cached copy.
-const CACHE_NAME = 'notin-shell-v22';
+const CACHE_NAME = 'notin-shell-v23';
 const SHELL_PATHS = [
   '/app.html',
   '/app.bundle.js',

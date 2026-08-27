@@ -258,6 +258,20 @@ async function migratePostgres(pool) {
   await pool.query(`INSERT INTO schema_migrations (version) VALUES ('2026-08-24-token-versioning-v1') ON CONFLICT DO NOTHING;`);
   await pool.query(`INSERT INTO schema_migrations (version) VALUES ('2026-08-24-device-inventory-v1') ON CONFLICT DO NOTHING;`);
 
+  // WP-BILLING-001 — plan + Stripe linkage on User. Billing is config-gated:
+  // the columns are always present, but every user starts on the 'free' plan
+  // and only the (optionally configured) Stripe webhook promotes to 'pro'.
+  await pool.query(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS plan TEXT NOT NULL DEFAULT 'free';`);
+  await pool.query(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "planStatus" TEXT;`);
+  await pool.query(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "stripeCustomerId" TEXT;`);
+  await pool.query(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "stripeSubscriptionId" TEXT;`);
+  await pool.query(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "planRenewsAt" TIMESTAMPTZ;`);
+  await pool.query(`UPDATE "User" SET plan = 'free' WHERE plan IS NULL;`);
+  // Unique: at most one user per Stripe customer (NULLs are never equal, so
+  // users without a billing profile are unaffected).
+  await pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS "User_stripeCustomerId_key" ON "User"("stripeCustomerId");`);
+  await pool.query(`INSERT INTO schema_migrations (version) VALUES ('2026-08-27-billing-plan-v1') ON CONFLICT DO NOTHING;`);
+
   console.log('✅ PostgreSQL migrations complete');
 }
 
@@ -455,6 +469,17 @@ function migrateSqlite(dbPath) {
   db.prepare(`INSERT OR IGNORE INTO schema_migrations (version) VALUES (?)`).run('2026-08-22-market-hardening-v1');
   db.prepare(`INSERT OR IGNORE INTO schema_migrations (version) VALUES (?)`).run('2026-08-24-token-versioning-v1');
   db.prepare(`INSERT OR IGNORE INTO schema_migrations (version) VALUES (?)`).run('2026-08-24-device-inventory-v1');
+
+  // WP-BILLING-001 — plan + Stripe linkage on User (mirrors the PostgreSQL
+  // migration above; timestamps are TEXT ISO strings in the SQLite dialect).
+  try{ db.exec(`ALTER TABLE "User" ADD COLUMN plan TEXT NOT NULL DEFAULT 'free'`); }catch(e){ if(!String(e.message).includes('duplicate column')) throw e; }
+  try{ db.exec(`ALTER TABLE "User" ADD COLUMN "planStatus" TEXT`); }catch(e){ if(!String(e.message).includes('duplicate column')) throw e; }
+  try{ db.exec(`ALTER TABLE "User" ADD COLUMN "stripeCustomerId" TEXT`); }catch(e){ if(!String(e.message).includes('duplicate column')) throw e; }
+  try{ db.exec(`ALTER TABLE "User" ADD COLUMN "stripeSubscriptionId" TEXT`); }catch(e){ if(!String(e.message).includes('duplicate column')) throw e; }
+  try{ db.exec(`ALTER TABLE "User" ADD COLUMN "planRenewsAt" TEXT`); }catch(e){ if(!String(e.message).includes('duplicate column')) throw e; }
+  try{ db.exec(`UPDATE "User" SET plan = 'free' WHERE plan IS NULL`); }catch{}
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS "User_stripeCustomerId_key" ON "User"("stripeCustomerId") WHERE "stripeCustomerId" IS NOT NULL;`);
+  db.prepare(`INSERT OR IGNORE INTO schema_migrations (version) VALUES (?)`).run('2026-08-27-billing-plan-v1');
   db.close();
   console.log('✅ SQLite fallback migrations complete');
 }
