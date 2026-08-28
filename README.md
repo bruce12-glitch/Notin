@@ -20,10 +20,22 @@
   <img src="https://img.shields.io/badge/type-Personal%2FPortfolio-8FE333?style=flat-square" alt="Project type" />
 </p>
 
+## 📌 Project metadata
+
+**Description:** Notin is a full-stack, privacy-minded note-taking platform for capturing ideas, organizing work, and finding information quickly.
+
+- **Website:** [notin.app](https://notin.app/)
+- **About Notin:** [Read the story and roadmap](frontend/context.html)
+- **Security policy:** [SECURITY.md](SECURITY.md) · [Report a vulnerability](mailto:security@notin.app)
+- **Project type:** Personal / portfolio project
+
+**Topics:** `note-taking` · `productivity` · `vanilla-javascript` · `nodejs` · `express` · `postgresql` · `prisma` · `jwt` · `pwa` · `ai`
+
 ---
 
 ## 📋 Table of Contents
 
+- [Project metadata](#-project-metadata)
 - [Overview](#-overview)
 - [Architecture](#-architecture)
 - [Tech Stack](#️-tech-stack)
@@ -34,6 +46,7 @@
 - [Testing](#-testing)
 - [CI/CD](#-cicd)
 - [Security](#-security)
+- [Security policy](SECURITY.md)
 - [Key Learnings & Challenges](#-key-learnings--challenges)
 
 ---
