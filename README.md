@@ -27,6 +27,7 @@
 - **Website:** [notin.app](https://notin.app/)
 - **About Notin:** [Read the story and roadmap](frontend/context.html)
 - **Security policy:** [SECURITY.md](SECURITY.md) · [Report a vulnerability](mailto:security@notin.app)
+- **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md)
 - **Project type:** Personal / portfolio project
 
 **Topics:** `note-taking` · `productivity` · `vanilla-javascript` · `nodejs` · `express` · `postgresql` · `prisma` · `jwt` · `pwa` · `ai`
@@ -47,6 +48,7 @@
 - [CI/CD](#-cicd)
 - [Security](#-security)
 - [Security policy](SECURITY.md)
+- [Contributing](CONTRIBUTING.md)
 - [Key Learnings & Challenges](#-key-learnings--challenges)
 
 ---

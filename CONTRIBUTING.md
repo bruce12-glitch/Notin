@@ -46,6 +46,12 @@ npm --prefix frontend run check
 npm --prefix backend run test:e2e       # Playwright end-to-end suite
 ```
 
+Or run the fast subset in one command:
+
+```bash
+./ci/checks.sh
+```
+
 If you changed anything under `authentication/`, re-run `build:app` and commit
 the regenerated `app.bundle.js`. CI fails when the bundle drifts from source.
 
