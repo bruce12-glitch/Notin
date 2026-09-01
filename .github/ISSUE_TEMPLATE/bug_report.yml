@@ -1,0 +1,61 @@
+name: Bug report
+description: Report something in Notin that is broken or behaves unexpectedly
+title: "bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report! Please do **not** file security vulnerabilities here —
+        follow [SECURITY.md](../../SECURITY.md) instead.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and what you expected instead.
+      placeholder: Saving a note with an empty title returns a 500 instead of a validation error.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1. Go to '...'
+        2. Click on '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which area is affected?
+      options:
+        - backend (API)
+        - authentication (app UI)
+        - frontend (marketing site)
+        - deployment / CI
+        - not sure
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Browser, OS and Node.js version where relevant.
+      placeholder: Chrome 129 on macOS 15, Node 22.9
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or screenshots
+      description: Paste any server output or console errors. Redact secrets and personal data.
+      render: shell
+    validations:
+      required: false
