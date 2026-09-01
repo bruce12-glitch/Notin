@@ -1,0 +1,49 @@
+name: Feature request
+description: Suggest an improvement or new capability for Notin
+title: "feat: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is hard or impossible today? Focus on the need, not the solution.
+      placeholder: I keep dozens of notes per notebook and cannot filter them by tag.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like Notin to do?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which area would this touch?
+      options:
+        - backend (API)
+        - authentication (app UI)
+        - frontend (marketing site)
+        - deployment / CI
+        - not sure
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I would be willing to open a pull request for this
+          required: false
