@@ -57,11 +57,6 @@
 
 **Notin** is a full-stack note-taking platform inspired by Evernote. It consists of three integrated layers:
 
-| Layer | Description | Status |
-|---|---|---|
-| 🎨 **Marketing Site** | Pixel-perfect Evernote-style landing page in two themes (Green & Neon) with 3D motion design, Lottie animations, and responsive layout | ✅ Complete |
-| ⚙️ **REST API** | Express.js backend with PostgreSQL/SQLite, JWT auth, CRUD for notes/notebooks/tags, image attachments, AI integration, and read-only public sharing | ✅ Complete |
-| 🔐 **Auth & Editor App** | Google OAuth + email OTP sign-in, TipTap rich-text editor, post-auth Home dashboard (Evernote-dark clone), PWA offline support | ✅ Complete |
 
 The entire frontend is built with **vanilla JavaScript** (no React/Angular/Vue) and **Tailwind CSS v4**, demonstrating deep understanding of the DOM, CSS architecture, and interactive motion design.
 
