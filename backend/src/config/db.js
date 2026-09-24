@@ -44,28 +44,80 @@ if (usePostgres) {
   sqliteDb.exec('PRAGMA journal_mode = WAL');
 }
 
+// WP-AUDIT-M1 — quote-aware placeholder rewrite for the SQLite dialect. The old
+// /\$(\d+)/g pass also rewrote "$n" sequences inside string literals and left
+// Postgres casts ($1::timestamptz) behind, corrupting queries on the fallback.
+// This scanner skips single-quoted regions (with '' escapes) and absorbs simple
+// casts directly after a placeholder.
 function pgToSqliteQuery(text) {
-  return text.replace(/\$(\d+)/g, '?');
+  let out = '';
+  let inString = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      out += ch;
+      if (ch === "'") {
+        if (text[i + 1] === "'") { out += "'"; i++; } // '' escape inside literal
+        else inString = false;
+      }
+      continue;
+    }
+    if (ch === "'") { inString = true; out += ch; continue; }
+    if (ch === '$' && /\d/.test(text[i + 1] || '')) {
+      let j = i + 1;
+      while (j < text.length && /\d/.test(text[j])) j++;
+      out += '?';
+      const cast = text.slice(j).match(/^::[a-zA-Z]+/);
+      i = j + (cast ? cast[0].length : 0) - 1;
+      continue;
+    }
+    out += ch;
+  }
+  return out;
 }
+export { pgToSqliteQuery }; // exported for unit tests (WP-AUDIT-M1)
 function randomId() {
   return 'c' + Date.now().toString(16) + crypto.randomBytes(8).toString('hex');
 }
+// WP-AUDIT-M1 — explicit, exhaustive connection-failure detection. Substring
+// matching on 'connect' misclassified SQL errors (e.g. "connection" inside a
+// constraint message) as outages and silently flipped the process onto an
+// empty SQLite file mid-flight.
+const PG_CONN_CODES = new Set([
+  'ECONNREFUSED', 'ENOTFOUND', 'ECONNRESET', 'ETIMEDOUT', 'EAI_AGAIN', 'EPIPE',
+  '57P01', // admin_shutdown
+  '08000', '08001', '08003', '08004', '08006', '08007', '08P01', // SQLSTATE connection class
+]);
+function isConnectionError(err) {
+  if (!err) return false;
+  if (PG_CONN_CODES.has(err.code)) return true;
+  if (Array.isArray(err.errors) && err.errors.length) return err.errors.some(isConnectionError); // AggregateError
+  const msg = String(err.message || '');
+  return /\b(ECONNREFUSED|ENOTFOUND|ECONNRESET|ETIMEDOUT|EAI_AGAIN)\b/.test(msg);
+}
+const sqliteFallbackAllowed = process.env.ALLOW_SQLITE_FALLBACK === 'true';
 async function query(text, params = []) {
   if (usePostgres && pool) {
     try {
       const result = await pool.query(text, params);
       return result;
     } catch (err) {
-      const msg = String(err.message || err.code || '');
-      const isConnError = msg.includes('ECONNREFUSED') || msg.includes('ENOTFOUND') || msg.includes('connect') || err.code === 'ECONNREFUSED';
+      const isConnError = isConnectionError(err);
       if (isConnError) {
         // WP-DEPLOY-001 — same rule mid-flight: production must never silently
         // migrate live traffic onto an empty local SQLite file.
         if (process.env.NODE_ENV === 'production') {
-          console.error(`FATAL: lost the PostgreSQL connection in production (${msg}) — refusing to fall back to SQLite`);
+          console.error(`FATAL: lost the PostgreSQL connection in production (${err.message || err.code}) — refusing to fall back to SQLite`);
           throw err;
         }
-        console.warn(`⚠️  Postgres query failed (${msg}), switching to SQLite fallback at ${sqlitePath}`);
+        // WP-AUDIT-M1 — the dev fallback is now opt-in: without
+        // ALLOW_SQLITE_FALLBACK=true a Postgres outage fails loudly instead of
+        // silently serving an empty/divergent SQLite store.
+        if (!sqliteFallbackAllowed) {
+          console.error(`PostgreSQL query failed (${err.message || err.code}). Set ALLOW_SQLITE_FALLBACK=true to enable the development SQLite fallback.`);
+          throw err;
+        }
+        console.warn(`⚠️  Postgres query failed (${err.message || err.code}), switching to SQLite fallback at ${sqlitePath}`);
         usePostgres = false;
         if (!sqliteDb) {
           try { fs.mkdirSync(path.dirname(sqlitePath), { recursive: true }); } catch {}
@@ -75,7 +127,7 @@ async function query(text, params = []) {
             sqliteDb.prepare(`SELECT 1 FROM "User" LIMIT 1`).get();
           } catch {
             console.log('SQLite User table missing — creating fallback tables');
-            const fallbackMigrate = (await import('../db/migrate.js')).default;
+            await import('../db/migrate.js');
           }
         }
         return querySqlite(text, params);
@@ -516,7 +568,7 @@ const db = {
       );
       const row = rows[0];
       if(row){
-        if(row.contentJson && typeof row.contentJson === 'string'){ try{ row.contentJson = JSON.parse(row.contentJson); }catch{} }
+        if(row.contentJson && typeof row.contentJson === 'string'){ try{ row.contentJson = JSON.parse(row.contentJson); }catch(parseErr){ console.warn(`[db] contentJson parse failed for note ${row.id ?? 'unknown'} — returning raw text:`, parseErr.message); } }
         row.isTrashed = !!(row.isTrashed === true || row.isTrashed === 1 || row.isTrashed === '1' || row.isTrashed === 't');
         row.isPinned = !!(row.isPinned === true || row.isPinned === 1 || row.isPinned === '1' || row.isPinned === 't'); // WP-APP-007
         row.tags = row.tags || []; // WP-APP-006 — new notes start untagged
@@ -556,7 +608,7 @@ const db = {
       }
       const { rows } = await query(sql, params);
       const mapped = rows.map(r=>{
-        if(r.contentJson && typeof r.contentJson === 'string'){ try{ r.contentJson = JSON.parse(r.contentJson); }catch{} }
+        if(r.contentJson && typeof r.contentJson === 'string'){ try{ r.contentJson = JSON.parse(r.contentJson); }catch(parseErr){ console.warn(`[db] contentJson parse failed for note ${r.id ?? 'unknown'} — returning raw text:`, parseErr.message); } }
         r.isTrashed = !!(r.isTrashed === true || r.isTrashed === 1 || r.isTrashed === '1' || r.isTrashed === 't');
         r.isPinned = !!(r.isPinned === true || r.isPinned === 1 || r.isPinned === '1' || r.isPinned === 't'); // WP-APP-007
         // WP-HARDEN-001 — rank is internal unless the client asked for it.
@@ -579,7 +631,7 @@ const db = {
       );
       const row = rows[0] || null;
       if(row){
-        if(row.contentJson && typeof row.contentJson === 'string'){ try{ row.contentJson = JSON.parse(row.contentJson); }catch{} }
+        if(row.contentJson && typeof row.contentJson === 'string'){ try{ row.contentJson = JSON.parse(row.contentJson); }catch(parseErr){ console.warn(`[db] contentJson parse failed for note ${row.id ?? 'unknown'} — returning raw text:`, parseErr.message); } }
         row.isTrashed = !!(row.isTrashed === true || row.isTrashed === 1 || row.isTrashed === '1' || row.isTrashed === 't');
         row.isPinned = !!(row.isPinned === true || row.isPinned === 1 || row.isPinned === '1' || row.isPinned === 't'); // WP-APP-007
         await attachTags([row]);
@@ -631,7 +683,10 @@ const db = {
       params.push(id);
       let whereClause = `id = $${idParam}`;
       if (data.expectedUpdatedAt !== undefined) {
-        whereClause += ` AND "updatedAt" = $${idx++}`;
+        // WP-AUDIT-M2 — rows stamped by DB-default NOW() carry full timestamptz
+        // precision; an uncast parameter let Postgres pick text/timestamp
+        // semantics and spuriously miss. Pin the type on the pg dialect.
+        whereClause += ` AND "updatedAt" = ${idx++}${usePostgres ? '::timestamptz' : ''}`;
         params.push(data.expectedUpdatedAt);
       }
       const setClause = sets.join(', ');
@@ -645,7 +700,7 @@ const db = {
       }
       const row = rows[0];
       if(row){
-        if(row.contentJson && typeof row.contentJson === 'string'){ try{ row.contentJson = JSON.parse(row.contentJson); }catch{} }
+        if(row.contentJson && typeof row.contentJson === 'string'){ try{ row.contentJson = JSON.parse(row.contentJson); }catch(parseErr){ console.warn(`[db] contentJson parse failed for note ${row.id ?? 'unknown'} — returning raw text:`, parseErr.message); } }
         row.isTrashed = !!(row.isTrashed === true || row.isTrashed === 1 || row.isTrashed === '1' || row.isTrashed === 't');
         row.isPinned = !!(row.isPinned === true || row.isPinned === 1 || row.isPinned === '1' || row.isPinned === 't'); // WP-APP-007
         await attachTags([row]);

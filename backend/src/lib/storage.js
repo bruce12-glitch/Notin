@@ -21,6 +21,19 @@ fs.mkdirSync(uploadDir, { recursive: true });
 
 export const storageProvider = (process.env.STORAGE_PROVIDER || 'local').toLowerCase(); // local | s3
 
+// WP-AUDIT-M5 — an s3 deployment with a missing bucket or a failing SDK must
+// fail loudly. Silently falling back to local disk would split attachment data
+// across two stores and report success for files that are lost on redeploy.
+if (storageProvider === 's3' && !process.env.S3_BUCKET) {
+  console.error('FATAL: STORAGE_PROVIDER=s3 requires S3_BUCKET — refusing silent local-disk fallback');
+  process.exit(1);
+}
+function s3Fail(action, err) {
+  const e = new Error(`S3 storage ${action} failed: ${err?.message || err || 'not configured'}`);
+  e.cause = err;
+  return e;
+}
+
 // Local provider
 const localProvider = {
   name: 'local',
@@ -85,8 +98,7 @@ const s3Provider = {
   async save(file) {
     const bucket = process.env.S3_BUCKET;
     if (!bucket) {
-      console.warn('[storage] S3_BUCKET not set — falling back to local');
-      return localProvider.save(file);
+      throw s3Fail('save', 'S3_BUCKET not set');
     }
     try {
       const client = await getS3Client();
@@ -106,13 +118,12 @@ const s3Provider = {
       await fs.promises.unlink(file.path).catch(() => {});
       return key;
     } catch (e) {
-      console.warn('[storage] S3 save failed, falling back to local', e.message);
-      return localProvider.save(file);
+      throw s3Fail('save', e);
     }
   },
   async remove(storedPath) {
     const bucket = process.env.S3_BUCKET;
-    if (!bucket) return localProvider.remove(storedPath);
+    if (!bucket) throw s3Fail('remove', 'S3_BUCKET not set');
     try {
       const client = await getS3Client();
       if (!client) throw new Error('S3 client not configured');
@@ -122,13 +133,12 @@ const s3Provider = {
         Key: path.basename(storedPath),
       }));
     } catch (e) {
-      console.warn('[storage] S3 remove failed, trying local fallback', e.message);
-      await localProvider.remove(storedPath);
+      throw s3Fail('remove', e);
     }
   },
   async removeMany(storedPaths = []) {
     const bucket = process.env.S3_BUCKET;
-    if (!bucket) return localProvider.removeMany(storedPaths);
+    if (!bucket) throw s3Fail('removeMany', 'S3_BUCKET not set');
     try {
       const client = await getS3Client();
       if (!client) throw new Error('S3 client not configured');
@@ -140,14 +150,25 @@ const s3Provider = {
         Delete: { Objects: keys, Quiet: true },
       }));
     } catch (e) {
-      console.warn('[storage] S3 removeMany failed, falling back to local', e.message);
-      await localProvider.removeMany(storedPaths);
+      throw s3Fail('removeMany', e);
     }
   },
-  exists(storedPath) {
-    // For performance, we assume exists if we have key; real check would be HeadObject async
-    // Synchronous exists check can't be S3 — return true to allow attempt, actual 404 handled in getStream
-    return true;
+  // WP-AUDIT-M5 — real existence check instead of unconditional true.
+  // (Callers must await; the local provider's exists stays synchronous and is
+  // the only one used in sync contexts.)
+  async exists(storedPath) {
+    const bucket = process.env.S3_BUCKET;
+    if (!bucket) throw s3Fail('exists', 'S3_BUCKET not set');
+    const client = await getS3Client();
+    if (!client) throw s3Fail('exists', 'S3 client not configured');
+    const { HeadObjectCommand } = await import('@aws-sdk/client-s3');
+    try {
+      await client.send(new HeadObjectCommand({ Bucket: bucket, Key: path.basename(storedPath) }));
+      return true;
+    } catch (e) {
+      if (e?.name === 'NotFound' || e?.$metadata?.httpStatusCode === 404) return false;
+      throw s3Fail('exists', e);
+    }
   },
   fullPath(storedPath) {
     // For S3, fullPath is not a local path — return key for reference
@@ -155,7 +176,7 @@ const s3Provider = {
   },
   async getStream(storedPath) {
     const bucket = process.env.S3_BUCKET;
-    if (!bucket) return localProvider.getStream(storedPath);
+    if (!bucket) throw s3Fail('getStream', 'S3_BUCKET not set');
     try {
       const client = await getS3Client();
       if (!client) throw new Error('S3 client not configured');
@@ -166,14 +187,12 @@ const s3Provider = {
       }));
       return result.Body; // Readable stream
     } catch (e) {
-      // Fallback to local if S3 fails
-      if (localProvider.exists(storedPath)) return localProvider.getStream(storedPath);
-      throw e;
+      throw s3Fail('getStream', e);
     }
   },
   async probeWritable() {
     const bucket = process.env.S3_BUCKET;
-    if (!bucket) return localProvider.probeWritable();
+    if (!bucket) return false;
     try {
       const client = await getS3Client();
       if (!client) return false;

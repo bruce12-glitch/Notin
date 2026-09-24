@@ -41,7 +41,7 @@ export async function getUsage(req, res) {
       attachments: { count: Number(attachmentRes.rows[0]?.count || 0), storageBytes: Number(attachmentRes.rows[0]?.bytes || 0), storageQuota: maxStorage },
       sessions: { count: Number(sessionRes.rows[0]?.total || 0) },
     });
-  } catch (e) {
+  } catch {
     res.status(500).json({ message: 'Could not load usage' });
   }
 }

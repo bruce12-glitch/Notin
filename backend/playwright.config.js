@@ -32,6 +32,9 @@ export default defineConfig({
         url: `${baseURL}/health`,
         reuseExistingServer: true,
         timeout: 30_000,
+        // WP-AUDIT-H2 — the suite drives the passwordless flow through the demo
+        // OTP endpoint, which is now opt-in. Enable it ONLY for the test server.
+        env: { ...process.env, ALLOW_DEMO_OTP: 'true' },
       }
     : undefined,
 });

@@ -1,23 +1,39 @@
-import { SignJWT, jwtVerify } from 'jose';
+﻿import { SignJWT, jwtVerify } from 'jose';
 import crypto from 'node:crypto';
 
 const env = process.env;
 
-// Unified secrets — prefer new names, fallback to legacy JWT_SECRET for backwards compat
-const accessSecret = env.JWT_ACCESS_SECRET || env.JWT_SECRET || 'dev-access-secret-change-me-32chars-min-ok';
-const refreshSecret = env.JWT_REFRESH_SECRET || env.JWT_SECRET || 'dev-refresh-secret-change-me-32chars-min-ok';
+// Unified secrets â€” prefer new names, fallback to legacy JWT_SECRET for backwards compat.
+// WP-AUDIT-H2 â€” never fall back to a committed constant: in non-production a missing
+// secret becomes a per-process EPHEMERAL random value (tokens die on restart, and a
+// published constant can never mint valid tokens for a preview deployment). Production
+// is fail-closed via assertProductionEnv() in server.js before this module matters.
+const isProd = env.NODE_ENV === 'production';
+const ephemeralAccess = crypto.randomBytes(32).toString('hex');
+const ephemeralRefresh = crypto.randomBytes(32).toString('hex');
+const accessSecret = env.JWT_ACCESS_SECRET || env.JWT_SECRET || ephemeralAccess;
+const refreshSecret = env.JWT_REFRESH_SECRET || env.JWT_SECRET || ephemeralRefresh;
 const issuer = env.JWT_ISSUER || 'notin-auth';
 const audience = 'notin-api';
 
-if (!env.JWT_ACCESS_SECRET && !env.JWT_SECRET) {
-  console.warn('⚠️  JWT_ACCESS_SECRET not set, using fallback — set JWT_ACCESS_SECRET in .env for production');
+export const devShortcuts = {
+  ephemeralAccessSecret: !env.JWT_ACCESS_SECRET && !env.JWT_SECRET,
+  ephemeralRefreshSecret: !env.JWT_REFRESH_SECRET && !env.JWT_SECRET,
+};
+
+if (!isProd && devShortcuts.ephemeralAccessSecret) {
+  console.warn('âš ï¸  JWT_ACCESS_SECRET not set â€” using an ephemeral per-process secret (dev only; all sessions invalidate on restart)');
 }
-if (!env.JWT_REFRESH_SECRET && !env.JWT_SECRET) {
-  console.warn('⚠️  JWT_REFRESH_SECRET not set, using fallback — set JWT_REFRESH_SECRET in .env');
+if (!isProd && devShortcuts.ephemeralRefreshSecret) {
+  console.warn('âš ï¸  JWT_REFRESH_SECRET not set â€” using an ephemeral per-process secret (dev only; all sessions invalidate on restart)');
+}
+if (isProd && (!env.JWT_ACCESS_SECRET || !env.JWT_REFRESH_SECRET)) {
+  // assertProductionEnv() normally exits first; this is belt-and-braces for
+  // any embedding that imports this module without booting server.js.
+  throw new Error('FATAL: JWT_ACCESS_SECRET and JWT_REFRESH_SECRET are required in production');
 }
 
 const accessKey = new TextEncoder().encode(accessSecret);
-const refreshKey = new TextEncoder().encode(refreshSecret);
 
 export const jwtConfig = {
   issuer,
@@ -28,7 +44,9 @@ export const jwtConfig = {
 
 export async function createAccessToken(user, minutes = 15) {
   const tokenVersion = Number.isFinite(Number(user?.tokenVersion)) ? Number(user.tokenVersion) : 0;
-  return new SignJWT({ sub: user.id, email: user.email, type: 'access', tv: tokenVersion })
+  // WP-AUDIT-L2 â€” no email in the token: sub + tv suffice; tokens pass through
+  // logs/proxies and email is PII. middleware/auth.js loads the user row anyway.
+  return new SignJWT({ sub: user.id, type: 'access', tv: tokenVersion })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuer(issuer)
     .setAudience(audience)
@@ -46,7 +64,7 @@ export async function verifyAccessToken(token) {
   return payload;
 }
 
-// Legacy jsonwebtoken fallback retired in market-hardening — all tokens now jose HS256 15m.
+// Legacy jsonwebtoken fallback retired in market-hardening â€” all tokens now jose HS256 15m.
 // Any pre-unify 7d tokens have long expired; no fallback needed.
 
 export function hashToken(value) {
@@ -57,7 +75,7 @@ export function randomToken(bytes = 32) {
   return crypto.randomBytes(bytes).toString('base64url');
 }
 
-// WP-SEC-002 — signed double-submit CSRF tokens (cookie-carried mutations only).
+// WP-SEC-002 â€” signed double-submit CSRF tokens (cookie-carried mutations only).
 // Not httpOnly: the client must read + echo it. Signature defeats value forgery.
 const csrfKey = crypto.createHash('sha256').update(`csrf:${refreshSecret}`).digest();
 export function mintCsrfToken() {

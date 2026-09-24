@@ -3,7 +3,9 @@
 const origin = process.env.APP_ORIGIN || 'http://localhost:4173';
 export const allowList = origin.split(',').map((s) => s.trim()).filter(Boolean);
 export const canonicalOrigin = allowList[0] || origin;
-const DEV_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
+// WP-AUDIT-H2 — exported so the CORS middleware can gate its dev echo on the
+// same localhost-only rule instead of echoing any origin with credentials.
+export const DEV_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i;
 
 export function isOriginAllowed(originHeader) {
   if (!originHeader) return true; // non-browser callers are handled elsewhere
