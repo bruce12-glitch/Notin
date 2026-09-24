@@ -73,3 +73,11 @@ instead.
 
 Be respectful and constructive. Review comments should target the code, never
 the person who wrote it.
+
+## Service worker cache rule
+
+When you change authentication/app.html or authentication/app.bundle.js, bump CACHE_NAME in authentication/sw.js in the same commit and call it out in the PR description - offline clients keep the old shell until the cache identity changes.
+
+## Documentation source of truth
+
+README.md, PROJECT_BIBLE.md, and RUNBOOK.md are canonical. Update them in the same PR as the behavior change. GAP_ANALYSIS.md and the audit findings it references are historical; do not treat them as current state.

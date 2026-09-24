@@ -1,4 +1,4 @@
-# 📝 Notin — Full-Stack Note-Taking Platform
+﻿# 📝 Notin — Full-Stack Note-Taking Platform
 
 <p align="center">
   <img src="frontend/assets/notin-icon-nav.png" width="100" alt="Notin 3D icon" />
@@ -103,10 +103,9 @@ The entire frontend is built with **vanilla JavaScript** (no React/Angular/Vue) 
 |---|---|
 | **HTML5** | Semantic markup, ARIA accessibility |
 | **Tailwind CSS v4** | Utility-first CSS (pre-compiled, zero runtime) |
-| **Vanilla ES6 JavaScript** | Motion engine, 3D parallax, Lottie, theme switching |
+| **Vanilla ES6 JavaScript** | Motion engine, 3D parallax, original hero demo, theme switching |
 | **CSS 3D Transforms** | `perspective`, `transform3d`, `requestAnimationFrame` |
 | **Google Fonts** | Manrope, Inter, JetBrains Mono, IBM Plex Sans |
-| **Lottie-web** | Vector animations |
 
 ### Backend (API)
 | Technology | Purpose |
@@ -218,8 +217,7 @@ notin/
 │   ├── polish.css              # Shared responsive visual layer
 │   ├── script.js               # Motion engine & interactions (~985 LOC)
 │   ├── dev-server.mjs          # Dev server with API proxy
-│   └── assets/                  # Images, video, Lottie, icon
-│       ├── hero-demo-full.mp4  # Product demo video
+│   └── assets/                  # Images & brand icons (original assets)
 │       ├── notin-icon-*.png    # 3D logos & favicons
 │       └── ...
 │
@@ -367,4 +365,4 @@ The project implements several security-hardening measures:
 
 ## 📄 License
 
-© Notin. Personal / portfolio project. The Evernote Lottie asset is the property of Evernote and is used here for design reference only.
+MIT — see [LICENSE](LICENSE). © Notin. Original design inspired by modern note-taking apps; all shipped assets are original or permissively licensed.
