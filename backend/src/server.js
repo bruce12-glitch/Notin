@@ -15,6 +15,7 @@ import userRoutes, { signupIpLimit, signinIpLimit } from './routes/userRoutes.js
 import noteRoutes from './routes/noteRoutes.js';
 import notebookRoutes from './routes/notebookRoutes.js';
 import tagRoutes from './routes/tagRoutes.js';
+import reminderRoutes from './routes/reminderRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import attachmentRoutes from './routes/attachmentRoutes.js';
 import publicShareRoutes from './routes/publicShareRoutes.js';
@@ -286,6 +287,7 @@ app.use('/api/notes', noteRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/notebooks', notebookRoutes);
 app.use('/api/tags', tagRoutes);
+app.use('/api/reminders', reminderRoutes);
 
 // Marketing site (Green/Neon landing, legal pages) lives beside the app origin
 // at /site so a single process can ship the public funnel + authenticated app.

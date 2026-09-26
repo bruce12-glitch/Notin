@@ -216,6 +216,33 @@ export const tagSchema = z
 // WP-SEC-006 â€” password policy now single-sourced in lib/passwordStrength.js
 import { evaluatePasswordStrength } from './passwordStrength.js';
 
+
+// -- reminders (WP-REM-001) --------------------------------------------------
+export const reminderCreateSchema = z
+  .object({
+    noteId: idSchema,
+    remindAt: z.string().datetime({ message: 'remindAt must be a valid ISO 8601 timestamp' }),
+  })
+  .strict();
+
+export const reminderUpdateSchema = z
+  .object({
+    remindAt: z.string().datetime({ message: 'remindAt must be a valid ISO 8601 timestamp' }).optional(),
+    isCompleted: z.boolean().optional(),
+    snoozeMinutes: z.number().int().min(1).max(10080).optional(),
+  })
+  .strict();
+
+export const pushSubscriptionSchema = z
+  .object({
+    endpoint: z.string().url({ message: 'endpoint must be a valid URL' }).max(2048),
+    keys: z.object({
+      p256dh: z.string().min(1).max(512),
+      auth: z.string().min(1).max(512),
+    }),
+  })
+  .strict();
+
 const basePasswordSchema = z
   .string({ invalid_type_error: 'Password must be 8â€“72 bytes' })
   .min(8, 'Password must be at least 8 characters')
