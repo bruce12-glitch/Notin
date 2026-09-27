@@ -12,6 +12,7 @@ const API_BASE = (window.NOTIN_API || '').replace(/\/$/, '') || '';
 
 let memToken = null;
 let notes = [];
+let reminders = []; // WP-REM-001
 let selectedId = null;
 let saveTimer = null;
 let isSaving = false;
@@ -230,6 +231,21 @@ const tasksList = document.getElementById('tasksList');
 const tasksCount = document.getElementById('tasksCount');
 const tasksNewNote = document.getElementById('tasksNewNote');
 const countTasksEl = document.getElementById('countTasks');
+// WP-REM-001 — reminders
+const navReminders = document.getElementById('navReminders');
+const remindersView = document.getElementById('remindersView');
+const remindersList = document.getElementById('remindersList');
+const remindersCount = document.getElementById('remindersCount');
+const countRemindersEl = document.getElementById('countReminders');
+const remindersNewBtn = document.getElementById('remindersNewBtn');
+const reminderBtn = document.getElementById('reminderBtn');
+const reminderBtnLabel = document.getElementById('reminderBtnLabel');
+const reminderModal = document.getElementById('reminderModal');
+const reminderBackdrop = document.getElementById('reminderBackdrop');
+const reminderForm = document.getElementById('reminderForm');
+const reminderDateTime = document.getElementById('reminderDateTime');
+const reminderClearBtn = document.getElementById('reminderClearBtn');
+const reminderCancelBtn = document.getElementById('reminderCancelBtn');
 const templatesView = document.getElementById('templatesView');
 const templatesGrid = document.getElementById('templatesGrid');
 const templatesBlankNote = document.getElementById('templatesBlankNote');
@@ -753,7 +769,7 @@ if(aiTagChips) aiTagChips.addEventListener('click', async (event)=>{
 if(aiTagDismiss) aiTagDismiss.addEventListener('click', ()=>{ hideAiTags(); hideAiAssist(); });
 
 // ── WP-UI-HOME-001 — authenticated view router + Home dashboard ──
-const APP_ROUTES = new Set(['home','notes','shortcuts','notebooks','tags','trash','tasks','templates','account','graph','ask']);
+const APP_ROUTES = new Set(['home','notes','shortcuts','notebooks','tags','trash','tasks','templates','account','graph','ask','reminders']); // WP-REM-001
 function routeFromHash(){
   const value = location.hash.replace(/^#\/?/, '').split('/')[0].toLowerCase();
   return APP_ROUTES.has(value) ? value : 'home';
@@ -782,6 +798,7 @@ function setViewChrome(view){
   const showShortcuts = currentView==='shortcuts';
   const showOrganize = currentView==='notebooks' || currentView==='tags';
   const showTasks = currentView==='tasks';
+  const showReminders = currentView==='reminders'; // WP-REM-001
   const showTemplates = currentView==='templates';
   const showGraph = currentView==='graph';
   const showAsk = currentView==='ask';
@@ -789,23 +806,25 @@ function setViewChrome(view){
   if(shortcutsView) shortcutsView.hidden = !showShortcuts;
   if(organizeView) organizeView.hidden = !showOrganize;
   if(tasksView) tasksView.hidden = !showTasks;
+  if(remindersView) remindersView.hidden = !showReminders;
   if(templatesView) templatesView.hidden = !showTemplates;
   const graphView = document.getElementById('graphView');
   const askView = document.getElementById('askView');
   if(graphView) graphView.hidden = !showGraph;
   if(askView) askView.hidden = !showAsk;
-  if(editorWorkspace) editorWorkspace.hidden = showHome || showShortcuts || showOrganize || showTasks || showTemplates || showGraph || showAsk;
+  if(editorWorkspace) editorWorkspace.hidden = showHome || showShortcuts || showOrganize || showTasks || showTemplates || showGraph || showAsk || showReminders;
   if(showGraph) renderGraph();
   if(layout){
     layout.classList.toggle('is-home', showHome);
     layout.classList.toggle('is-shortcuts', showShortcuts);
     layout.classList.toggle('is-organize', showOrganize);
     layout.classList.toggle('is-tasks', showTasks);
+    layout.classList.toggle('is-reminders', showReminders);
     layout.classList.toggle('is-templates', showTemplates);
-    if(showHome || showShortcuts || showOrganize || showTasks || showTemplates || showGraph || showAsk){ layout.classList.remove('is-list','is-editor'); }
+    if(showHome || showShortcuts || showOrganize || showTasks || showTemplates || showGraph || showAsk || showReminders){ layout.classList.remove('is-list','is-editor'); }
     else if(!layout.classList.contains('is-editor')) layout.classList.add('is-list');
   }
-  [navHome,navAll,navShortcuts,navNotebooks,navTags,navTrash,navTasks,navTemplates,document.getElementById('navGraph'),document.getElementById('navAsk')].forEach(el=>{
+  [navHome,navAll,navShortcuts,navNotebooks,navTags,navTrash,navTasks,navTemplates,document.getElementById('navGraph'),document.getElementById('navReminders'),document.getElementById('navAsk')].forEach(el=>{
     if(!el) return;
     const active = (el===navHome && currentView==='home')
       || (el===navAll && currentView==='notes')
@@ -816,6 +835,7 @@ function setViewChrome(view){
       || (el===navTasks && currentView==='tasks')
       || (el===navTemplates && currentView==='templates')
       || (el.id==='navGraph' && currentView==='graph')
+      || (el.id==='navReminders' && currentView==='reminders')
       || (el.id==='navAsk' && currentView==='ask');
     el.classList.toggle('is-active', active);
     el.setAttribute('aria-current', active ? 'page' : 'false');
@@ -992,6 +1012,96 @@ function renderTasks(){
     row.append(check, copy);
     tasksList.appendChild(row);
   });
+}
+function openReminderModal(){
+  if(!selectedId || !reminderModal) return;
+  const existing = reminders.find(r=>r.noteId===selectedId && !r.isCompleted);
+  const base = existing ? reminderDueAt(existing) : null;
+  const seed = base || new Date(Date.now() + 60*60*1000);
+  if(reminderDateTime){
+    const local = new Date(seed.getTime() - seed.getTimezoneOffset()*60000);
+    reminderDateTime.value = local.toISOString().slice(0,16);
+  }
+  if(reminderClearBtn) reminderClearBtn.style.display = existing ? '' : 'none';
+  reminderModal.hidden = false;
+  reminderDateTime?.focus();
+}
+function closeReminderModal(){
+  if(reminderModal) reminderModal.hidden = true;
+}
+async function saveReminderFromModal(){
+  if(!selectedId || !reminderDateTime?.value){ setError('Pick a date and time first'); return; }
+  const when = new Date(reminderDateTime.value);
+  if(Number.isNaN(when.getTime())){ setError('Pick a valid date and time'); return; }
+  if(when.getTime() <= Date.now() - 60*1000){ setError('Reminders must be in the future'); return; }
+  setError('');
+  try{
+    const res = await fetchWithAuth(API_BASE + '/api/reminders', {
+      method:'POST',
+      body: JSON.stringify({ noteId: selectedId, remindAt: when.toISOString() }),
+    });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.message || 'Could not save the reminder');
+    const idx = reminders.findIndex(r=>r.noteId===selectedId && !r.isCompleted);
+    if(idx>=0) reminders[idx]=data; else reminders.push(data);
+    closeReminderModal();
+    renderReminders();
+    showToast('Reminder saved.');
+    subscribeToPush(); // WP-REM-002 — best-effort notification opt-in
+  }catch(error){ setError(error.message || 'Could not save the reminder'); }
+}
+async function completeReminder(id){
+  if(offlineReadOnly) return;
+  try{
+    const res = await fetchWithAuth(API_BASE + `/api/reminders/${id}`, { method:'PATCH', body: JSON.stringify({ isCompleted:true }) });
+    if(!res.ok) throw new Error('Could not complete the reminder');
+    const idx = reminders.findIndex(r=>r.id===id);
+    if(idx>=0) reminders[idx].isCompleted = true;
+    renderReminders();
+  }catch(error){ setError(error.message || 'Could not complete the reminder'); }
+}
+async function snoozeReminder(id, minutes){
+  if(offlineReadOnly) return;
+  try{
+    const res = await fetchWithAuth(API_BASE + `/api/reminders/${id}`, { method:'PATCH', body: JSON.stringify({ snoozeMinutes:minutes }) });
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok) throw new Error(data.message || 'Could not snooze the reminder');
+    const idx = reminders.findIndex(r=>r.id===id);
+    if(idx>=0) reminders[idx]=data;
+    renderReminders();
+    showToast(`Snoozed for ${minutes} minutes.`);
+  }catch(error){ setError(error.message || 'Could not snooze the reminder'); }
+}
+async function removeReminder(id){
+  if(offlineReadOnly) return;
+  try{
+    const res = await fetchWithAuth(API_BASE + `/api/reminders/${id}`, { method:'DELETE' });
+    if(!res.ok && res.status!==404) throw new Error('Could not delete the reminder');
+    reminders = reminders.filter(r=>r.id!==id);
+    renderReminders();
+  }catch(error){ setError(error.message || 'Could not delete the reminder'); }
+}
+async function clearReminderForSelected(){
+  const existing = reminders.find(r=>r.noteId===selectedId && !r.isCompleted);
+  if(existing) await removeReminder(existing.id);
+  closeReminderModal();
+}
+// WP-REM-002 — Web Push opt-in (best-effort; silently skipped when unsupported)
+async function subscribeToPush(){
+  try{
+    if(!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    if(!('Notification' in window) || Notification.permission === 'denied') return;
+    const registration = await navigator.serviceWorker.ready;
+    let sub = await registration.pushManager.getSubscription();
+    if(!sub){
+      if(Notification.permission !== 'granted'){
+        const permission = await Notification.requestPermission();
+        if(permission !== 'granted') return;
+      }
+      sub = await registration.pushManager.subscribe({ userVisibleOnly:true });
+    }
+    await fetchWithAuth(API_BASE + '/api/reminders/subscribe', { method:'POST', body: JSON.stringify(sub.toJSON()) });
+  }catch{ /* notifications are optional */ }
 }
 function cloneJson(value){
   return JSON.parse(JSON.stringify(value));
@@ -1281,6 +1391,7 @@ async function applyRoute(view=routeFromHash(), {focusSearch=false}={}){
   if(view==='shortcuts') renderShortcuts();
   if(view==='notebooks' || view==='tags') renderOrganizeView();
   if(view==='tasks') renderTasks();
+  if(view==='reminders') renderReminders(); // WP-REM-001
   if(view==='templates') renderTemplates();
   if(focusSearch) setTimeout(()=>searchInput?.focus(), 0);
 }
@@ -1573,6 +1684,7 @@ async function loadNotes({append=false}={}){
     sortNotes(notes); // WP-APP-007 — pin-aware
     renderList();
     if(currentView==='tasks') renderTasks();
+    if(currentView==='reminders') renderReminders(); // WP-REM-001
     if(loadMoreNotesBtn){
       loadMoreNotesBtn.hidden = notesPage >= notesTotalPages || notes.length===0;
       loadMoreNotesBtn.disabled = false;
@@ -1768,6 +1880,15 @@ function updateEditorForSelection(note){
     pinBtn.title = pinned ? 'Unpin note' : 'Pin note';
     const lbl = pinBtn.querySelector('.app-pin-toggle-label');
     if(lbl) lbl.textContent = pinned ? 'Pinned' : 'Pin';
+  }
+  // WP-REM-001 — reminder control mirrors the selected note
+  if(reminderBtn){
+    reminderBtn.hidden = !hasSelection || isTrashed || readOnly;
+    reminderBtn.disabled = !hasSelection || isTrashed || readOnly;
+    const active = note ? reminders.find(r=>r.noteId===note.id && !r.isCompleted) : null;
+    reminderBtn.classList.toggle('has-reminder', !!active);
+    reminderBtn.title = active ? `Reminder: ${formatReminderWhen(reminderDueAt(active))}` : 'Set reminder';
+    if(reminderBtnLabel) reminderBtnLabel.textContent = active ? 'Remind ✓' : 'Remind';
   }
   // WP-UX-003 — focus mode is available whenever a note is open
   if(focusModeBtn){
@@ -2605,6 +2726,21 @@ if(navNotebooks) navNotebooks.addEventListener('click', ()=> goToView('notebooks
 if(navTags) navTags.addEventListener('click', ()=> goToView('tags'));
 if(navTrash) navTrash.addEventListener('click', ()=> goToView('trash'));
 if(navTasks) navTasks.addEventListener('click', ()=> goToView('tasks'));
+if(navReminders) navReminders.addEventListener('click', ()=> goToView('reminders')); // WP-REM-001
+// WP-REM-001 — reminder modal controls
+if(reminderBtn) reminderBtn.addEventListener('click', openReminderModal);
+if(reminderCancelBtn) reminderCancelBtn.addEventListener('click', closeReminderModal);
+if(reminderBackdrop) reminderBackdrop.addEventListener('click', closeReminderModal);
+if(reminderClearBtn) reminderClearBtn.addEventListener('click', clearReminderForSelected);
+if(reminderForm) reminderForm.addEventListener('submit', (event)=>{ event.preventDefault(); saveReminderFromModal(); });
+if(remindersNewBtn) remindersNewBtn.addEventListener('click', ()=>{
+  if(selectedId){ openReminderModal(); return; }
+  goToView('notes');
+  showToast('Open a note first, then press Remind.');
+});
+document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && reminderModal && !reminderModal.hidden) closeReminderModal(); });
+// Keep due badges fresh while the tab is open (cheap: list query only).
+setInterval(()=>{ if(memToken && !offlineReadOnly) loadReminders(); }, 60 * 1000);
 if(navTemplates) navTemplates.addEventListener('click', ()=> goToView('templates'));
 if(navGraph) navGraph.addEventListener('click', ()=> goToView('graph'));
 if(navAsk) navAsk.addEventListener('click', ()=> goToView('ask'));
@@ -2642,7 +2778,7 @@ if(globalSearchClear) globalSearchClear.addEventListener('click', ()=>{ clearSea
 if(sidebarNewNote) sidebarNewNote.addEventListener('click', createNote);
 if(syncNotesBtn) syncNotesBtn.addEventListener('click', async ()=>{
   syncNotesBtn.disabled=true;
-  await Promise.all([loadNotes(), loadNotebooks(), loadTags()]);
+  await Promise.all([loadNotes(), loadNotebooks(), loadTags(), loadReminders()]); // WP-REM-001
   syncNotesBtn.disabled=false;
   showToast('Notes refreshed from the server.');
 });
@@ -3358,6 +3494,7 @@ registerServiceWorker();
       if(currentView==='shortcuts') renderShortcuts();
       if(currentView==='notebooks' || currentView==='tags') renderOrganizeView();
       if(currentView==='tasks') renderTasks();
+    if(currentView==='reminders') renderReminders(); // WP-REM-001
       if(currentView==='templates') renderTemplates();
       if(!currentUserId || !offlineSnapshot) setError('No saved notes are available for this offline session. Reconnect to sign in.');
       routeReady = true;
