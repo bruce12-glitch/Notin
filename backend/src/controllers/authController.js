@@ -1,4 +1,4 @@
-import crypto from 'node:crypto';
+﻿import crypto from 'node:crypto';
 import nodemailer from 'nodemailer';
 import bcrypt from 'bcryptjs';
 import { OAuth2Client } from 'google-auth-library';
@@ -18,7 +18,7 @@ const env = process.env;
 const origin = String(env.PUBLIC_APP_URL || canonicalOrigin).replace(/\/+$/, '');
 const emailAuthEnabled = env.AUTH_EMAIL_ENABLED !== 'false';
 
-// Mailer — null if SMTP not configured (triggers demo mode)
+// Mailer â€” null if SMTP not configured (triggers demo mode)
 const mailer =
   env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASSWORD
     ? nodemailer.createTransport({
@@ -39,6 +39,10 @@ const sha = (v) => crypto.createHash('sha256').update(v).digest('hex');
 const otpHash = (id, code) => sha(`${id}:${code}:${env.OTP_PEPPER}`);
 const random = (n = 32) => crypto.randomBytes(n).toString('base64url');
 const isProduction = env.NODE_ENV === 'production';
+// WP-AUDIT-H2 â€” the fixed demo OTP (123456, no SMTP) now requires an explicit
+// opt-in. A publicly reachable preview must never silently allow "log in as
+// anyone"; local dev and the E2E suite set ALLOW_DEMO_OTP=true deliberately.
+const demoOtpEnabled = !isProduction && env.ALLOW_DEMO_OTP === 'true';
 const cookieOpts = {
   httpOnly: true,
   secure: isProduction,
@@ -51,7 +55,7 @@ const cookieOptsLegacy = {
   sameSite: 'lax',
   path: '/auth',
 };
-// WP-SEC-002 — readable double-submit cookie; root path covers both mounts
+// WP-SEC-002 â€” readable double-submit cookie; root path covers both mounts
 const csrfCookieOpts = { httpOnly: false, secure: isProduction, sameSite: 'lax', path: '/' };
 
 function publicUser(u) {
@@ -79,12 +83,12 @@ function safeEqual(left, right) {
 }
 
 function clearOauthCookies(res) {
-  const { maxAge, ...clearOptions } = oauthCookieOpts;
+  const { maxAge: _maxAge, ...clearOptions } = oauthCookieOpts;
   res.clearCookie(OAUTH_STATE_COOKIE, clearOptions);
   res.clearCookie(OAUTH_VERIFIER_COOKIE, clearOptions);
 }
 
-// Helpers for time handling — use ISO strings for both pg and sqlite (TEXT)
+// Helpers for time handling â€” use ISO strings for both pg and sqlite (TEXT)
 function nowIso() {
   return new Date().toISOString();
 }
@@ -133,7 +137,7 @@ export async function otpRequest(req, res) {
   const gate = await otpRequestAllowed(email);
   if (!gate.allowed) {
     res.setHeader('Retry-After', String(gate.retryAfterSec || 900));
-    return res.status(429).json({ error: 'Too many codes requested — try again later' });
+    return res.status(429).json({ error: 'Too many codes requested â€” try again later' });
   }
 
   let user = await db.user.findUnique({ where: { email } });
@@ -211,7 +215,7 @@ export async function googleCallback(req, res) {
           await db.query(`UPDATE "User" SET google_sub = $1, "updatedAt" = $2 WHERE id = $3`, [p.sub, nowIso(), user.id]);
           user = await db.user.findByGoogleSub(p.sub);
         } else if ((user.googleSub || user.google_sub) !== p.sub) {
-          // Email exists with different google_sub — create new? For now, error
+          // Email exists with different google_sub â€” create new? For now, error
           return res.status(409).send('Account exists with different sign-in method');
         }
       } else {
@@ -225,9 +229,10 @@ export async function googleCallback(req, res) {
       const challenge = await issueOtp(user);
       res.redirect(`${origin}/?auth=otp&challenge=${encodeURIComponent(challenge)}&email=${encodeURIComponent(user.email)}`);
     } catch (otpErr) {
-      // If SMTP not configured, fallback to demo — never in production.
+      // If SMTP not configured, fallback to demo â€” only with explicit opt-in.
       // WP-DEPLOY-001: production without SMTP falls through to `throw otpErr`.
-      if (!mailer && !isProduction) {
+      // WP-AUDIT-H2: non-prod without ALLOW_DEMO_OTP=true also falls through.
+      if (!mailer && demoOtpEnabled) {
         // Create demo challenge so flow can continue in dev
         const id = random(18);
         const demoCode = '123456';
@@ -263,18 +268,18 @@ export async function otpResend(req, res) {
     let responseChallenge = random(18);
     // Anti-enumeration: always return ok, but only send if user exists.
     if (user) {
-      // WP-SEC-003 — per-email issue throttle (per-challenge caps cannot
+      // WP-SEC-003 â€” per-email issue throttle (per-challenge caps cannot
       // accumulate: issueOtp deletes prior challenges)
       const gate = await otpRequestAllowed(email);
       if (!gate.allowed) {
         res.setHeader('Retry-After', String(gate.retryAfterSec || 900));
-        return res.status(429).json({ error: 'Too many codes requested — try again later' });
+        return res.status(429).json({ error: 'Too many codes requested â€” try again later' });
       }
       try {
         responseChallenge = await issueOtp(user);
       } catch (e) {
-        if (!mailer && !isProduction) {
-          // demo fallback
+        if (!mailer && demoOtpEnabled) {
+          // demo fallback (WP-AUDIT-H2 â€” explicit ALLOW_DEMO_OTP=true opt-in)
           const id = random(18);
           await db.query(`DELETE FROM otp_challenges WHERE user_id = $1 OR expires_at < $2`, [user.id, nowIso()]);
           await db.query(
@@ -295,8 +300,9 @@ export async function otpResend(req, res) {
 }
 
 export async function otpDemoRequest(req, res) {
-  // Guard: demo only when NOT production AND SMTP not configured
-  if (isProduction) {
+  // Guard: demo only when NOT production AND SMTP not configured AND the
+  // operator explicitly opted in with ALLOW_DEMO_OTP=true (WP-AUDIT-H2).
+  if (isProduction || !demoOtpEnabled) {
     return res.status(404).json({ error: 'Not found' });
   }
   if (mailer) {
@@ -308,16 +314,15 @@ export async function otpDemoRequest(req, res) {
     return res.status(400).json({ error: 'Valid email required' });
   }
   const email = parsed.data.email;
-  // WP-SEC-003 — per-email issue throttle (per-challenge caps cannot
+  // WP-SEC-003 â€” per-email issue throttle (per-challenge caps cannot
   // accumulate: issueOtp deletes prior challenges)
   const gate = await otpRequestAllowed(email);
   if (!gate.allowed) {
     res.setHeader('Retry-After', String(gate.retryAfterSec || 900));
-    return res.status(429).json({ error: 'Too many codes requested — try again later' });
+    return res.status(429).json({ error: 'Too many codes requested â€” try again later' });
   }
   let user = await db.user.findUnique({ where: { email } });
   if (!user) {
-    const id = random(18);
     // google_sub demo prefix
     const sub = `demo:${email}:${random(8)}`;
     user = await db.user.create({ data: { email, username: null, password: null, googleSub: sub } });
@@ -381,7 +386,7 @@ export async function otpVerify(req, res) {
   const accessToken = await createAccessToken(user, 15);
   const refreshRaw = randomToken(48);
   const expiresAt = futureIso(30 * 86400000);
-  // WP-SEC-001 — every verified session starts a NEW rotation family
+  // WP-SEC-001 â€” every verified session starts a NEW rotation family
   const familyId = randomToken(24);
   const ua = String(req.headers['user-agent'] || '').slice(0, 500);
   const ip = String(req.ip || '').slice(0, 128);
@@ -395,12 +400,12 @@ export async function otpVerify(req, res) {
   res.json({ accessToken, token: accessToken, user: publicUser(user) });
 }
 
-// WP-SEC-001 — rotation with family replay detection. A consumed refresh
+// WP-SEC-001 â€” rotation with family replay detection. A consumed refresh
 // token being presented again means either a benign rotation race (two
 // tabs/calls fired together, inside the grace window) or a stolen cookie
 // replayed after rotation. The race gets a fresh family sibling; the theft
 // nukes the ENTIRE family so attacker and victim both return to sign-in.
-// Every failure path returns the identical 401 body — never an oracle.
+// Every failure path returns the identical 401 body â€” never an oracle.
 const REFRESH_FAMILY_GRACE_MS = 10_000;
 
 export async function refresh(req, res) {
@@ -420,7 +425,7 @@ export async function refresh(req, res) {
     if (!Number.isFinite(expiresTs) || expiresTs <= Date.parse(now)) throw new Error('Expired');
 
     if (!row.revoked_at) {
-      // Live token — rotate via compare-and-swap so a concurrent request
+      // Live token â€” rotate via compare-and-swap so a concurrent request
       // cannot silently fork the family.
       const { rowCount } = await db.query(
         `UPDATE refresh_tokens SET revoked_at = $1, revoke_reason = 'rotation' WHERE hash = $2 AND revoked_at IS NULL`,
@@ -440,20 +445,20 @@ export async function refresh(req, res) {
         && Number.isFinite(revokedTs)
         && (Date.parse(now) - revokedTs) <= REFRESH_FAMILY_GRACE_MS;
       if (!inGrace) {
-        // REPLAY — revoke every live member of this rotation family.
+        // REPLAY â€” revoke every live member of this rotation family.
         if (row.family_id) {
           await db.query(
             `UPDATE refresh_tokens SET revoked_at = $1, revoke_reason = 'replay' WHERE family_id = $2 AND revoked_at IS NULL`,
             [now, row.family_id]
           );
         }
-        console.error('[SECURITY] refresh-token replay detected — rotation family revoked', { userId: row.user_id });
+        console.error('[SECURITY] refresh-token replay detected â€” rotation family revoked', { userId: row.user_id });
         res.clearCookie('notin_refresh', cookieOpts);
         res.clearCookie('notin_refresh', cookieOptsLegacy);
         res.clearCookie('notin_csrf', csrfCookieOpts);
         throw new Error('Replay');
       }
-      console.warn('[SECURITY] refresh reuse inside rotation grace — sibling issued', { userId: row.user_id });
+      console.warn('[SECURITY] refresh reuse inside rotation grace â€” sibling issued', { userId: row.user_id });
     }
 
     const user = await db.user.findById(row.user_id);
@@ -480,10 +485,10 @@ export async function logout(req, res) {
   const raw = req.cookies.notin_refresh;
   if (raw) {
     const now = nowIso();
-    // WP-SEC-001 — by-hash revoke with reason; idempotent guard so a
+    // WP-SEC-001 â€” by-hash revoke with reason; idempotent guard so a
     // concurrent rotation/logout pair cannot clobber the other's reason.
     // Deliberate consequence: replaying a logged-out cookie is an instant
-    // family nuke — logout is NOT sheltered by the rotation grace.
+    // family nuke â€” logout is NOT sheltered by the rotation grace.
     await db.query(
       `UPDATE refresh_tokens SET revoked_at = $1, revoke_reason = 'logout' WHERE hash = $2 AND revoked_at IS NULL`,
       [now, hashToken(raw)]
@@ -495,10 +500,10 @@ export async function logout(req, res) {
   res.status(204).end();
 }
 
-// ── WP-AUTH-003 — Forgot password (email reset) ──
-// Token is stored HASHED only (peppered sha256) — never plaintext in the DB.
+// â”€â”€ WP-AUTH-003 â€” Forgot password (email reset) â”€â”€
+// Token is stored HASHED only (peppered sha256) â€” never plaintext in the DB.
 // Delivery: SMTP email when configured; dev-only token echo/log when !production && !SMTP
-// (same guard family as the demo OTP — never exposed in production).
+// (same guard family as the demo OTP â€” never exposed in production).
 const RESET_TTL_MS = 60 * 60 * 1000; // 60 minutes
 const resetPepper = env.RESET_PEPPER || env.OTP_PEPPER || 'dev-reset-pepper';
 const resetHash = (token) => sha(`reset:${token}:${resetPepper}`);
@@ -510,7 +515,7 @@ export async function forgotPassword(req, res) {
   try {
     const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};
     const parsed = forgotPasswordSchema.safeParse(body);
-    // WP-HARDEN-001 — anti-enumeration is preserved verbatim: schema failures
+    // WP-HARDEN-001 â€” anti-enumeration is preserved verbatim: schema failures
     // and malformed addresses all receive the identical generic response.
     if (!parsed.success) {
       return res.json(generic);
@@ -523,7 +528,7 @@ export async function forgotPassword(req, res) {
     if (!user) {
       return res.json(generic); // anti-enumeration: same response for unknown email
     }
-    // Choice (documented): reset works for password accounts AND OTP/Google-only accounts —
+    // Choice (documented): reset works for password accounts AND OTP/Google-only accounts â€”
     // for passwordless accounts the reset flow SETS their first password (email ownership proven).
     const token = randomToken(32);
     const now = nowIso();
@@ -539,18 +544,18 @@ export async function forgotPassword(req, res) {
         from: env.MAIL_FROM || 'Notin <noreply@notin.app>',
         to: user.email,
         subject: 'Reset your Notin password',
-        text: `We received a request to reset the password for your Notin account.\n\nReset it here (link expires in 60 minutes and works once):\n${resetLinkFor(token)}\n\nIf you did not request this, you can ignore this email — your password will not change.`,
+        text: `We received a request to reset the password for your Notin account.\n\nReset it here (link expires in 60 minutes and works once):\n${resetLinkFor(token)}\n\nIf you did not request this, you can ignore this email â€” your password will not change.`,
       });
       return res.json(generic);
     }
     if (!isProduction) {
-      // DEV fallback (no SMTP, not production) — mirrors the demo-OTP guard: token is echoed
+      // DEV fallback (no SMTP, not production) â€” mirrors the demo-OTP guard: token is echoed
       // in the response + server log so the flow stays end-to-end usable in dev/preview.
       console.log(`[DEV RESET] ${user.email} => token ${token}`);
       console.log(`[DEV RESET] link ${resetLinkFor(token)}`);
       return res.json({ ...generic, devResetToken: token, devResetLink: resetLinkFor(token) });
     }
-    // Production without SMTP: never expose the token — must be fixed by configuring SMTP.
+    // Production without SMTP: never expose the token â€” must be fixed by configuring SMTP.
     console.error(`[RESET] SMTP is not configured; reset email to ${user.email} could not be delivered`);
     return res.json(generic);
   } catch (e) {
@@ -589,7 +594,7 @@ export async function resetPassword(req, res) {
       const userId = consumed.rows[0].user_id;
       const existing = await tx.query(`SELECT id FROM "User" WHERE id = $1 LIMIT 1`, [userId]);
       if (existing.rowCount !== 1) return false;
-      // WP-SEC-004 — password reset increments tokenVersion, invalidating all
+      // WP-SEC-004 â€” password reset increments tokenVersion, invalidating all
       // existing access tokens even if they are still within 15m window.
       await tx.query(`UPDATE "User" SET password = $1, "tokenVersion" = COALESCE("tokenVersion",0) + 1, "updatedAt" = $2 WHERE id = $3`, [hashed, now, userId]);
       await tx.query(
@@ -607,7 +612,7 @@ export async function resetPassword(req, res) {
 }
 
 
-// WP-SEC-005 — device inventory: list active refresh-token families (sessions)
+// WP-SEC-005 â€” device inventory: list active refresh-token families (sessions)
 // Each live refresh token = one family = one device/session. User agent and IP
 // captured at mint time (refresh rotation updates last_active_at implicitly via
 // new row). Current session marked via refresh cookie hash.
@@ -615,7 +620,7 @@ export async function listSessions(req, res) {
   try {
     const userId = req.userId;
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-    const now = nowIso();
+    // (no expiry filtering — revoked/expires handled on use)
     // Find current family from cookie if present
     let currentFamilyId = null;
     const raw = req.cookies?.notin_refresh;
@@ -634,7 +639,7 @@ export async function listSessions(req, res) {
     const sessions = [];
     const seenFamilies = new Set();
     for (const r of rows) {
-      // WP-SEC-001 — a family can briefly hold two live tokens (rotation
+      // WP-SEC-001 â€” a family can briefly hold two live tokens (rotation
       // grace sibling). One device = one entry: keep the newest row per family.
       if (seenFamilies.has(r.family_id)) continue;
       seenFamilies.add(r.family_id);
@@ -650,7 +655,7 @@ export async function listSessions(req, res) {
       });
     }
     res.json({ sessions });
-  } catch (e) {
+  } catch (e) { logError(req, e, 'listSessions failed');
     return res.status(500).json({ message: 'Could not list sessions' });
   }
 }
@@ -667,7 +672,7 @@ export async function revokeSession(req, res) {
       [now, familyId, userId]
     );
     if (result.rowCount === 0) return res.status(404).json({ message: 'Session not found' });
-    // Clear cookies only when the revoked session IS the current one —
+    // Clear cookies only when the revoked session IS the current one â€”
     // revoking another device must not log this browser out.
     const raw = req.cookies?.notin_refresh;
     if (raw) {
@@ -679,7 +684,7 @@ export async function revokeSession(req, res) {
       }
     }
     res.status(200).json({ ok: true, revokedFamilyId: familyId });
-  } catch (e) {
+  } catch (e) { logError(req, e, 'revokeSession failed');
     return res.status(500).json({ message: 'Could not revoke session' });
   }
 }
@@ -701,14 +706,14 @@ export async function revokeOtherSessions(req, res) {
         [now, userId, currentFamilyId]
       );
     } else {
-      // No current cookie (Bearer-only call) — revoke all refresh sessions
+      // No current cookie (Bearer-only call) â€” revoke all refresh sessions
       result = await db.query(
         `UPDATE refresh_tokens SET revoked_at = $1, revoke_reason = 'user-revoke-others' WHERE user_id = $2 AND revoked_at IS NULL`,
         [now, userId]
       );
     }
     res.json({ ok: true, revokedCount: result.rowCount || 0, keptFamilyId: currentFamilyId });
-  } catch (e) {
+  } catch (e) { logError(req, e, 'revokeOtherSessions failed');
     return res.status(500).json({ message: 'Could not revoke other sessions' });
   }
 }
@@ -717,7 +722,7 @@ export async function cleanupTokens(req, res) {
   try {
     const results = await cleanupExpiredTokens();
     res.json({ ok: true, cleaned: results });
-  } catch (e) {
+  } catch (e) { logError(req, e, 'cleanupTokens failed');
     res.status(500).json({ message: 'Cleanup failed' });
   }
 }
@@ -739,7 +744,7 @@ export async function passwordStrength(req, res) {
       valid: result.valid,
       categories: result.categories,
     });
-  } catch (e) {
+  } catch (e) { logError(req, e, 'passwordStrength failed');
     res.status(500).json({ message: 'Could not evaluate password' });
   }
 }
@@ -753,12 +758,16 @@ export async function health(req, res) {
     googleConfigured: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_REDIRECT_URI),
     emailAuthEnabled,
     smtpConfigured,
-    demoMode: emailAuthEnabled && !smtpConfigured && !isProduction,
-    hint: emailAuthEnabled && !smtpConfigured && !isProduction ? 'SMTP not configured — use POST /api/auth/otp/demo-request with {email} then verify with code 123456' : undefined,
+    demoMode: emailAuthEnabled && !smtpConfigured && demoOtpEnabled,
+    hint: emailAuthEnabled && !smtpConfigured && !isProduction
+      ? (demoOtpEnabled
+        ? 'SMTP not configured â€” use POST /api/auth/otp/demo-request with {email} then verify with code 123456'
+        : 'SMTP not configured â€” set ALLOW_DEMO_OTP=true to enable the demo OTP endpoint (development only)')
+      : undefined,
   });
 }
 
-// WP-FUNNEL-002 — public capability discovery so clients can render only the
+// WP-FUNNEL-002 â€” public capability discovery so clients can render only the
 // sign-in options this deployment actually supports (no dead-end buttons).
 export async function providers(req, res) {
   const google = Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_REDIRECT_URI);
@@ -769,6 +778,6 @@ export async function providers(req, res) {
     apple: false,
     otp: emailAuthEnabled,
     password: emailAuthEnabled && (env.ALLOW_PASSWORD_SIGNUP === 'true' || (!isProduction && env.ALLOW_PASSWORD_SIGNUP !== 'false')),
-    demoOtp: emailAuthEnabled && !smtpConfigured && !isProduction,
+    demoOtp: emailAuthEnabled && !smtpConfigured && demoOtpEnabled,
   });
 }
