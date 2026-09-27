@@ -258,6 +258,39 @@ async function migratePostgres(pool) {
   await pool.query(`INSERT INTO schema_migrations (version) VALUES ('2026-08-24-token-versioning-v1') ON CONFLICT DO NOTHING;`);
   await pool.query(`INSERT INTO schema_migrations (version) VALUES ('2026-08-24-device-inventory-v1') ON CONFLICT DO NOTHING;`);
 
+  // WP-REM-001 - Note Reminders
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "Reminder" (
+      id TEXT PRIMARY KEY DEFAULT cuid(),
+      "noteId" TEXT NOT NULL REFERENCES "Note"(id) ON DELETE CASCADE,
+      "userId" TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+      "remindAt" TIMESTAMPTZ NOT NULL,
+      "isCompleted" BOOLEAN NOT NULL DEFAULT FALSE,
+      "completedAt" TIMESTAMPTZ,
+      "snoozedUntil" TIMESTAMPTZ,
+      "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "Reminder_noteId_idx" ON "Reminder" ("noteId");`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "Reminder_userId_idx" ON "Reminder" ("userId");`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "Reminder_remindAt_idx" ON "Reminder" ("remindAt");`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "Reminder_isCompleted_idx" ON "Reminder" ("isCompleted");`);
+
+  // Web Push Subscriptions for notification delivery
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS "PushSubscription" (
+      id TEXT PRIMARY KEY DEFAULT cuid(),
+      "userId" TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+      endpoint TEXT NOT NULL UNIQUE,
+      p256dh TEXT NOT NULL,
+      auth TEXT NOT NULL,
+      "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+  `);
+  await pool.query(`CREATE INDEX IF NOT EXISTS "PushSubscription_userId_idx" ON "PushSubscription" ("userId");`);
+
+
   console.log('✅ PostgreSQL migrations complete');
 }
 
@@ -455,6 +488,39 @@ function migrateSqlite(dbPath) {
   db.prepare(`INSERT OR IGNORE INTO schema_migrations (version) VALUES (?)`).run('2026-08-22-market-hardening-v1');
   db.prepare(`INSERT OR IGNORE INTO schema_migrations (version) VALUES (?)`).run('2026-08-24-token-versioning-v1');
   db.prepare(`INSERT OR IGNORE INTO schema_migrations (version) VALUES (?)`).run('2026-08-24-device-inventory-v1');
+
+  // WP-REM-001 - Note Reminders
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS "Reminder" (
+      id TEXT PRIMARY KEY,
+      noteId TEXT NOT NULL REFERENCES "Note"(id) ON DELETE CASCADE,
+      userId TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+      remindAt TEXT NOT NULL,
+      isCompleted INTEGER NOT NULL DEFAULT 0,
+      completedAt TEXT,
+      snoozedUntil TEXT,
+      createdAt TEXT NOT NULL DEFAULT (datetime('now')),
+      updatedAt TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS Reminder_noteId_idx ON "Reminder"(noteId);`);
+  db.exec(`CREATE INDEX IF NOT EXISTS Reminder_userId_idx ON "Reminder"(userId);`);
+  db.exec(`CREATE INDEX IF NOT EXISTS Reminder_remindAt_idx ON "Reminder"(remindAt);`);
+  db.exec(`CREATE INDEX IF NOT EXISTS Reminder_isCompleted_idx ON "Reminder"(isCompleted);`);
+
+  // Web Push Subscriptions for notification delivery
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS "PushSubscription" (
+      id TEXT PRIMARY KEY,
+      userId TEXT NOT NULL REFERENCES "User"(id) ON DELETE CASCADE,
+      endpoint TEXT NOT NULL UNIQUE,
+      p256dh TEXT NOT NULL,
+      auth TEXT NOT NULL,
+      createdAt TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS PushSubscription_userId_idx ON "PushSubscription"(userId);`);
+
   db.close();
   console.log('✅ SQLite fallback migrations complete');
 }

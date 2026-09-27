@@ -29,3 +29,147 @@ section[id], [id="top"]{scroll-margin-top:88px}
 /* Additive pointer motion layer */
 .cursor-orb{position:fixed;left:0;top:0;width:18px;height:18px;border:1px solid rgba(143,227,51,.75);border-radius:50%;pointer-events:none;z-index:9999;opacity:0;transform:translate3d(-50%,-50%,0);transition:width .25s ease,height .25s ease,opacity .25s ease,background .25s ease;mix-blend-mode:multiply}.cursor-orb.is-visible{opacity:1}.cursor-orb.is-hovering{width:56px;height:56px;background:rgba(143,227,51,.12);border-color:rgba(143,227,51,.95)}.cursor-trail{position:fixed;left:0;top:0;width:7px;height:7px;border-radius:50%;pointer-events:none;z-index:9998;background:#8fe333;box-shadow:0 0 18px rgba(143,227,51,.8);opacity:0;transform:translate3d(-50%,-50%,0)}.magnetic-3d{transform-style:preserve-3d;will-change:transform;transition:transform .18s cubic-bezier(.22,1,.36,1),box-shadow .25s ease}.magnetic-3d::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;background:radial-gradient(circle at var(--glare-x,50%) var(--glare-y,50%),rgba(255,255,255,.24),transparent 34%);transition:opacity .2s ease}.magnetic-3d.is-magnetic::after{opacity:1}@media (pointer:coarse),(prefers-reduced-motion:reduce){.cursor-orb,.cursor-trail{display:none}.magnetic-3d{transform:none!important}}
 .auth-modal{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:20px;background:rgba(20,20,20,.5);backdrop-filter:blur(12px);opacity:0;pointer-events:none;transition:opacity .3s}.auth-modal.is-open{opacity:1;pointer-events:auto}.auth-panel{position:relative;width:min(430px,100%);overflow:hidden;border:1px solid rgba(143,227,51,.5);border-radius:28px;background:#fffaf3;padding:38px;box-shadow:0 30px 100px rgba(0,0,0,.3);transform:perspective(900px) rotateX(8deg) translateY(20px);transition:transform .5s cubic-bezier(.22,1,.36,1)}.auth-modal.is-open .auth-panel{transform:perspective(900px) rotateX(0) translateY(0)}.auth-close{position:absolute;right:18px;top:12px;font-size:28px}.auth-kicker{color:#5fa11e;font:700 11px monospace;letter-spacing:.16em}.auth-panel h2{font-size:30px;font-weight:800;margin:8px 0}.auth-copy{color:#5b5852;margin-bottom:24px}.auth-google,.auth-verify{width:100%;border-radius:999px;background:#141414;color:white;padding:13px;font-weight:700;cursor:pointer}.auth-code{display:block;width:100%;margin:8px 0 14px;border:1px solid #d8d0c0;border-radius:12px;padding:12px;font-size:22px;letter-spacing:.3em}.auth-resend{margin-top:14px;color:#5fa11e;font-weight:700}.auth-status{margin-top:14px;font-size:13px}.auth-orbit{position:absolute;right:-50px;top:-50px;width:150px;height:150px;border:1px dashed #8fe333;border-radius:50%;animation:auth-spin 12s linear infinite}@keyframes auth-spin{to{transform:rotate(360deg)}}
+
+/* ============================================================
+   HERO APP DEMO — original animated workspace mock (WP-AUDIT-H3)
+   Replaces the removed third-party demo video. Pure CSS/JS,
+   honors prefers-reduced-motion (static completed frame).
+   ============================================================ */
+.hero-app-demo {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  background: #fbfaf7;
+  color: #2c2d2a;
+  font-family: inherit;
+  text-align: left;
+}
+.had-sidebar {
+  width: 26%;
+  min-width: 96px;
+  background: #f3f1ea;
+  border-right: 1px solid #e6e3d8;
+  padding: 8% 8% 8% 10%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.had-logo {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: #00a82d;
+  margin-bottom: 8px;
+}
+.had-nav {
+  height: 10px;
+  border-radius: 5px;
+  background: #ddd9cb;
+  width: 85%;
+}
+.had-nav--active { background: #00a82d33; outline: 1.5px solid #00a82d55; width: 95%; }
+.had-nav--short { width: 60%; }
+.had-main {
+  flex: 1;
+  padding: 6% 7%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.had-search {
+  height: 22px;
+  border-radius: 11px;
+  background: #fff;
+  border: 1px solid #e6e3d8;
+  width: 62%;
+}
+.had-note {
+  flex: 1;
+  background: #fff;
+  border: 1px solid #e6e3d8;
+  border-radius: 12px;
+  padding: 7% 8%;
+  box-shadow: 0 6px 18px rgba(44, 45, 42, 0.06);
+}
+.had-title {
+  min-height: 1.4em;
+  font-weight: 700;
+  font-size: clamp(13px, 1.6vw, 18px);
+  color: #2c2d2a;
+  margin-bottom: 10px;
+}
+.had-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: #00a82d;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  animation: had-blink 1s steps(1) infinite;
+}
+.hero-app-demo.is-static .had-caret { display: none; }
+@keyframes had-blink { 50% { opacity: 0; } }
+.had-line {
+  height: 8px;
+  border-radius: 4px;
+  background: #eceade;
+  margin-bottom: 8px;
+  width: 92%;
+}
+.had-line--short { width: 64%; }
+.had-checklist { list-style: none; margin: 14px 0 0; padding: 0; }
+.had-checklist li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+}
+.had-box {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  border-radius: 4px;
+  border: 2px solid #b9b5a4;
+  position: relative;
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
+.had-checklist li.is-done .had-box { background: #00a82d; border-color: #00a82d; }
+.had-checklist li.is-done .had-box::after {
+  content: "";
+  position: absolute;
+  left: 3.5px;
+  top: 0.5px;
+  width: 4px;
+  height: 8px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(42deg);
+}
+.had-text {
+  height: 8px;
+  border-radius: 4px;
+  background: #dcd8c8;
+  position: relative;
+  overflow: hidden;
+}
+.had-text--a { width: 58%; }
+.had-text--b { width: 44%; }
+.had-text--c { width: 66%; }
+.had-text::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #fbfaf7;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s ease;
+}
+.had-checklist li.is-done .had-text::after { transform: scaleX(0.55); }
+.hero-frame-flash .hero-product-frame {
+  outline: 3px solid #00a82d;
+  outline-offset: 4px;
+  transition: outline-color 0.3s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .had-caret { animation: none; }
+}
