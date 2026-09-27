@@ -1,4 +1,4 @@
-# 🏗️ Notin Architecture Diagram — Current (2026-08-22)
+﻿# 🏗️ Notin Architecture Diagram — Current (2026-08-22)
 
 > Updated after WP-HARDEN-001 + production-beta hardening (#45). Previous version incorrectly marked Backend/Auth as PLANNED — now 100% implemented.
 
@@ -13,7 +13,7 @@
 │  │  index.html     │  │  Express 4.21    │  │  app.html       │              │
 │  │  index-neon.html│  │  Unified :5000   │  │  TipTap 2.27    │              │
 │  │  context.html   │  │  REST + static   │  │  OAuth + OTP    │              │
-│  │  legal pages    │  │  Prisma docs     │  │  PWA sw.js v15  │              │
+│  │  legal pages    │  │  Prisma docs     │  │  PWA sw.js v23  │              │
 │  │  Tailwind v4    │  │  pg + SQLite     │  │  share.html     │              │
 │  │  Vanilla JS     │  │  Zod validation  │  │  esbuild bundle │              │
 │  └────────┬────────┘  └────────┬─────────┘  └────────┬────────┘              │
@@ -118,9 +118,9 @@ frontend/
 │   - IntersectionObserver reveal threshold 0.12, stagger i*70ms max 420ms
 │   - 3D tilt perspective(900px), magnetic buttons dx*0.22, parallax --px3d/--py3d
 │   - CardsShowcase 8 cards infinite loop dual sets, autoplay 2.6s, hover circles
-│   - Video play-enforcer, OS-aware download CTA, theme switcher via notinAppOrigin()
+│   - Hero app-demo animator (WP-AUDIT-H3), OS-aware download CTA, theme switcher via notinAppOrigin()
 ├─ dev-server.mjs :3000 proxies /api/* /auth/* → :5000
-└─ assets/: hero-demo-full.mp4, Lottie evernote-homepage.json, 3D icons
+└─ assets/: original brand icons & images (no third-party media — hero is an original CSS/JS app demo)
 ```
 
 Component hierarchy same as previous doc — 12 sections: Navbar (mega-menu), Hero split, CardsShowcase, Capture, OrganizeShowcase, Testimonials, Pricing, AIToolsBand, Download (6 platforms + web clipper disabled spans aria-disabled), DarkCTA, FAQ, Footer.
@@ -152,7 +152,7 @@ authentication/
 ├─ app.bundle.js esbuild minified (git diff check in CI)
 ├─ app.css, styles.css
 ├─ share.html/share.js public renderer (title+body+image metadata only)
-├─ sw.js CACHE_NAME notin-shell-v15, shell-only, bypass /api/* /auth/*
+├─ sw.js CACHE_NAME notin-shell-v23, shell-only, bypass /api/* /auth/*
 ├─ manifest.webmanifest + icons/icon-192.png / 512.png
 └─ package.json only TipTap + esbuild (no express/nodemailer legacy — retired WP-HARDEN-001)
 ```
@@ -244,7 +244,7 @@ Client: stream-first empty bubble textContent += fill, fallback to JSON endpoint
 
 ```
 manifest.webmanifest installable, icons 192/512
-sw.js notin-shell-v15 caches shell assets only, bypasses /api/* /auth/*
+sw.js notin-shell-v23 caches shell assets only, bypasses /api/* /auth/*
 IndexedDB notin-offline-v1 store snapshots keyed by userId, session-only active userId cleared on logout/delete
 Offline: list/body read-only, create/edit/save/organize/share disabled, offline banner shown
 Not a sync engine — offline edits intentionally unsupported
