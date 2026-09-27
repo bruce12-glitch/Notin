@@ -10,17 +10,19 @@
 <meta name="description" content="Notin is the note-taking app that helps you capture and prioritize ideas, projects and to-do lists, so nothing falls through the cracks. Free web beta." />
 <meta name="keywords" content="notin, note taking app, notes, organize notes, to-do list" />
 <meta name="language" content="en-US" />
-<link rel="canonical" href="https://notin.app/" />
+<link rel="canonical" href="https://notin.app/site/" />
 
 <!-- Open Graph / social sharing -->
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Notin" />
 <meta property="og:title" content="Notin — Best Note Taking App · Capture &amp; Organize Your Thoughts" />
 <meta property="og:description" content="Capture ideas instantly, organize them effortlessly, and find anything in seconds." />
-<meta property="og:url" content="https://notin.app/" />
+<meta property="og:url" content="https://notin.app/site/" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="Notin — Best Note Taking App" />
 <meta name="twitter:description" content="Capture ideas instantly, organize them effortlessly, and find anything in seconds." />
+  <meta property="og:image" content="https://notin.app/site/assets/notin-logo.png" />
+  <meta name="twitter:image" content="https://notin.app/site/assets/notin-logo.png" />
 <meta name="theme-color" content="#8fe333" />
 
 <link rel="icon" type="image/png" href="assets/notin-icon-favicon.png" />
@@ -203,10 +205,29 @@
       <div class="hero-frame-wrap mx-auto w-full max-w-[660px]">
         <div class="hero-frame-label"><span></span> Live workspace</div>
         <div class="hero-product-frame aspect-[8/5] w-full overflow-hidden rounded-2xl border border-stroke-cards bg-surface shadow-[0_30px_70px_rgba(26,20,16,0.18)]">
-          <video id="heroDemoVideo" class="hero-video" src="assets/hero-demo-full.mp4"
-                 poster="assets/hero-demo-poster.jpg"
-                 autoplay muted loop playsinline preload="auto"
-                 aria-label="Notin demo — notebooks and checklists"></video>
+          <div id="heroAppDemo" class="hero-app-demo" role="img"
+                   aria-label="Notin demo — notebooks and checklists">
+            <div class="had-sidebar" aria-hidden="true">
+              <div class="had-logo"></div>
+              <div class="had-nav had-nav--active"></div>
+              <div class="had-nav"></div>
+              <div class="had-nav"></div>
+              <div class="had-nav had-nav--short"></div>
+            </div>
+            <div class="had-main" aria-hidden="true">
+              <div class="had-search"></div>
+              <div class="had-note">
+                <div class="had-title"><span class="had-title-text"></span><span class="had-caret"></span></div>
+                <div class="had-line"></div>
+                <div class="had-line had-line--short"></div>
+                <ul class="had-checklist">
+                  <li><span class="had-box"></span><span class="had-text had-text--a"></span></li>
+                  <li><span class="had-box"></span><span class="had-text had-text--b"></span></li>
+                  <li><span class="had-box"></span><span class="had-text had-text--c"></span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -825,7 +846,7 @@
       Notin v2 introduces powerful new AI features to level up your second brain.
     </p>
     <div class="flex flex-wrap items-center justify-center gap-4">
-      <button type="button" id="discoverMoreBtn" class="group inline-flex cursor-pointer items-center gap-2 bg-transparent text-[16px] font-bold text-[#94e130] transition hover:brightness-110" aria-haspopup="dialog" aria-controls="videoModal">
+      <button type="button" id="discoverMoreBtn" class="group inline-flex cursor-pointer items-center gap-2 bg-transparent text-[16px] font-bold text-[#94e130] transition hover:brightness-110">
         Discover more
         <svg class="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
       </button>
@@ -892,41 +913,7 @@
 <button id="backTop" class="back-top" aria-label="Back to top"><svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg></button>
 
 <!-- ============ VIDEO LIGHTBOX (full demo) ============ -->
-<div id="videoModal" class="video-modal" role="dialog" aria-modal="true" aria-label="Notin demo video" hidden>
-  <div class="video-modal-backdrop" id="videoModalBackdrop"></div>
-  <div class="video-modal-panel" role="document">
-    <button type="button" id="videoModalClose" class="video-modal-close" aria-label="Close video">✕</button>
-    <div class="video-modal-stage">
-      <!-- Notin branding overlay (replaces the Evernote branding shown in the clip) -->
-      <div class="video-brand" aria-hidden="true">
-        <img src="assets/notin-icon-nav.png" alt="" class="video-brand-icon" />
-        <span class="video-brand-name">Notin</span>
-      </div>
-      <video id="demoVideo" controls playsinline loop preload="metadata"
-             poster="assets/hero-demo-poster.jpg"
-             crossorigin="anonymous"
-             data-trim-end="45"
-             src="https://evernote.cdn.prismic.io/evernote/BAhQ26f0Iw3kMeEC_BSP_WatermelonVideoRepurpose_EN_169_V03_compressed.mp4"></video>
-    </div>
-    <p class="video-modal-caption">Notin — your productivity, supercharged.</p>
-  </div>
-</div>
 
-<script>
-  // ===== Theme switcher: Green (styles.css) ⇄ Neon (styles-neon.css) =====
-  (function () {
-    var btn = document.getElementById('themeToggle');
-    if (!btn) return;
-    var label = document.getElementById('themeToggleLabel');
-    var isNeon = location.pathname.indexOf('neon') !== -1 || document.cookie.indexOf('neon=1') !== -1;
-    var switchTo = function (neon) {
-      document.cookie = 'neon=' + (neon ? 1 : 0) + '; path=/; max-age=31536000';
-      location.href = neon ? 'index-neon.html' : 'index.html';
-    };
-    btn.addEventListener('click', function () { switchTo(!isNeon); });
-    if (label) label.textContent = isNeon ? 'Switch to Green' : 'Switch to Neon';
-  })();
-</script>
 <script src="script.js"></script>
 <script type="module" src="three-hero.js"></script>
 </body>
