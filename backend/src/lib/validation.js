@@ -1,4 +1,4 @@
-// WP-HARDEN-001 — centralized runtime request validation (Zod, plain JS).
+﻿// WP-HARDEN-001 â€” centralized runtime request validation (Zod, plain JS).
 //
 // All mutable backend routes validate through these schemas BEFORE any
 // database write, AI provider call, file mutation, email send, or token
@@ -12,7 +12,7 @@
 import { z } from 'zod';
 import { sendValidationError } from './apiResponse.js';
 
-// ── shared primitives ────────────────────────────────────────────────────────
+// â”€â”€ shared primitives â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 // Server-generated ids look like `c<hex>` (or `att_<uuid>`); the same sane
 // charset the request-id middleware accepts. `-`/`_` kept for legacy ids.
@@ -24,6 +24,7 @@ export const idSchema = z
   .max(128, 'Must be a valid id string')
   .regex(ID_RE, 'Must be a valid id string');
 
+// eslint-disable-next-line no-control-regex -- matching control chars is the whole point
 const CONTROL_CHARS_RE = /[\u0000-\u001f\u007f]/;
 
 // Email rule identical to the pre-hardening auth regex (contract preserved).
@@ -56,7 +57,7 @@ function noControlChars(value) {
   return !CONTROL_CHARS_RE.test(value);
 }
 
-// ── notes ────────────────────────────────────────────────────────────────────
+// â”€â”€ notes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const NOTE_TITLE_MAX = 500;
 export const NOTE_DESCRIPTION_MAX = 100_000;
@@ -125,7 +126,7 @@ export const tagIdsSchema = z
   .max(NOTE_TAG_IDS_MAX, `tagIds must contain at most ${NOTE_TAG_IDS_MAX} tag ids`)
   .refine((ids) => new Set(ids).size === ids.length, 'tagIds must not contain duplicates');
 
-// notebookId: a real id, '', or null. '' and null both mean "unfiled" — that
+// notebookId: a real id, '', or null. '' and null both mean "unfiled" â€” that
 // mapping lives in the controller (legacy contract).
 export const notebookIdSchema = z.union([
   idSchema,
@@ -170,7 +171,7 @@ export const noteUpdateSchema = z.object({
   // authoritative (WP-HARDEN-001).
 }).strict();
 
-// ── notebooks / tags ─────────────────────────────────────────────────────────
+// â”€â”€ notebooks / tags â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const NOTEBOOK_NAME_MAX = 100;
 export const TAG_NAME_MAX = 50;
@@ -210,13 +211,40 @@ export const tagSchema = z
   })
   .strict();
 
-// ── auth ─────────────────────────────────────────────────────────────────────
+// â”€â”€ auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-// WP-SEC-006 — password policy now single-sourced in lib/passwordStrength.js
+// WP-SEC-006 â€” password policy now single-sourced in lib/passwordStrength.js
 import { evaluatePasswordStrength } from './passwordStrength.js';
 
+
+// -- reminders (WP-REM-001) --------------------------------------------------
+export const reminderCreateSchema = z
+  .object({
+    noteId: idSchema,
+    remindAt: z.string().datetime({ message: 'remindAt must be a valid ISO 8601 timestamp' }),
+  })
+  .strict();
+
+export const reminderUpdateSchema = z
+  .object({
+    remindAt: z.string().datetime({ message: 'remindAt must be a valid ISO 8601 timestamp' }).optional(),
+    isCompleted: z.boolean().optional(),
+    snoozeMinutes: z.number().int().min(1).max(10080).optional(),
+  })
+  .strict();
+
+export const pushSubscriptionSchema = z
+  .object({
+    endpoint: z.string().url({ message: 'endpoint must be a valid URL' }).max(2048),
+    keys: z.object({
+      p256dh: z.string().min(1).max(512),
+      auth: z.string().min(1).max(512),
+    }),
+  })
+  .strict();
+
 const basePasswordSchema = z
-  .string({ invalid_type_error: 'Password must be 8–72 bytes' })
+  .string({ invalid_type_error: 'Password must be 8â€“72 bytes' })
   .min(8, 'Password must be at least 8 characters')
   .refine((value) => Buffer.byteLength(value, 'utf8') <= 72, 'Password must be 72 bytes or fewer')
   .refine((value) => {
@@ -229,7 +257,7 @@ const basePasswordSchema = z
     if (!valid) {
       for (const issue of issues) {
         if (issue === 'too common') {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'This password is too common — choose a less predictable one' });
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'This password is too common â€” choose a less predictable one' });
         } else if (issue.includes('3 of')) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Password must include at least 3 of: lowercase, uppercase, number, special character' });
         } else if (issue.includes('repeating')) {
@@ -258,7 +286,7 @@ export const signupSchema = z
       } else if (issue.includes('repeating') || issue.includes('sequential') || issue.includes('common')) {
         // Already reported by base schema, but ensure message if not yet
         if (issue === 'too common') {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['password'], message: 'This password is too common — choose a less predictable one' });
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['password'], message: 'This password is too common â€” choose a less predictable one' });
         } else if (issue.includes('repeating')) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['password'], message: 'Password must not contain 3 repeating characters in a row' });
         } else if (issue.includes('sequential')) {
@@ -307,7 +335,7 @@ export const resetPasswordSchema = z
   })
   .strict();
 
-// ── AI ───────────────────────────────────────────────────────────────────────
+// â”€â”€ AI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export const MAX_CHAT_HISTORY_TURNS = 6;
 export const MAX_CHAT_HISTORY_CONTENT_CHARS = 2000;
@@ -334,12 +362,12 @@ export const chatBodySchema = z
   .object({
     // Question emptiness/length keeps the legacy guard message in the
     // controller; the schema only enforces the type here.
-    question: z.string({ invalid_type_error: 'Ask a question (1–2000 characters)' }).trim().optional(),
+    question: z.string({ invalid_type_error: 'Ask a question (1â€“2000 characters)' }).trim().optional(),
     history: chatHistorySchema.optional(),
   })
   .strict();
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /** Convert a ZodError into the standard details array. */
 export function zodDetails(error) {
@@ -354,7 +382,7 @@ export function zodDetails(error) {
 /**
  * Validate `req.body` (treating missing/non-object bodies as `{}`) against a
  * schema. On success returns the parsed data; on failure sends the standard
- * validation envelope and returns null — controllers must `return` when null.
+ * validation envelope and returns null â€” controllers must `return` when null.
  */
 export function validateBody(schema, req, res) {
   const body = req.body && typeof req.body === 'object' && !Array.isArray(req.body) ? req.body : {};

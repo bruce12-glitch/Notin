@@ -594,84 +594,63 @@ const OS_META = NOTIN_PLATFORMS[OS] || NOTIN_PLATFORMS.web;
 
 
 // ============================================================
-// VIDEO LIGHTBOX — full demo player (index.html)
+// DEMO CTA — scroll to the live hero demo (WP-AUDIT-H3)
+// The third-party demo video was removed; the CTAs now bring the
+// visitor to the original animated workspace mock in the hero.
 // ============================================================
 (function () {
-  // Any element that should open the demo lightbox (Discover more, Watch demo, …)
   const triggers = [
     document.getElementById('discoverMoreBtn'),
     document.getElementById('watchDemoBtn'),
   ].filter(Boolean);
-  const modal = document.getElementById('videoModal');
-  const closeBtn = document.getElementById('videoModalClose');
-  const backdrop = document.getElementById('videoModalBackdrop');
-  const video = document.getElementById('demoVideo');
-  if (!triggers.length || !modal || !video) return;
-
-  // ---- Playback trim: stop/loop before the last few seconds ----
-  // Reads data-trim-end="45" so the 45–50s tail (end branding) never plays.
-  const trimEnd = parseFloat(video.getAttribute('data-trim-end'));
-  if (!Number.isNaN(trimEnd) && trimEnd > 0) {
-    video.addEventListener('timeupdate', () => {
-      if (video.currentTime >= trimEnd) {
-        if (video.loop) {
-          video.currentTime = 0;      // seamless restart at the trimmed length
-        } else {
-          video.pause();
-          video.currentTime = trimEnd;
-        }
-      }
-    });
-    // If metadata says the file is shorter than the trim point, ignore the trim.
-    video.addEventListener('loadedmetadata', () => {
-      if (video.duration && video.duration <= trimEnd) {
-        video.removeAttribute('data-trim-end');
-      }
-    });
-  }
-
-  const open = () => {
-    modal.hidden = false;
-    document.body.style.overflow = 'hidden';
-    const pr = video.play();
-    if (pr && pr.catch) pr.catch(() => {});
-  };
-  const close = () => {
-    modal.hidden = true;
-    document.body.style.overflow = '';
-    video.pause();
-  };
-
-  triggers.forEach((t) => t.addEventListener('click', open));
-  closeBtn.addEventListener('click', close);
-  backdrop.addEventListener('click', close);
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !modal.hidden) close();
-  });
+  if (!triggers.length) return;
+  const target = document.querySelector('.hero-product-frame') || document.getElementById('top');
+  if (!target) return;
+  triggers.forEach((t) => t.addEventListener('click', () => {
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.classList.add('hero-frame-flash');
+    setTimeout(() => target.classList.remove('hero-frame-flash'), 1600);
+  }));
 })();
 
 
 
-
-
-
 // ============================================================
-// HERO VIDEO — play enforcer (strict: video MUST play)
-// Retries autoplay; if the browser blocks it, plays on the
-// first tap/scroll/click (autoplay policies require gesture).
+// HERO APP DEMO — original, self-animated product mock (WP-AUDIT-H3)
+// Types a note title, then checks off the checklist, then loops.
+// Honors prefers-reduced-motion with a static completed frame.
 // ============================================================
 (function () {
-  const v = document.getElementById('heroDemoVideo');
-  if (!v) return;
-  const tryPlay = () => { const p = v.play(); if (p && p.catch) p.catch(() => {}); };
-  tryPlay();
-  v.addEventListener('canplay', tryPlay);
-  v.addEventListener('loadeddata', tryPlay);
-  ['click', 'keydown', 'touchstart', 'scroll'].forEach(ev =>
-    window.addEventListener(ev, tryPlay, { once: true, passive: true })
-  );
-  // retry a few times in case source loads late
-  [500, 1200, 2500, 5000].forEach(t => setTimeout(tryPlay, t));
+  const demo = document.getElementById('heroAppDemo');
+  if (!demo) return;
+  const titleEl = demo.querySelector('.had-title-text');
+  const items = [...demo.querySelectorAll('.had-checklist li')];
+  const PHRASES = ['Trip to Lisbon', 'Weekly reset plan', 'Ideas worth keeping'];
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (titleEl) titleEl.textContent = PHRASES[0];
+    items.forEach((li) => li.classList.add('is-done'));
+    demo.classList.add('is-static');
+    return;
+  }
+  let phrase = 0;
+  function typeText(el, text, done) {
+    if (!el) return done();
+    el.textContent = '';
+    let i = 0;
+    (function step() {
+      el.textContent = text.slice(0, ++i);
+      if (i < text.length) setTimeout(step, 55 + Math.random() * 60);
+      else done();
+    })();
+  }
+  function cycle() {
+    items.forEach((li) => li.classList.remove('is-done'));
+    typeText(titleEl, PHRASES[phrase], () => {
+      items.forEach((li, i) => setTimeout(() => li.classList.add('is-done'), 600 * (i + 1)));
+      setTimeout(() => { phrase = (phrase + 1) % PHRASES.length; cycle(); }, 600 * items.length + 2800);
+    });
+  }
+  cycle();
 })();
 
 
@@ -855,4 +834,22 @@ if (yearEl) yearEl.textContent = new Date().getFullYear();
       photoWrap.classList.add('failed');
     });
   }
+})();
+
+// ============================================================
+// THEME SWITCHER — Green (index.html) ⇄ Neon (index-neon.html)
+// WP-AUDIT-H1 — moved here from an inline <script> so the production
+// CSP (script-src 'self') can stay strict on the marketing pages.
+// ============================================================
+(function () {
+  var btn = document.getElementById('themeToggle');
+  if (!btn) return;
+  var label = document.getElementById('themeToggleLabel');
+  var isNeon = location.pathname.indexOf('neon') !== -1 || document.cookie.indexOf('neon=1') !== -1;
+  var switchTo = function (neon) {
+    document.cookie = 'neon=' + (neon ? 1 : 0) + '; path=/; max-age=31536000';
+    location.href = neon ? 'index-neon.html' : 'index.html';
+  };
+  btn.addEventListener('click', function () { switchTo(!isNeon); });
+  if (label) label.textContent = isNeon ? 'Switch to Green' : 'Switch to Neon';
 })();

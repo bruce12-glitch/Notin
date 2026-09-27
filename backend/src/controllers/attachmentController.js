@@ -3,7 +3,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import multer from 'multer';
 import db from '../config/db.js';
-import { logError } from '../lib/logging.js';
 import { ID_RE } from '../lib/validation.js';
 import { sendInternalError } from '../lib/apiResponse.js';
 import attachmentStorage, { uploadDir, MAX_IMAGE_BYTES, MAX_IMAGES_PER_NOTE, MAX_ATTACHMENT_STORAGE_BYTES } from '../lib/storage.js';
@@ -258,6 +257,13 @@ export async function getAttachmentFile(req, res) {
     }
     res.type(attachment.mime);
     res.setHeader('Cache-Control', 'private, max-age=3600');
+    // WP-AUDIT-M5 â€” never let the browser sniff past the declared image MIME,
+    // and pin a sanitized inline filename (defense in depth behind the upload
+    // magic-byte checks). Local sendFile already negotiates HTTP Range.
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    const safeName = String(attachment.filename || 'attachment')
+      .replace(/[^\w.\- ]+/g, '_').replace(/["\\]/g, '_').slice(0, 120) || 'file';
+    res.setHeader('Content-Disposition', `inline; filename="${safeName}"`);
     if (attachmentStorage.name === 's3') {
       try {
         const stream = await attachmentStorage.getStream(attachment.path);
@@ -279,7 +285,7 @@ export async function getAttachmentFile(req, res) {
           const filePath = attachmentStorage.fullPath(attachment.path);
           return res.sendFile(filePath);
         }
-      } catch (e) {
+      } catch {
         return res.status(404).json({ message: 'Image file not found' });
       }
     } else {
@@ -327,7 +333,7 @@ export function handleUploadError(error, req, res, next) {
   next(error);
 }
 
-// -- WP-AI-009 — record/upload audio, store it, transcribe it (Groq Whisper or
+// -- WP-AI-009 ï¿½ record/upload audio, store it, transcribe it (Groq Whisper or
 // deterministic mock), and append the transcript to the note. The audio stays
 // a normal attachment; the transcript is plain note text (export-friendly).
 import { transcribeAudio } from '../lib/ai/provider.js';
@@ -358,7 +364,7 @@ export async function transcribeUpload(req, res) {
       [id, req.params.noteId, req.userId, originalName, file.mimetype, file.size, file.filename, now],
     );
 
-    // Transcribe. A provider failure keeps the attachment but reports 503 —
+    // Transcribe. A provider failure keeps the attachment but reports 503 ï¿½
     // the bytes are safe, only the text step failed.
     let transcript;
     let provider;

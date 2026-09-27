@@ -1,9 +1,15 @@
 // Notin minimal PWA service worker — static shell only.
 // Authenticated API responses are deliberately NEVER stored in Cache Storage;
 // per-user note snapshots live in IndexedDB and are managed by app.js.
-// Bump CACHE_NAME whenever any shell asset changes (app.bundle.js etc.) or
-// existing installs keep serving the stale cached copy.
-const CACHE_NAME = 'notin-shell-v22';
+//
+// WP-AUDIT-L10 — caching strategy (was cache-first for everything, so updated
+// app.html/app.bundle.js went stale until a manual CACHE_NAME bump):
+//   • navigations / HTML  → network-first (fresh deploys win; cache = offline fallback)
+//   • static assets        → stale-while-revalidate (instant paint, refreshed in background)
+// CACHE RULE: still bump CACHE_NAME on every app.html/app.bundle.js change —
+// network-first protects online users, but offline users keep the old shell
+// until the cache identity changes.
+const CACHE_NAME = 'notin-shell-v23';
 const SHELL_PATHS = [
   '/app.html',
   '/app.bundle.js',
@@ -38,18 +44,40 @@ self.addEventListener('fetch', (event) => {
   // Never cache API/auth traffic, especially Bearer-authenticated note JSON.
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/')) return;
 
+  const isHtml = request.mode === 'navigate' || url.pathname.endsWith('.html');
   const shellPath = url.pathname === '/app.html' || url.pathname === '/share.html'
     ? url.pathname
     : SHELL_PATHS.includes(url.pathname) ? url.pathname : null;
   if (!shellPath) return;
 
+  if (isHtml) {
+    // Network-first: a fresh deploy must reach the client immediately; the
+    // cache is only the offline read-only fallback.
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(shellPath, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(shellPath)),
+    );
+    return;
+  }
+
+  // Stale-while-revalidate for static shell assets (css/js/icons/manifest).
   event.respondWith(
-    caches.match(shellPath).then((cached) => cached || fetch(request).then((response) => {
-      if (response.ok) {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(shellPath, copy));
-      }
-      return response;
-    })),
+    caches.match(shellPath).then((cached) => {
+      const refreshed = fetch(request).then((response) => {
+        if (response.ok) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(shellPath, copy));
+        }
+        return response;
+      }).catch(() => cached);
+      return cached || refreshed;
+    }),
   );
 });

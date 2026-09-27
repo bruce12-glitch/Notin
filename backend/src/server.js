@@ -1,4 +1,4 @@
-import 'dotenv/config';
+﻿import 'dotenv/config';
 import { captureExpressError } from './config/sentry.js';
 import express from 'express';
 import helmet from 'helmet';
@@ -15,6 +15,7 @@ import userRoutes, { signupIpLimit, signinIpLimit } from './routes/userRoutes.js
 import noteRoutes from './routes/noteRoutes.js';
 import notebookRoutes from './routes/notebookRoutes.js';
 import tagRoutes from './routes/tagRoutes.js';
+import reminderRoutes from './routes/reminderRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import attachmentRoutes from './routes/attachmentRoutes.js';
 import publicShareRoutes from './routes/publicShareRoutes.js';
@@ -22,7 +23,7 @@ import aiRoutes from './routes/aiRoutes.js';
 import { signup, signin } from './controllers/userController.js';
 import storage from './lib/storage.js';
 import { cleanupExpiredTokens } from './lib/cleanup.js';
-import { canonicalOrigin, isOriginAllowed } from './lib/httpSecurity.js';
+import { canonicalOrigin, isOriginAllowed, DEV_ORIGIN } from './lib/httpSecurity.js';
 import { logError } from './lib/logging.js';
 import requestId from './middleware/requestId.js';
 
@@ -33,9 +34,9 @@ const app = express();
 const PORT = Number(process.env.PORT || 5000);
 const isProd = process.env.NODE_ENV === 'production';
 
-// WP-DEPLOY-001 — fail-closed production boot. Dev/preview is untouched: this
+// WP-DEPLOY-001 â€” fail-closed production boot. Dev/preview is untouched: this
 // returns immediately unless NODE_ENV === 'production'. Only variable NAMES and
-// reasons are printed — never a value, not even a prefix.
+// reasons are printed â€” never a value, not even a prefix.
 const ENV_PLACEHOLDERS = new Set([
   'change-me-access-32chars-minimum-replace-in-prod',
   'change-me-refresh-32chars-minimum-replace-in-prod',
@@ -113,7 +114,7 @@ try {
   process.exit(1);
 }
 
-// WP-OPS-001 — correlation id: after trust proxy, before helmet/CORS/routers
+// WP-OPS-001 â€” correlation id: after trust proxy, before helmet/CORS/routers
 // so every response (health, static, errors) carries X-Request-Id.
 app.use(requestId);
 app.use(compression());
@@ -186,14 +187,17 @@ app.use((req, res, next) => {
     res.setHeader('Content-Security-Policy', 'frame-ancestors *');
   }
   const reqOrigin = req.headers.origin;
-  // WP-DEPLOY-001 — CORS lockdown. In production only APP_ORIGIN allowlist
+  // WP-DEPLOY-001 â€” CORS lockdown. In production only APP_ORIGIN allowlist
   // entries are echoed; everyone else gets the canonical origin back, never
-  // their own. Preview/localhost echo is now strictly non-production.
+  // their own. WP-AUDIT-H2 â€” non-production no longer echoes ANY origin with
+  // credentials: the echo is limited to the allowlist plus localhost/127.0.0.1
+  // (DEV_ORIGIN), so a publicly reachable preview cannot be driven from an
+  // attacker's page.
   let allowOrigin = canonicalOrigin;
   if (reqOrigin) {
     if (isProd) {
       if (isOriginAllowed(reqOrigin)) allowOrigin = reqOrigin;
-    } else {
+    } else if (isOriginAllowed(reqOrigin) || DEV_ORIGIN.test(reqOrigin)) {
       allowOrigin = reqOrigin;
     }
   }
@@ -232,10 +236,13 @@ app.use((req, res, next) => {
   return authStatic(req, res, next);
 });
 
-app.use(express.json({ limit: '10mb' }));
+// WP-AUDIT-M6 â€” JSON bodies are capped near the validation ceiling
+// (contentJson â‰¤ 2 MB); attachments use multer, not JSON, so 10 MB here was
+// pure memory/CPU amplification surface for unauthenticated routes.
+app.use(express.json({ limit: '2.5mb' }));
 app.use(cookieParser());
 
-// WP-OPS-001 — liveness vs readiness.
+// WP-OPS-001 â€” liveness vs readiness.
 // GET /health is the container liveness probe: process-only, never queries the
 // DB, so a dependency blip cannot flap the process.
 app.get('/health', (req, res) => {
@@ -248,7 +255,7 @@ app.get('/api/health', async (req, res) => {
   const body = healthPayload(database);
   res.status(database.reachable ? 200 : 503).json(body);
 });
-// Deep check — same readiness plus upload-directory writability (no new deps).
+// Deep check â€” same readiness plus upload-directory writability (no new deps).
 app.get('/api/health/deep', async (req, res) => {
   const database = await db.probeHealth(2000);
   const uploadsWritable = await probeUploadsWritable();
@@ -257,16 +264,16 @@ app.get('/api/health/deep', async (req, res) => {
   res.status(ok ? 200 : 503).json(body);
 });
 
-// Auth routes — unified identity (OTP/Google + password via /api/users)
+// Auth routes â€” unified identity (OTP/Google + password via /api/users)
 // Mount under /api/auth (preferred) and /auth (legacy for existing frontend)
 app.use('/api/auth', authRoutes);
 app.use('/auth', authRoutes);
 
 // Existing user routes (password signup/signin now use unified User table + same JWT)
-// Keep /api/users as legacy path — now shares table with OTP/Google
+// Keep /api/users as legacy path â€” now shares table with OTP/Google
 app.use('/api/users', userRoutes);
 // Spec also allows /api/auth/signup and /api/auth/signin as aliases (same handler)
-// WP-SEC-007 — aliases share the canonical per-IP limiter instances so the
+// WP-SEC-007 â€” aliases share the canonical per-IP limiter instances so the
 // alias paths cannot bypass the signup/signin budgets.
 app.post('/api/auth/signup', signupIpLimit, signup);
 app.post('/api/auth/signin', signinIpLimit, signin);
@@ -280,6 +287,7 @@ app.use('/api/notes', noteRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/notebooks', notebookRoutes);
 app.use('/api/tags', tagRoutes);
+app.use('/api/reminders', reminderRoutes);
 
 // Marketing site (Green/Neon landing, legal pages) lives beside the app origin
 // at /site so a single process can ship the public funnel + authenticated app.
@@ -316,7 +324,7 @@ app.get('/', (req, res) => {
     message: 'Notin Backend API (unified)',
     status: 'running',
     database: db.usePostgres ? 'PostgreSQL' : 'SQLite-fallback',
-    auth: '/api/auth (OTP/Google) + /api/users (password) → same User table',
+    auth: '/api/auth (OTP/Google) + /api/users (password) â†’ same User table',
     notes: '/api/notes (Bearer JWT)',
   });
 });
@@ -324,22 +332,22 @@ app.get('/', (req, res) => {
 // Fallback for SPA history? Serve index.html for unknown GET html
 app.get('/login.html', (req, res) => res.sendFile(path.join(authStaticPath, 'login.html')));
 
-// WP-OPS-002 — crawler directives at the root (crawlers never look in /site/)
+// WP-OPS-002 â€” crawler directives at the root (crawlers never look in /site/)
 app.get('/robots.txt', (req, res) => {
   res.type('text/plain');
   res.sendFile(path.join(__dirname, 'static/robots.txt'));
 });
 
-// WP-OPS-002 — friendly 404 for everything unmatched: JSON for the API,
+// WP-OPS-002 â€” friendly 404 for everything unmatched: JSON for the API,
 // a styled page for browsers. Never leaks internals.
 app.use((req, res) => {
   if (req.path.startsWith('/api/') || req.path.startsWith('/auth/')) {
     return res.status(404).json({ message: 'Not found' });
   }
-  res.status(404).type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Page not found — Notin</title><style>body{font-family:Inter,system-ui,sans-serif;background:#f6f5f0;color:#2c2d2a;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;text-align:center}a{color:#00a82d;font-weight:600}h1{font-size:56px;margin:0 0 8px}</style></head><body><div><h1>404</h1><p>That page doesn't exist.</p><p><a href="/site/">Go to Notin</a></p></div></body></html>`);
+  res.status(404).type('html').send(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Page not found â€” Notin</title><style>body{font-family:Inter,system-ui,sans-serif;background:#f6f5f0;color:#2c2d2a;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;text-align:center}a{color:#00a82d;font-weight:600}h1{font-size:56px;margin:0 0 8px}</style></head><body><div><h1>404</h1><p>That page doesn't exist.</p><p><a href="/site/">Go to Notin</a></p></div></body></html>`);
 });
 
-app.use((err, req, res, next) => {
+app.use((err, req, res, _next) => {
   if (err?.type === 'entity.parse.failed' || (err instanceof SyntaxError && err?.status === 400)) {
     return res.status(400).json({
       message: 'Invalid JSON body',
@@ -350,7 +358,7 @@ app.use((err, req, res, next) => {
   // Capture only the Error object. Sentry's beforeSend strips request/user/extras.
   captureExpressError(err);
   logError(req, err.stack || err, 'unhandled');
-  // Additive requestId only — `message` stays the public contract.
+  // Additive requestId only â€” `message` stays the public contract.
   res.status(500).json({ message: 'Internal Server Error', requestId: req.id });
 });
 
@@ -359,7 +367,7 @@ let httpServer = null;
 let shuttingDown = false;
 
 const start = async () => {
-  // WP-DEPLOY-001 — gate before anything touches the database or a socket.
+  // WP-DEPLOY-001 â€” gate before anything touches the database or a socket.
   const envFailures = assertProductionEnv();
   if (envFailures.length) {
     for (const reason of envFailures) console.error(`FATAL: ${reason}`);
@@ -371,10 +379,25 @@ const start = async () => {
     await db.$connect();
     // Ensure sqlite fallback file exists logging
     if (!db.usePostgres) {
-      console.log(`📁 Using SQLite fallback at ${db.sqlitePath} (set DATABASE_URL=postgresql://... for Postgres)`);
+      console.log(`ðŸ“ Using SQLite fallback at ${db.sqlitePath} (set DATABASE_URL=postgresql://... for Postgres)`);
+    }
+    // WP-AUDIT-H2 â€” make every active dev-only shortcut loud at boot so a
+    // publicly reachable preview can never silently run with unsafe defaults.
+    if (!isProd) {
+      const { devShortcuts } = await import('./lib/jwt.js');
+      const active = [];
+      if (devShortcuts.ephemeralAccessSecret || devShortcuts.ephemeralRefreshSecret) active.push('ephemeral JWT secrets (sessions die on restart)');
+      if (!db.usePostgres) active.push('SQLite fallback datastore');
+      if (process.env.ALLOW_DEMO_OTP === 'true') active.push('demo OTP 123456 enabled (ALLOW_DEMO_OTP)');
+      if (process.env.AUTH_EMAIL_ENABLED === 'false') active.push('email auth disabled (AUTH_EMAIL_ENABLED=false)');
+      if (active.length) {
+        console.warn('âš ï¸  Development shortcuts active â€” do NOT expose this instance publicly:');
+        for (const item of active) console.warn(`   â€¢ ${item}`);
+        console.warn('   Publicly reachable deployments MUST run with NODE_ENV=production.');
+      }
     }
     httpServer = app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Notin Unified API listening on http://0.0.0.0:${PORT}`);
+      console.log(`ðŸš€ Notin Unified API listening on http://0.0.0.0:${PORT}`);
       console.log(`   API:        http://0.0.0.0:${PORT}/api`);
       console.log(`   Auth:       http://0.0.0.0:${PORT}/api/auth ( + /auth legacy)`);
       console.log(`   Users:      http://0.0.0.0:${PORT}/api/users`);
@@ -385,21 +408,21 @@ const start = async () => {
       console.log(`   Marketing:  http://0.0.0.0:${PORT}/site/`);
     });
   } catch (error) {
-    console.error('❌ Database connection failed:', error);
+    console.error('âŒ Database connection failed:', error);
     process.exit(1);
   }
 };
 
 function requestShutdown(signal) {
   if (shuttingDown) {
-    console.log(`[shutdown] ${signal} ignored — already shutting down`);
+    console.log(`[shutdown] ${signal} ignored â€” already shutting down`);
     return;
   }
   shuttingDown = true;
-  console.log(`[shutdown] ${signal} received — stopping new connections`);
+  console.log(`[shutdown] ${signal} received â€” stopping new connections`);
 
   const forceTimer = setTimeout(() => {
-    console.error('[shutdown] grace period expired — forcing exit');
+    console.error('[shutdown] grace period expired â€” forcing exit');
     process.exit(1);
   }, SHUTDOWN_GRACE_MS);
 
@@ -430,7 +453,7 @@ function requestShutdown(signal) {
 }
 
 start().then(() => {
-  // WP-CLEANUP-001 — periodic cleanup of expired tokens (hourly)
+  // WP-CLEANUP-001 â€” periodic cleanup of expired tokens (hourly)
   // Runs on startup after DB connect, then hourly. In prod, operator should also run via cron.
   const runCleanup = async () => {
     try {

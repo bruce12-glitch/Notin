@@ -1,6 +1,4 @@
-import prisma from '../config/db.js';
-import { deleteAttachmentsForNote } from './attachmentController.js';
-import { logError } from '../lib/logging.js';
+﻿import prisma from '../config/db.js';
 import {
   noteCreateSchema,
   noteUpdateSchema,
@@ -15,7 +13,7 @@ const MAX_NOTES_PER_USER = Number.isSafeInteger(configuredNoteQuota) && configur
   ? configuredNoteQuota
   : 5000;
 
-// WP-HARDEN-001 — pagination query parsing for GET /api/notes.
+// WP-HARDEN-001 â€” pagination query parsing for GET /api/notes.
 // Returns null after sending a 400 when any argument is invalid.
 function parsePagination(query, res) {
   const { page, limit, includeMeta, includeRank, q } = query;
@@ -117,9 +115,9 @@ export const createNote = async (req, res) => {
 export const getNotes = async (req, res) => {
   const userId = req.userId;
   // Support ?filter=active|trash|all and legacy ?trash=0|1, ?isTrashed, ?trashed
-  // WP-APP-004: optional ?q=<string> — full-text search (title / contentText / description)
-  // WP-APP-005: optional ?notebookId=<id|none> — 'none'/'unfiled' = notebookId IS NULL
-  // WP-APP-006: optional ?tagId=<id> — notes carrying that tag (AND with other filters)
+  // WP-APP-004: optional ?q=<string> â€” full-text search (title / contentText / description)
+  // WP-APP-005: optional ?notebookId=<id|none> â€” 'none'/'unfiled' = notebookId IS NULL
+  // WP-APP-006: optional ?tagId=<id> â€” notes carrying that tag (AND with other filters)
   // WP-HARDEN-001: optional page / limit / includeMeta / includeRank
   const { filter, trash, trashed, isTrashed: isTrashedQ, q, notebookId: nbParam, tagId: tagParam } = req.query;
   let isTrashed;
@@ -131,10 +129,10 @@ export const getNotes = async (req, res) => {
   else if (isTrashedQ !== undefined) isTrashed = isTrashedQ === '1' || isTrashedQ === 'true';
   else isTrashed = false; // default: All Notes excludes trashed
 
-  // Empty/missing q → same list behavior as today (no search clause)
+  // Empty/missing q â†’ same list behavior as today (no search clause)
   const needle = typeof q === 'string' ? q.trim() : '';
 
-  // WP-HARDEN-001 — query-length cap keeps tsquery parsing and LIKE scanning
+  // WP-HARDEN-001 â€” query-length cap keeps tsquery parsing and LIKE scanning
   // bounded (defense in depth on top of the parameterized statements).
   if (needle.length > NOTE_QUERY_MAX) {
     return sendValidationError(res, [
@@ -160,7 +158,7 @@ export const getNotes = async (req, res) => {
       }
     }
 
-    // WP-APP-006 — tag filter (omitted = any tags; ownership enforced)
+    // WP-APP-006 â€” tag filter (omitted = any tags; ownership enforced)
     let tagFilter; // undefined = no tag filter
     if (tagParam !== undefined && tagParam !== '') {
       const tg = await prisma.tag.findFirst({ where: { id: String(tagParam), userId } });
@@ -184,7 +182,7 @@ export const getNotes = async (req, res) => {
       includeRank: rankRequested,
     });
 
-    // WP-HARDEN-001 — pagination metadata (only when explicitly requested).
+    // WP-HARDEN-001 â€” pagination metadata (only when explicitly requested).
     if (metaRequested) {
       const total = await prisma.note.count({ where });
       return res.status(200).json({
@@ -227,7 +225,7 @@ export const updateNote = async (req, res) => {
     if (body.description !== undefined) data.description = String(body.description);
     if (body.isTrashed !== undefined) {
       data.isTrashed = !!body.isTrashed;
-      // WP-HARDEN-001 — server timestamps are authoritative; the client can
+      // WP-HARDEN-001 â€” server timestamps are authoritative; the client can
       // never supply trashedAt.
       data.trashedAt = data.isTrashed ? new Date().toISOString() : null;
     }
@@ -241,8 +239,8 @@ export const updateNote = async (req, res) => {
         data.notebookId = nb.id;
       }
     }
-    // WP-APP-006: tagIds replace-set (string[] — replaces the note's whole tag set; [] clears).
-    // Every id must belong to the user → 400 otherwise.
+    // WP-APP-006: tagIds replace-set (string[] â€” replaces the note's whole tag set; [] clears).
+    // Every id must belong to the user â†’ 400 otherwise.
     if (body.tagIds !== undefined) {
       const unique = [...new Set(body.tagIds)];
       const owned = await prisma.tag.findManyByIds(userId, unique);
@@ -251,7 +249,7 @@ export const updateNote = async (req, res) => {
       }
       data.tagIds = unique;
     }
-    // WP-APP-007: pin/unpin — strict boolean; composes with any other fields in one PUT.
+    // WP-APP-007: pin/unpin â€” strict boolean; composes with any other fields in one PUT.
     if (body.isPinned !== undefined) {
       data.isPinned = body.isPinned;
     }
@@ -332,9 +330,23 @@ export const deleteNote = async (req, res) => {
 
     // Share metadata and local images are retained while trashed/restored, and
     // removed only when the owning note is permanently deleted (explicit for SQLite FK-off mode).
-    await prisma.query(`DELETE FROM "NoteShare" WHERE "noteId" = $1 AND "userId" = $2`, [id, userId]);
-    await deleteAttachmentsForNote(id, userId);
-    await prisma.note.delete({ where: { id } });
+    // WP-AUDIT-L3 â€” all DB writes (shares, attachments, tags, note) commit or
+    // roll back together; a mid-sequence failure can no longer strand rows.
+    // File bytes leave only AFTER the commit succeeds (fs cannot roll back).
+    let attachmentPaths = [];
+    await prisma.$transaction(async (tx) => {
+      const { rows: attRows } = await tx.query(
+        `SELECT path FROM "Attachment" WHERE "noteId" = $1 AND "userId" = $2`, [id, userId]);
+      attachmentPaths = attRows.map((r) => r.path);
+      await tx.query(`DELETE FROM "NoteShare" WHERE "noteId" = $1 AND "userId" = $2`, [id, userId]);
+      await tx.query(`DELETE FROM "Attachment" WHERE "noteId" = $1 AND "userId" = $2`, [id, userId]);
+      await tx.query(`DELETE FROM "NoteTag" WHERE "noteId" = $1`, [id]);
+      await tx.query(`DELETE FROM "Note" WHERE id = $1`, [id]);
+    });
+    if (attachmentPaths.length) {
+      const storage = (await import('../lib/storage.js')).default;
+      await storage.removeMany(attachmentPaths);
+    }
     res.status(200).json({ message: 'Note deleted successfully' });
   } catch (error) {
     return sendInternalError(req, res, error, 'Failed to delete note', 'deleteNote');
