@@ -1,9 +1,10 @@
-{
+﻿{
   "name": "notin-backend",
   "version": "1.0.0",
   "description": "Notin Backend - Clean PostgreSQL API (Prisma schema + pg driver)",
   "main": "src/server.js",
   "type": "module",
+  "license": "MIT",
   "engines": {
     "node": ">=22.5.0"
   },
@@ -12,8 +13,10 @@
     "start": "node src/server.js",
     "db:migrate": "node src/db/migrate.js",
     "db:generate": "echo 'SQL is applied by npm run db:migrate (migrate.js). prisma/schema.prisma documents that schema; this repo does not run prisma generate.'",
-    "test": "npm run test:e2e",
+    "test": "npm run test:unit",
+    "test:unit": "node --test tests/unit/*.test.js",
     "check": "find src -name '*.js' -print0 | xargs -0 -n1 node --check",
+    "lint": "eslint src tests/unit",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },
@@ -23,7 +26,6 @@
     "bcryptjs": "^2.4.3",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
-    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "express-rate-limit": "^8.6.2",
@@ -33,9 +35,11 @@
     "multer": "^2.2.0",
     "nodemailer": "^9.0.5",
     "pg": "^8.13.1",
+    "web-push": "^3.6.7",
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@playwright/test": "^1.62.1"
+    "@playwright/test": "^1.62.1",
+    "eslint": "^9.39.1"
   }
 }
