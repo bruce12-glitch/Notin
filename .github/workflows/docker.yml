@@ -1,0 +1,62 @@
+name: Docker build + smoke
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: notin
+          POSTGRES_PASSWORD: ci-throwaway-not-a-secret
+          POSTGRES_DB: notin
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U notin"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t notin:ci .
+
+      - name: Run migrations against service Postgres
+        run: >-
+          docker run --rm --network host
+          -e DATABASE_URL=postgresql://notin:ci-throwaway-not-a-secret@localhost:5432/notin
+          notin:ci node src/db/migrate.js
+
+      - name: Boot container (production env) and probe /health
+        run: |
+          docker run -d --name notin --network host \
+            -e NODE_ENV=production \
+            -e PORT=5000 \
+            -e DATABASE_URL=postgresql://notin:ci-throwaway-not-a-secret@localhost:5432/notin \
+            -e JWT_ACCESS_SECRET="$(openssl rand -hex 32)" \
+            -e JWT_REFRESH_SECRET="$(openssl rand -hex 32)" \
+            -e OTP_PEPPER="$(openssl rand -hex 32)" \
+            -e APP_ORIGIN=https://app.example.com \
+            -e PUBLIC_APP_URL=https://app.example.com \
+            -e AUTH_EMAIL_ENABLED=false \
+            -e TRUST_PROXY=1 \
+            notin:ci
+          ok=0
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:5000/health -o /tmp/health.json 2>/dev/null; then
+              grep -q '"database":"PostgreSQL"' /tmp/health.json && { ok=1; break; }
+            fi
+            sleep 1
+          done
+          docker logs notin
+          cat /tmp/health.json 2>/dev/null || true
+          [ "$ok" -eq 1 ] || { echo "::error::container /health did not report PostgreSQL"; exit 1; }
+          echo "OK: container boots on PostgreSQL and serves /health"

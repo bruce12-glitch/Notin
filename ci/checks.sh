@@ -1,5 +1,5 @@
-#!/usr/bin/env bash
-# Fast pre-push gate — the same checks CI runs, minus the Playwright suite.
+﻿#!/usr/bin/env bash
+# Fast pre-push gate â€” the same checks CI runs, minus the Playwright suite.
 # Usage: ./ci/checks.sh   (run from the repository root)
 
 set -euo pipefail
@@ -22,11 +22,17 @@ npm --prefix frontend run --silent check || bad "frontend syntax check"
 step "Browser bundle is in sync with source"
 npm --prefix authentication run --silent build:app || bad "bundle build"
 git diff --quiet -- authentication/app.bundle.js ||
-  bad "authentication/app.bundle.js is stale — commit the rebuilt bundle"
+  bad "authentication/app.bundle.js is stale â€” commit the rebuilt bundle"
+
+step "Marketing CSP / asset guard"
+node ci/check-csp.mjs || bad "CSP/asset guard"
+
+step "Backend unit tests"
+npm --prefix backend run --silent test:unit || bad "backend unit tests"
 
 step "No tracked .env files"
 if git ls-files | grep -E '(^|/)\.env(\..*)?$' | grep -v '\.env\.example$'; then
-  bad "a .env file is tracked in git — remove it and rotate the secrets"
+  bad "a .env file is tracked in git â€” remove it and rotate the secrets"
 else
   echo "OK: no tracked .env files"
 fi

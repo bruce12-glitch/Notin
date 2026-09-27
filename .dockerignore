@@ -1,4 +1,4 @@
-.git
+﻿.git
 **/node_modules
 **/.env
 **/*.sqlite
@@ -7,5 +7,3 @@
 backend/uploads
 backend/playwright-report
 backend/test-results
-frontend/assets/evernote-homepage.json
-frontend/assets/hero-anim-data.js

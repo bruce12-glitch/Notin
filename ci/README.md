@@ -1,29 +1,24 @@
-# CI workflow staging
+# CI
 
-`ci/e2e.yml` contains the complete release-gate workflow. It installs all three
-packages, verifies syntax and the reproducible browser bundle, audits runtime
-dependencies, runs SQLite migrations, checks fail-closed production startup,
-rehearses PostgreSQL 16, and executes the complete Playwright suite.
+`.github/workflows/` is the single source of CI truth:
 
-The Arena GitHub App cannot push files under `.github/workflows/` because its
-token does not have the GitHub `workflows` permission. After this pull request
-is merged, a repository administrator should activate it with:
+- `e2e.yml` — release gates: syntax + reproducible browser bundle + npm audit,
+  SQLite migrations, fail-closed production startup, PostgreSQL 16 boot
+  rehearsal, and the complete Playwright suite.
+- `codeql.yml` — static analysis on every push/PR and weekly.
+- `docker.yml` — builds the root Dockerfile and smoke-tests the container
+  against a service Postgres (migrate → production boot → `/health`).
 
-```bash
-mkdir -p .github/workflows
-git mv ci/e2e.yml .github/workflows/e2e.yml
-git commit -m "ci: activate release gates"
-git push
-```
-
-Then make the `E2E` job a required branch-protection check for `main`.
+Make the `E2E` job a required branch-protection check for `main`.
 
 ## `ci/checks.sh` — local pre-push gate
 
 `ci/checks.sh` runs the fast half of the release gates on your machine:
-syntax checks for all three packages, a bundle-freshness check for
-`authentication/app.bundle.js`, and a guard against accidentally tracking a
-`.env` file.
+syntax checks for all three packages, the marketing CSP/asset guard
+(`ci/check-csp.mjs` — no inline scripts on the marketing pages, no references
+to removed third-party assets), the backend unit-test suite, a
+bundle-freshness check for `authentication/app.bundle.js`, and a guard
+against accidentally tracking a `.env` file.
 
 ```bash
 ./ci/checks.sh
