@@ -163,6 +163,11 @@ export async function deleteAccount(req, res) {
       await tx.query(`DELETE FROM "NoteShare" WHERE "userId" = $1`, [userId]);
       await tx.query(`DELETE FROM "Attachment" WHERE "userId" = $1`, [userId]);
       await tx.query(`DELETE FROM "NoteTag" WHERE "noteId" IN (SELECT id FROM "Note" WHERE "userId" = $1)`, [userId]);
+      // WP-REM-001 — reminders and push subscriptions belong to the user and
+      // must be reaped explicitly: PostgreSQL cascades, the SQLite fallback
+      // (FK actions off) does not.
+      await tx.query(`DELETE FROM "Reminder" WHERE "userId" = $1`, [userId]);
+      await tx.query(`DELETE FROM "PushSubscription" WHERE "userId" = $1`, [userId]);
       await tx.query(`DELETE FROM "Note" WHERE "userId" = $1`, [userId]);
       await tx.query(`DELETE FROM "Notebook" WHERE "userId" = $1`, [userId]);
       await tx.query(`DELETE FROM "Tag" WHERE "userId" = $1`, [userId]);
