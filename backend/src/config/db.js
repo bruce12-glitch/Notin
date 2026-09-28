@@ -686,7 +686,10 @@ const db = {
         // WP-AUDIT-M2 — rows stamped by DB-default NOW() carry full timestamptz
         // precision; an uncast parameter let Postgres pick text/timestamp
         // semantics and spuriously miss. Pin the type on the pg dialect.
-        whereClause += ` AND "updatedAt" = ${idx++}${usePostgres ? '::timestamptz' : ''}`;
+        // NOTE: the leading `$` is load-bearing — without it the clause embeds
+        // the raw index (e.g. `AND "updatedAt" = 3`) and keeps one extra bound
+        // parameter, which SQLite rejects with SQLITE_RANGE.
+        whereClause += ` AND "updatedAt" = $${idx++}${usePostgres ? '::timestamptz' : ''}`;
         params.push(data.expectedUpdatedAt);
       }
       const setClause = sets.join(', ');
@@ -710,6 +713,9 @@ const db = {
     async delete({ where: { id } }) {
       // WP-APP-006 — explicit junction cleanup (SQLite FK actions are off by default)
       await query('DELETE FROM "NoteTag" WHERE "noteId" = $1', [id]);
+      // WP-REM-001 — reminders are note-owned; FK cascades never fire on the
+      // SQLite fallback, so drop them with the note they point at.
+      await query('DELETE FROM "Reminder" WHERE "noteId" = $1', [id]);
       await query('DELETE FROM "Note" WHERE id = $1', [id]);
       return { id };
     },
@@ -839,10 +845,14 @@ const db = {
       const now = new Date().toISOString();
       const id = randomId();
       const col = usePostgres ? 'EXCLUDED' : 'excluded';
+      // A device endpoint can only ever belong to the account that most
+      // recently subscribed it: re-registering the same endpoint from another
+      // session moves ownership instead of leaving the old user's notifications
+      // pointed at the new user's browser.
       const { rows } = await query(
         `INSERT INTO "PushSubscription" (id, "userId", endpoint, p256dh, auth, "createdAt")
          VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT (endpoint) DO UPDATE SET p256dh = ${col}.p256dh, auth = ${col}.auth
+         ON CONFLICT (endpoint) DO UPDATE SET p256dh = ${col}.p256dh, auth = ${col}.auth, "userId" = ${col}."userId"
          RETURNING id, "userId", endpoint, "createdAt"`,
         [id, userId, endpoint, p256dh, auth, now]
       );
