@@ -1,4 +1,4 @@
-﻿// WP-AUDIT â€” ESLint flat config (backend, ESM, Node >= 22.5).
+﻿// WP-AUDIT — ESLint flat config (backend, ESM, Node >= 22.5).
 // Correctness rules only; style stays with the existing codebase conventions.
 import js from '@eslint/js';
 

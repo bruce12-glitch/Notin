@@ -1,5 +1,5 @@
 ﻿/* ============================================================
-   WP-UI-HOME-PIXEL-001 â€” Evernote Home (dark) clone shell
+   WP-UI-HOME-PIXEL-001 — Evernote Home (dark) clone shell
    Dark tokens only. Does NOT touch auth login styles.css.
    ============================================================ */
 
@@ -38,7 +38,7 @@
   --app-green:#8fe333;
   --app-green-deep:#00a82d;
   --app-yellow:#f5c518;
-  /* WP-UI-NOTES-3D-001 â€” shared depth + motion curves */
+  /* WP-UI-NOTES-3D-001 — shared depth + motion curves */
   --depth-1:0 1px 2px rgba(0,0,0,.32),0 2px 8px rgba(0,0,0,.22);
   --depth-2:0 4px 12px rgba(0,0,0,.34),0 10px 28px rgba(0,0,0,.28);
   --depth-3:0 8px 20px rgba(0,0,0,.40),0 18px 44px rgba(0,0,0,.34);
@@ -49,17 +49,17 @@
 html,body{height:100%;background:var(--env-bg);color:var(--env-text);overflow:hidden}
 body{font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 
-/* â”€â”€ Offline banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Offline banner ─────────────────────────────────────── */
 .app-offline-banner{position:fixed;top:0;left:0;right:0;z-index:80;min-height:38px;padding:10px 16px;background:#262b1c;color:#d9f7b9;text-align:center;font:600 13px/18px "Inter",system-ui,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.35)}
 .app-offline-banner[hidden]{display:none !important}
 body.is-offline .app-layout{padding-top:38px}
 body.is-offline .app-sidebar,body.is-offline .app-stage{height:calc(100dvh - 38px)}
 
-/* â”€â”€ Frame: sidebar + floating stage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Frame: sidebar + floating stage ────────────────────── */
 .app-layout{min-height:100dvh;height:100dvh;display:grid;grid-template-columns:240px minmax(0,1fr);background:var(--env-bg);font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;transition:grid-template-columns .18s ease}
 .app-stage{position:relative;min-width:0;height:100dvh;padding:14px 14px 14px 0;overflow:hidden;background:var(--env-bg)}
 
-/* â”€â”€ Left sidebar (exact Evernote IA) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Left sidebar (exact Evernote IA) ───────────────────── */
 .app-sidebar{position:relative;z-index:40;height:100dvh;min-height:0;display:flex;flex-direction:column;gap:12px;padding:14px 12px 12px;overflow:hidden;background:var(--env-sidebar);border-right:1px solid #232323;color:var(--env-text)}
 .app-sidebar-top{display:flex;align-items:center;gap:9px;padding:2px 4px}
 .app-sidebar-mark{width:28px;height:28px;flex:none;display:flex;align-items:center;justify-content:center}
@@ -89,7 +89,7 @@ body.is-offline .app-sidebar,body.is-offline .app-stage{height:calc(100dvh - 38p
 .app-icon-btn svg{width:18px;height:18px}
 .app-icon-btn:hover{background:var(--env-input-hover);color:#fff}
 
-/* Nav list â€” exact order: Home, Shortcuts, Notes, Trash, Tasks, Files, Calendar, Templates, Notebooks, Tags, Shared, Spaces, More */
+/* Nav list — exact order: Home, Shortcuts, Notes, Trash, Tasks, Files, Calendar, Templates, Notebooks, Tags, Shared, Spaces, More */
 .app-nav{flex:1;min-height:0;display:flex;flex-direction:column;gap:2px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#333 transparent}
 .app-nav-item{display:flex;align-items:center;gap:10px;height:40px;flex:none;padding:0 12px;border:0;border-radius:10px;background:transparent;color:#a5a5a5;font:500 14px "Inter",sans-serif;cursor:pointer;text-align:left;width:100%}
 .app-nav-item:hover{background:var(--env-hover);color:#e8e8e8}
@@ -158,7 +158,7 @@ body.is-offline .app-sidebar,body.is-offline .app-stage{height:calc(100dvh - 38p
 .app-toast{position:absolute;left:12px;right:12px;bottom:10px;z-index:60;padding:9px 12px;border-radius:9px;background:#262b1c;border:1px solid #3c4527;color:#d9f7b9;font-size:12.5px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.4)}
 .app-toast[hidden]{display:none}
 
-/* â”€â”€ Collapsed sidebar (chevron) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Collapsed sidebar (chevron) ────────────────────────── */
 body.sidebar-collapsed .app-layout{grid-template-columns:64px minmax(0,1fr)}
 body.sidebar-collapsed .app-sidebar{padding:14px 10px 12px}
 body.sidebar-collapsed .app-sidebar-brand,
@@ -178,12 +178,12 @@ body.sidebar-collapsed .nav-count{display:none}
 body.sidebar-collapsed .app-upgrade{width:40px;height:40px;border-radius:50%;padding:0;justify-content:center}
 body.sidebar-collapsed .app-user{justify-content:center;padding:7px 0}
 body.sidebar-collapsed .app-btn-logout{font-size:0;width:36px;height:36px;border-radius:50%;align-self:center}
-body.sidebar-collapsed .app-btn-logout::before{content:"â»";font-size:15px}
+body.sidebar-collapsed .app-btn-logout::before{content:"⏻";font-size:15px}
 
-/* â”€â”€ Floating main stage panels â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Floating main stage panels ─────────────────────────── */
 .home-view,.shortcuts-view,.organize-view,.editor-workspace{height:100%;border-radius:18px;border:1px solid var(--env-panel-border);background:var(--env-panel);box-shadow:0 10px 34px rgba(0,0,0,.35)}
 
-/* â”€â”€ Home view (Evernote Home clone) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Home view (Evernote Home clone) ────────────────────── */
 .home-view{overflow:auto;padding:30px 34px 44px;scrollbar-width:thin;scrollbar-color:#333 transparent}
 .home-header{display:flex;align-items:center;justify-content:space-between;margin:0 0 30px}
 .home-header h1{margin:0;color:var(--env-text);font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1}
@@ -200,7 +200,7 @@ body.sidebar-collapsed .app-btn-logout::before{content:"â»";font-size:15px}
 .home-view-all{border:0;background:transparent;color:#8a8a8a;font-size:12px;font-weight:500;cursor:pointer;padding:2px 4px}
 .home-view-all:hover{color:var(--env-green)}
 
-/* Notes cards â€” horizontal row, square-ish tiles */
+/* Notes cards — horizontal row, square-ish tiles */
 .home-note-grid{display:flex;gap:14px;overflow-x:auto;padding:2px 2px 10px;scrollbar-width:thin;scrollbar-color:#333 transparent}
 .home-note-card{position:relative;display:flex;flex:0 0 184px;height:212px;flex-direction:column;padding:16px 16px 14px;border:1px solid #303030;border-radius:14px;background:var(--env-card);color:var(--env-text);text-align:left;cursor:pointer;transition:transform .16s,border-color .16s,background .16s,box-shadow .16s;font-family:inherit}
 .home-note-card:hover{transform:translateY(-2px);border-color:#4a4a4a;background:var(--env-card-hover);box-shadow:0 14px 26px rgba(0,0,0,.28)}
@@ -224,13 +224,13 @@ body.sidebar-collapsed .app-btn-logout::before{content:"â»";font-size:15px}
 .home-empty-cta{margin-top:10px;border:1px solid #455a38;border-radius:999px;background:#22291a;color:var(--env-green);padding:9px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
 .home-empty-cta:hover{background:#2c3821}
 
-/* Scratch pad â€” olive-gold sticky, right of notes cards */
+/* Scratch pad — olive-gold sticky, right of notes cards */
 .scratch-panel{display:flex;flex-direction:column;height:212px;padding:16px 16px 12px;border-radius:14px;background:var(--env-scratch);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 12px 26px rgba(0,0,0,.22)}
 .scratch-panel textarea{flex:1;min-height:0;width:100%;resize:none;border:0;outline:0;background:transparent;color:var(--env-scratch-ink);font:500 14px/1.55 "Inter",sans-serif}
 .scratch-panel textarea::placeholder{color:var(--env-scratch-dim)}
 .scratch-status{margin-top:8px;color:var(--env-scratch-dim);font-size:10.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
 
-/* Recently captured band â€” full width below */
+/* Recently captured band — full width below */
 .capture-band{max-width:1160px;margin:36px auto 0}
 .capture-band-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .capture-select{display:flex;align-items:center;gap:6px;border:0;background:transparent;color:#9a9a9a;font-size:12.5px;font-weight:500;cursor:pointer;padding:3px 6px;border-radius:7px;font-family:inherit}
@@ -244,12 +244,12 @@ body.sidebar-collapsed .app-btn-logout::before{content:"â»";font-size:15px}
 .capture-soon.is-coming{border-color:#526445;color:var(--env-green);cursor:default}
 .capture-soon.is-coming span{display:block;font-size:10px;color:#8a8a8a;margin-top:2px}
 
-/* â”€â”€ FAB (AI stub, bottom-right) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── FAB (AI stub, bottom-right) ────────────────────────── */
 .app-fab{position:absolute;right:26px;bottom:26px;z-index:20;display:flex;align-items:center;justify-content:center;width:46px;height:46px;border:0;border-radius:50%;background:#f2f2f2;color:#161616;cursor:pointer;box-shadow:0 10px 26px rgba(0,0,0,.4);transition:transform .14s,background .14s}
 .app-fab svg{width:22px;height:22px}
 .app-fab:hover{transform:translateY(-2px) scale(1.04);background:#fff}
 
-/* â”€â”€ Shortcuts view (pinned notes) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Shortcuts view (pinned notes) ──────────────────────── */
 .shortcuts-view{overflow:auto;padding:30px 34px 44px;background:radial-gradient(circle at 84% 0%,rgba(143,227,51,.04),transparent 30%),var(--env-panel);scrollbar-width:thin;scrollbar-color:#333 transparent}
 .shortcuts-header{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;max-width:1100px;margin:0 auto 34px}
 .home-eyebrow{margin:0 0 8px;color:var(--env-green);font-size:10.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase}
@@ -275,7 +275,7 @@ body.sidebar-collapsed .app-btn-logout::before{content:"â»";font-size:15px}
 .shortcuts-empty-actions button:first-child{border-color:var(--env-green);background:var(--env-green);color:#15200e}
 .shortcuts-empty-actions button:first-child:hover{background:#a0ef4a}
 
-/* â”€â”€ Organize views (notebooks / tags) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Organize views (notebooks / tags) ──────────────────── */
 .organize-view{overflow:auto;padding:30px 34px 44px;background:radial-gradient(circle at 85% 0%,rgba(143,227,51,.04),transparent 30%),var(--env-panel);scrollbar-width:thin;scrollbar-color:#333 transparent}
 .organize-header{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;max-width:1100px;margin:0 auto 34px}
 .organize-header h1{margin:0;color:#fff;font-size:30px;font-weight:700;letter-spacing:-.02em;line-height:1}
@@ -303,7 +303,7 @@ body.sidebar-collapsed .app-btn-logout::before{content:"â»";font-size:15px}
 .organize-empty strong{display:block;color:#bbb;font-size:14px}
 .organize-empty span{display:block;margin-top:7px;font-size:11px}
 
-/* â”€â”€ Editor workspace: 3-pane notes + TipTap (dark) â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Editor workspace: 3-pane notes + TipTap (dark) ─────── */
 .editor-workspace{display:grid;grid-template-columns:320px minmax(0,1fr);overflow:hidden}
 .app-list{height:100%;min-width:0;display:flex;flex-direction:column;background:#181818;border-right:1px solid #2b2b2b}
 .app-list-header{padding:14px 14px 10px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #2b2b2b;background:#181818;position:sticky;top:0;z-index:1}
@@ -432,7 +432,7 @@ body.sidebar-collapsed .app-btn-logout::before{content:"â»";font-size:15px}
 .tiptap-editor a{color:#a7d96a}
 .tiptap-editor blockquote{border-left:3px solid #3f5232;margin:12px 0;padding:2px 14px;color:#b9b9b9}
 
-/* â”€â”€ Modals (dark) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Modals (dark) ──────────────────────────────────────── */
 .app-modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:20px}
 .app-modal[hidden]{display:none}
 .app-modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.6)}
@@ -457,7 +457,7 @@ body.sidebar-collapsed .app-btn-logout::before{content:"â»";font-size:15px}
 .btn-social{height:36px;padding:0 14px;border:1px solid #3d3d3d;border-radius:8px;background:#262626;color:#ccc;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
 .btn-social:hover{background:#2f2f2f}
 
-/* â”€â”€ Mobile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Mobile ─────────────────────────────────────────────── */
 .app-mobile-menu{display:none;position:fixed;top:12px;left:12px;z-index:70;width:38px;height:38px;border:1px solid #3a3a3a;border-radius:10px;background:#1e1e1e;color:#ddd;font-size:16px;cursor:pointer}
 .app-sidebar-scrim{position:fixed;inset:0;z-index:55;background:rgba(0,0,0,.55)}
 
@@ -523,12 +523,12 @@ body.sidebar-collapsed .app-btn-logout::before{content:"â»";font-size:15px}
 }
 
 /* ============================================================
-   WP-UI-NOTES-001 â€” Notes list + editor UX upgrade (dark)
+   WP-UI-NOTES-001 — Notes list + editor UX upgrade (dark)
    Scope: note list panel & editor pane only.
    Landing, auth, home, sidebar untouched.
    ============================================================ */
 
-/* â”€â”€ Note list: header tools â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Note list: header tools ─────────────────────────────── */
 .app-list-header{padding:16px 16px 12px;background:#181818}
 .app-list-title{font-size:16px}
 .app-sort{appearance:none;-webkit-appearance:none;height:28px;padding:0 22px 0 10px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238a8a8a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;transition:border-color .14s,color .14s}
@@ -538,7 +538,7 @@ body.sidebar-collapsed .app-btn-logout::before{content:"â»";font-size:15px}
 .btn-new{box-shadow:0 4px 14px rgba(143,227,51,.14);transition:background .14s,transform .1s}
 .btn-new:active{transform:scale(.985)}
 
-/* â”€â”€ Note list: rows â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Note list: rows ─────────────────────────────────────── */
 .app-list-items{padding:10px 12px 16px;gap:8px}
 .app-note-item{position:relative;gap:5px;padding:12px 14px 11px;border-color:#292929;border-radius:12px;background:#1f1f1f;box-shadow:0 1px 2px rgba(0,0,0,.18);transition:border-color .14s,background .14s,box-shadow .14s}
 .app-note-item::before{content:"";position:absolute;left:-1px;top:12px;bottom:12px;width:3px;border-radius:4px;background:transparent;transition:background .14s}
@@ -566,7 +566,7 @@ body.sidebar-collapsed .app-btn-logout::before{content:"â»";font-size:15px}
 .app-note-pin--static{opacity:1;cursor:default}
 .app-note-pin--static:hover{background:transparent}
 
-/* â”€â”€ Editor pane: frame + header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Editor pane: frame + header ─────────────────────────── */
 .app-editor{position:relative;background:#191919}
 .app-editor-header{padding:22px 28px 16px;border-bottom:1px solid #262626;background:transparent}
 .app-editor-title input{font:700 28px/1.25 "Inter",sans-serif;caret-color:var(--env-green)}
@@ -575,7 +575,7 @@ body.sidebar-collapsed .app-btn-logout::before{content:"â»";font-size:15px}
 .app-editor-meta-dot{color:#454545}
 .app-inline-error{margin:14px 28px 0;border-radius:10px}
 
-/* â”€â”€ Editor pane: action bar polish â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Editor pane: action bar polish ──────────────────────── */
 .app-editor-actions{gap:7px}
 .app-editor-actions button,.app-nb-select,.app-share-btn{border-radius:9px;transition:border-color .14s,color .14s,background .14s,transform .1s}
 .app-editor-actions button:active,.app-share-btn:active{transform:scale(.97)}
@@ -585,14 +585,14 @@ body.sidebar-collapsed .app-btn-logout::before{content:"â»";font-size:15px}
 .app-save-status.is-saved{border-color:#33421f;background:#1e2616;color:#a7d96a}
 .app-save-status.is-error{border-color:#4a2c2c;background:#291b1b;color:#ef9a9a}
 
-/* â”€â”€ Floating formatting toolbar (pill) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Floating formatting toolbar (pill) ──────────────────── */
 .app-toolbar{margin:14px auto 0;width:fit-content;max-width:calc(100% - 40px);padding:6px;border:1px solid #2e2e2e;border-radius:13px;background:#202020;box-shadow:0 6px 18px rgba(0,0,0,.28);flex-wrap:wrap;justify-content:center}
 .tb-btn{min-width:32px;height:30px;border-color:transparent;background:transparent;border-radius:8px;color:#a5a5a5;transition:background .13s,color .13s}
 .tb-btn:hover{background:#2c2c2c;border-color:transparent;color:#eee}
 .tb-btn.is-active{background:#2a3320;border-color:transparent;color:var(--env-green)}
 .tb-sep{background:#333;height:16px;margin:0 2px}
 
-/* â”€â”€ Editor body: reading comfort + typography â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Editor body: reading comfort + typography ───────────── */
 .app-editor-body{background:#191919}
 .tiptap-editor{padding:28px 34px 90px;font-size:15.5px;line-height:1.7;caret-color:var(--env-green)}
 .tiptap-editor:focus{outline:none}
@@ -615,7 +615,7 @@ body.sidebar-collapsed .app-btn-logout::before{content:"â»";font-size:15px}
 .tiptap-editor li[data-type="taskItem"][data-checked="true"]{color:#8a8a8a}
 .tiptap-editor .is-editor-empty:first-child::before{color:#565656}
 
-/* â”€â”€ Empty editor state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Empty editor state ──────────────────────────────────── */
 .app-editor-empty{position:absolute;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;background:#191919;padding:24px}
 .app-editor-empty[hidden]{display:none}
 .app-editor-empty-card{display:flex;flex-direction:column;align-items:center;gap:10px;max-width:300px;text-align:center}
@@ -624,7 +624,7 @@ body.sidebar-collapsed .app-btn-logout::before{content:"â»";font-size:15px}
 .app-editor-empty-card strong{color:#ddd;font-size:15px;font-weight:600}
 .app-editor-empty-card p{margin:0;color:#8a8a8a;font-size:12.5px;line-height:1.6}
 
-/* â”€â”€ Scrollbars + share/tag/attachment row refinement â”€â”€â”€â”€â”€â”€ */
+/* ── Scrollbars + share/tag/attachment row refinement ────── */
 .app-list-items::-webkit-scrollbar,.app-editor-body::-webkit-scrollbar{width:10px}
 .app-list-items::-webkit-scrollbar-thumb,.app-editor-body::-webkit-scrollbar-thumb{background:#333;border-radius:99px;border:2px solid transparent;background-clip:content-box}
 .app-list-items::-webkit-scrollbar-thumb:hover,.app-editor-body::-webkit-scrollbar-thumb:hover{background:#454545;border:2px solid transparent;background-clip:content-box}
@@ -634,7 +634,7 @@ body.sidebar-collapsed .app-btn-logout::before{content:"â»";font-size:15px}
 .app-attachment-thumb{border-radius:11px;transition:transform .14s,border-color .14s}
 .app-attachment-thumb:hover{transform:translateY(-2px);border-color:#4a5a3c}
 
-/* â”€â”€ Mobile adjustments for the new pieces â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Mobile adjustments for the new pieces ───────────────── */
 @media (max-width:560px){
   .app-editor-header{padding:16px 16px 12px}
   .app-editor-title input{font-size:22px}
@@ -643,7 +643,7 @@ body.sidebar-collapsed .app-btn-logout::before{content:"â»";font-size:15px}
   .app-note-book{max-width:40%}
 }
 
-/* WP-AI-002 â€” AI title suggestion bar */
+/* WP-AI-002 — AI title suggestion bar */
 .app-ai-title{display:flex;align-items:center;gap:8px;margin:0 18px 10px;padding:9px 12px;border:1px solid #3a4632;border-radius:10px;background:#1f261a;color:#d9e7cf;font-size:12.5px}
 .app-ai-title-label{color:var(--env-green);font-weight:700;flex:none}
 .app-ai-title-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -654,7 +654,7 @@ body.sidebar-collapsed .app-btn-logout::before{content:"â»";font-size:15px}
 .app-ai-title-actions #aiTitleDismiss:hover{border-color:#666;color:#ddd}
 @media (max-width:560px){.app-ai-title{flex-wrap:wrap}}
 
-/* WP-AI-002b â€” smart tag suggestions */
+/* WP-AI-002b — smart tag suggestions */
 .app-ai-tags{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 18px 10px;padding:9px 12px;border:1px solid #3a4632;border-radius:10px;background:#1f261a;color:#d9e7cf;font-size:12.5px}
 .app-ai-tags-label{color:var(--env-green);font-weight:700;flex:none}
 .app-ai-tags-chips{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:0}
@@ -665,7 +665,7 @@ body.sidebar-collapsed .app-btn-logout::before{content:"â»";font-size:15px}
 .app-ai-tags-dismiss:hover{color:#fff}
 
 /* ============================================================
-   WP-UI-NOTES-3D-001 â€” smooth, restrained depth + motion
+   WP-UI-NOTES-3D-001 — smooth, restrained depth + motion
    ============================================================ */
 @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes viewIn{from{opacity:0;transform:translateY(8px) scale(.995)}to{opacity:1;transform:none}}
@@ -705,8 +705,8 @@ body.sidebar-collapsed .app-btn-logout::before{content:"â»";font-size:15px}
 
 .app-list-items,.app-editor-body,.home-view,.shortcuts-view,.organize-view,.app-nav{scroll-behavior:smooth}
 
-/* WP-AI-003 â€” chat with note (session-only transcript, nothing persisted).
-   Inputs use aria-label directly, matching globalSearchInput/newTagInput â€”
+/* WP-AI-003 — chat with note (session-only transcript, nothing persisted).
+   Inputs use aria-label directly, matching globalSearchInput/newTagInput —
    this app has no sr-only/visually-hidden class and gains none here. */
 .app-ai-chat{margin:0 18px 10px;padding:10px 12px;border:1px solid #3a4632;border-radius:10px;background:#1f261a;color:#d9e7cf;font-size:12.5px}
 .app-ai-chat-head{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--env-green);font-size:12px;font-weight:700}
@@ -725,7 +725,7 @@ body.sidebar-collapsed .app-btn-logout::before{content:"â»";font-size:15px}
 .app-ai-chat-form button:hover{border-color:var(--env-green);color:var(--env-green)}
 .app-ai-chat-form button:disabled{opacity:.6;cursor:wait}
 
-/* WP-AI-004 â€” compact writing-assistant menu and explicit review/apply bar. */
+/* WP-AI-004 — compact writing-assistant menu and explicit review/apply bar. */
 .app-editor-header{position:relative}
 .app-ai-assist-menu{position:absolute;z-index:20;right:18px;top:calc(100% - 7px);width:190px;padding:6px;border:1px solid #46543b;border-radius:10px;background:#1b2118;box-shadow:0 12px 30px rgba(0,0,0,.34)}
 .app-ai-assist-menu button{display:block;width:100%;border:0;border-radius:7px;background:transparent;color:#d9e7cf;padding:8px 10px;text-align:left;font:600 12px/1.2 "Inter",sans-serif;cursor:pointer}
@@ -741,14 +741,14 @@ body.sidebar-collapsed .app-btn-logout::before{content:"â»";font-size:15px}
 .app-ai-assist p{margin:8px 0 0;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
 @media (max-width:560px){.app-ai-assist-menu{left:16px;right:16px;top:100%;width:auto}.app-ai-assist{margin-left:16px;margin-right:16px}}
 
-/* WP-AI-004b â€” floating selection bubble menu (zero-dependency positioning) */
+/* WP-AI-004b — floating selection bubble menu (zero-dependency positioning) */
 .app-ai-assist-bubble{position:fixed;z-index:30;display:flex;gap:4px;padding:5px;border:1px solid #46543b;border-radius:10px;background:#1b2118;box-shadow:0 12px 30px rgba(0,0,0,.34)}
 .app-ai-assist-bubble[hidden]{display:none}
 .app-ai-assist-bubble button{border:0;border-radius:7px;background:transparent;color:#d9e7cf;padding:7px 10px;font:600 12px/1.2 "Inter",sans-serif;cursor:pointer}
 .app-ai-assist-bubble button:hover,.app-ai-assist-bubble button:focus-visible{outline:0;background:#2a3324;color:var(--env-green)}
 .app-ai-assist-bubble button:disabled{opacity:.5;cursor:wait}
 
-/* WP-MARKET-001 â€” templates, tasks, note overflow, shortcuts help */
+/* WP-MARKET-001 — templates, tasks, note overflow, shortcuts help */
 .home-new-top{height:38px;padding:0 16px;border:1px solid var(--env-green);border-radius:999px;background:var(--env-green);color:#15200e;font:700 13px "Inter",sans-serif;cursor:pointer;white-space:nowrap}
 .home-new-top:hover{background:#a0ef4a}
 .home-template-row{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:14px}
@@ -1154,7 +1154,7 @@ body.focus-mode .app-editor {
   .graph-view, .ask-view { padding: 18px 16px; }
 }
 
-/* WP-REM-001 â€” reminders view + modal */
+/* WP-REM-001 — reminders view + modal */
 .reminder-row { align-items: center; gap: 12px; }
 .reminder-when { flex: none; min-width: 130px; font-size: 12px; font-weight: 600; color: var(--app-muted); }
 .reminder-when.is-overdue { color: var(--env-danger); }

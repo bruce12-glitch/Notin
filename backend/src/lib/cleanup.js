@@ -1,4 +1,4 @@
-﻿// WP-CLEANUP-001 â€” expired token cleanup job
+﻿// WP-CLEANUP-001 — expired token cleanup job
 // Deletes expired OTP challenges, password reset tokens, and revoked refresh tokens older than 7 days
 // Idempotent, safe to run concurrently (DELETE with time condition)
 // Can be called via cron, via GET /api/health/deep?cleanup=true (operator), or via scheduled setInterval in server.js (dev only)

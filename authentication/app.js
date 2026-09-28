@@ -3591,10 +3591,10 @@ try{
 })();
 
 // ============================================================================
-// WP-FEATURES � capture, multimedia, bi-directional links, graph, global AI
+// WP-FEATURES — capture, multimedia, bi-directional links, graph, global AI
 // ============================================================================
 
-// -- WP-CAPTURE-001 � Quick Add (Ctrl+Alt+N): thought ? note in one keystroke -
+// -- WP-CAPTURE-001 — Quick Add (Ctrl+Alt+N): thought → note in one keystroke -
 const quickAddModal = document.getElementById('quickAddModal');
 const quickAddBackdrop = document.getElementById('quickAddBackdrop');
 const quickAddInput = document.getElementById('quickAddInput');
@@ -3637,7 +3637,7 @@ if(quickAddInput) quickAddInput.addEventListener('keydown', (e)=>{
   if(e.key==='Escape') closeQuickAdd();
 });
 
-// -- WP-MEDIA-001 � PDF picker + audio recorder + sketch pad ------------------
+// -- WP-MEDIA-001 — PDF picker + audio recorder + sketch pad ------------------
 const attachPdfBtn = document.getElementById('attachPdfBtn');
 const attachPdfInput = document.createElement('input');
 attachPdfInput.type = 'file';
@@ -3784,7 +3784,7 @@ if(sketchSaveBtn) sketchSaveBtn.addEventListener('click', ()=>{
   }, 'image/png');
 });
 
-// -- WP-LINKS-001 � [[ note links: picker, insert, backlinks panel ------------
+// -- WP-LINKS-001 — [[ note links: picker, insert, backlinks panel ------------
 const wikiPicker = document.getElementById('wikiPicker');
 const wikiPickerList = document.getElementById('wikiPickerList');
 let wikiRange = null; // { from, to } of the active [[query
@@ -3835,7 +3835,7 @@ function updateWikiPicker(){
   const open = textBefore.lastIndexOf('[[');
   if(open === -1){ hideWikiPicker(); return; }
   const query = textBefore.slice(open + 2);
-  if(/[\]\n]/.test(query)){ hideWikiPicker(); return; } // closed or multiline � not a link
+  if(/[\]\n]/.test(query)){ hideWikiPicker(); return; } // closed or multiline — not a link
   wikiRange = { from: from - query.length - 2, to: from }; // include the opening [[
   const lower = query.toLowerCase();
   wikiItems = notes
@@ -3855,7 +3855,7 @@ document.addEventListener('keydown', (e)=>{
   else if(e.key==='Escape'){ e.preventDefault(); hideWikiPicker(); }
 }, true);
 
-// Backlinks panel � linked mentions of the open note
+// Backlinks panel — linked mentions of the open note
 const backlinksPanel = document.getElementById('backlinksPanel');
 const backlinksList = document.getElementById('backlinksList');
 const backlinksCount = document.getElementById('backlinksCount');
@@ -3887,7 +3887,7 @@ function updateBacklinks(){
 }
 // updateBacklinks is invoked from updateEditorMeta (patched at its call site).
 
-// -- WP-GRAPH-001 � knowledge graph (force-directed, zero deps) ---------------
+// -- WP-GRAPH-001 — knowledge graph (force-directed, zero deps) ---------------
 const graphCanvas = document.getElementById('graphCanvas');
 const graphStats = document.getElementById('graphStats');
 let graphState = null; // { nodes, edges, sim }
@@ -4025,7 +4025,7 @@ if(graphCanvas){
   window.addEventListener('resize', ()=>{ if(currentView==='graph') graphDraw(); });
 }
 
-// -- WP-AI-007 � Ask-my-notes view --------------------------------------------
+// -- WP-AI-007 — Ask-my-notes view --------------------------------------------
 const askForm = document.getElementById('askForm');
 const askInput = document.getElementById('askInput');
 const askSubmitBtn = document.getElementById('askSubmit');
@@ -4064,7 +4064,7 @@ if(askForm) askForm.addEventListener('submit', async (e)=>{
   }
 });
 
-// -- WP-SEARCH-002 � date filter (client-side on the loaded list) -------------
+// -- WP-SEARCH-002 — date filter (client-side on the loaded list) -------------
 const dateFilter = document.getElementById('dateFilter');
 function applyDateFilter(list){
   if(!dateFilter || dateFilter.value === 'all') return list;
@@ -4080,7 +4080,7 @@ if(dateFilter) dateFilter.addEventListener('change', ()=>{
   }
 });
 
-// -- WP-CAPTURE-002 � keyboard: Ctrl+Alt+N quick add --------------------------
+// -- WP-CAPTURE-002 — keyboard: Ctrl+Alt+N quick add --------------------------
 document.addEventListener('keydown', (event)=>{
   if((event.ctrlKey || event.metaKey) && event.altKey && event.key.toLowerCase()==='n'){
     event.preventDefault();
@@ -4088,7 +4088,7 @@ document.addEventListener('keydown', (event)=>{
   }
 });
 
-// -- WP-CLIP-001 � web clipper intake (bookmarklet lands on #clip?...) --------
+// -- WP-CLIP-001 — web clipper intake (bookmarklet lands on #clip?...) --------
   async function handleClipParams(){
     try{
     if(!location.hash.startsWith('#clip')) return;

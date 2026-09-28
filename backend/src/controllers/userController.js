@@ -17,7 +17,7 @@ function publicUser(u) {
   return { id: u.id, email: u.email, username: u.username || null, googleSub: u.googleSub || u.google_sub || null, createdAt: u.createdAt || u.created_at, updatedAt: u.updatedAt || u.updated_at };
 }
 
-// WP-HARDEN-001 â€” signup validation. Legacy exact messages are preserved for
+// WP-HARDEN-001 — signup validation. Legacy exact messages are preserved for
 // the checks the frontend already surfaced; new checks (username shape, unknown
 // fields, wrong types) use the standard VALIDATION_ERROR envelope.
 export const signup = async (req, res) => {
@@ -65,7 +65,7 @@ export const signup = async (req, res) => {
     const refreshRaw = randomToken(48);
     const now = new Date().toISOString();
     const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString();
-    // WP-SEC-001 â€” every signup starts a NEW rotation family
+    // WP-SEC-001 — every signup starts a NEW rotation family
     const familyId = randomToken(24);
     const ua = String(req.headers['user-agent'] || '').slice(0, 500);
     const ip = String(req.ip || '').slice(0, 128);
@@ -91,7 +91,7 @@ export const signup = async (req, res) => {
       path: '/auth',
       maxAge: 30 * 86400000,
     });
-    // WP-SEC-002 â€” readable double-submit cookie; root path covers both mounts
+    // WP-SEC-002 — readable double-submit cookie; root path covers both mounts
     res.cookie('notin_csrf', mintCsrfToken(), {
       httpOnly: false,
       secure: isProd,
@@ -115,7 +115,7 @@ export const signin = async (req, res) => {
     return res.status(400).json({ message: 'Email and password are required' });
   }
 
-  // WP-HARDEN-001 â€” shape/type guard only. The 404/401/429 signin contract is
+  // WP-HARDEN-001 — shape/type guard only. The 404/401/429 signin contract is
   // intentionally untouched (unknown accounts keep their legacy behavior).
   const parsed = signinSchema.safeParse(body);
   if (!parsed.success) {
@@ -126,7 +126,7 @@ export const signin = async (req, res) => {
   try {
     const user = await db.user.findUnique({ where: { email: normEmail } });
 
-    // WP-SEC-003 â€” availability-preserving: even locked, a CORRECT password
+    // WP-SEC-003 — availability-preserving: even locked, a CORRECT password
     // passes (and clears the row); only misses see the 429. Unknown and
     // passwordless accounts still run bcrypt against a sentinel and receive the
     // exact same outward response as a wrong password.
@@ -140,7 +140,7 @@ export const signin = async (req, res) => {
       if (lockState.locked || fail.locked) {
         const secs = fail.retryAfterSec || lockState.retryAfterSec || 60;
         res.setHeader('Retry-After', String(secs));
-        return res.status(429).json({ message: 'Too many failed attempts â€” try again later' });
+        return res.status(429).json({ message: 'Too many failed attempts — try again later' });
       }
       return res.status(401).json({ message: 'Invalid credentials' });
     }
@@ -150,7 +150,7 @@ export const signin = async (req, res) => {
     const refreshRaw = randomToken(48);
     const now = new Date().toISOString();
     const expiresAt = new Date(Date.now() + 30 * 86400000).toISOString();
-    // WP-SEC-001 â€” every signin starts a NEW rotation family
+    // WP-SEC-001 — every signin starts a NEW rotation family
     const familyId = randomToken(24);
     const ua = String(req.headers['user-agent'] || '').slice(0, 500);
     const ip = String(req.ip || '').slice(0, 128);
@@ -173,7 +173,7 @@ export const signin = async (req, res) => {
       path: '/auth',
       maxAge: 30 * 86400000,
     });
-    // WP-SEC-002 â€” readable double-submit cookie; root path covers both mounts
+    // WP-SEC-002 — readable double-submit cookie; root path covers both mounts
     res.cookie('notin_csrf', mintCsrfToken(), {
       httpOnly: false,
       secure: isProd,

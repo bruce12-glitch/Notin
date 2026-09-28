@@ -333,7 +333,7 @@ export function handleUploadError(error, req, res, next) {
   next(error);
 }
 
-// -- WP-AI-009 � record/upload audio, store it, transcribe it (Groq Whisper or
+// -- WP-AI-009 — record/upload audio, store it, transcribe it (Groq Whisper or
 // deterministic mock), and append the transcript to the note. The audio stays
 // a normal attachment; the transcript is plain note text (export-friendly).
 import { transcribeAudio } from '../lib/ai/provider.js';
@@ -364,7 +364,7 @@ export async function transcribeUpload(req, res) {
       [id, req.params.noteId, req.userId, originalName, file.mimetype, file.size, file.filename, now],
     );
 
-    // Transcribe. A provider failure keeps the attachment but reports 503 �
+    // Transcribe. A provider failure keeps the attachment but reports 503 —
     // the bytes are safe, only the text step failed.
     let transcript;
     let provider;

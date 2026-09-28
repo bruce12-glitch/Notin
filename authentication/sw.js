@@ -1,12 +1,12 @@
-﻿// Notin minimal PWA service worker â€” static shell only.
+﻿// Notin minimal PWA service worker — static shell only.
 // Authenticated API responses are deliberately NEVER stored in Cache Storage;
 // per-user note snapshots live in IndexedDB and are managed by app.js.
 //
-// WP-AUDIT-L10 â€” caching strategy (was cache-first for everything, so updated
+// WP-AUDIT-L10 — caching strategy (was cache-first for everything, so updated
 // app.html/app.bundle.js went stale until a manual CACHE_NAME bump):
-//   â€¢ navigations / HTML  â†’ network-first (fresh deploys win; cache = offline fallback)
-//   â€¢ static assets        â†’ stale-while-revalidate (instant paint, refreshed in background)
-// CACHE RULE: still bump CACHE_NAME on every app.html/app.bundle.js change â€”
+//   • navigations / HTML  → network-first (fresh deploys win; cache = offline fallback)
+//   • static assets        → stale-while-revalidate (instant paint, refreshed in background)
+// CACHE RULE: still bump CACHE_NAME on every app.html/app.bundle.js change —
 // network-first protects online users, but offline users keep the old shell
 // until the cache identity changes.
 const CACHE_NAME = 'notin-shell-v24';
@@ -82,7 +82,7 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// WP-REM-002 â€” Web Push: display reminder notifications and deep-link back to the app.
+// WP-REM-002 — Web Push: display reminder notifications and deep-link back to the app.
 self.addEventListener('push', (event) => {
   let payload = {};
   try {

@@ -325,9 +325,9 @@ export async function assistNoteController(req, res) {
   }
 }
 
-// -- WP-AI-007 � "ask my notes": retrieve ? rank ? grounded answer ------------
+// -- WP-AI-007 — "ask my notes": retrieve → rank → grounded answer ------------
 // Retrieval uses the same search paths as GET /api/notes?q= (Postgres FTS or
-// escaped SQLite LIKE � both parameterized). The top extracts are numbered and
+// escaped SQLite LIKE — both parameterized). The top extracts are numbered and
 // sent as read-only context; nothing is persisted anywhere.
 export async function askMyNotesController(req, res) {
   try {
@@ -359,7 +359,7 @@ export async function askMyNotesController(req, res) {
       searched = rows;
     }
 
-    // Relevance pass 2 � keyword overlap ranking so weak substring hits don't
+    // Relevance pass 2 — keyword overlap ranking so weak substring hits don't
     // crowd out notes that actually answer the question.
     const ranked = searched
       .map((row) => {
