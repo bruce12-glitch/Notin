@@ -160,6 +160,9 @@ if (navToggle && mobilePanel) {
         // frontend demo (origin null) wireDemoLink points at the Quick Start.
         if (item.app) {
           if (!wireDemoLink(a)) a.href = notinAppOrigin() + item.href;
+        } else {
+          a.href = item.href;
+        }
         a.textContent = item.label;
         a.className = 'block border-b border-stroke-cards py-2.5 text-[15px] font-semibold text-text-primary transition hover:text-brand-600';
         mobilePanel.appendChild(a);
