@@ -30,6 +30,9 @@ Not included (roadmap): native desktop/mobile apps, team workspaces, billing, re
 | App | Vanilla JS, TipTap 2.27, esbuild |
 | Backend | Node.js 22, Express 4.21, Zod validation |
 | Database | PostgreSQL 16 (production), SQLite fallback (development only) |
+| Auth | JWT (jose), bcryptjs, email OTP, Google OAuth |
+| AI | Groq API (live) with deterministic mock when no key is set |
+| Tests | Playwright E2E, Node unit tests, ESLint, GitHub Actions CI |
 
 ## 📌 Overview
 
