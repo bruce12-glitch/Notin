@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-- **AI Title & Tag Generator** — Analyzes note contents to suggest punchy titles and relevant tags.
-- **Ask AI (Global Search)** — Ask questions across your notes with citations linked to source notes.
-- **In-Editor Assistant** — Quick prompts to rewrite, shorten, expand, or adjust writing tone on highlighted selections.
-
-### 🔒 Enterprise-Grade Security
-- **JWT Rotation** — 15-minute ephemeral memory access tokens paired with rotating HTTP-only refresh tokens.
 - **Fail-Closed Design** — Server strictly refuses to start in production if insecure default keys or placeholder secrets are detected.
 - **Anti-Brute Force** — Exponential lockout ladders on failed sign-in attempts and OTP request rate limits.
 - **Zero Raw Tokens** — Public share tokens and refresh cookies are stored exclusively as SHA-256 hashes.
