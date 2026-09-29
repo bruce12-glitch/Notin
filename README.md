@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-| `POST` | `/api/notes/:id/share` | Generate secure 32-byte public share link | Bearer |
-
-### ⏰ Reminders & Push (`/api/reminders`)
-| Method | Path | Description | Auth |
-|---|---|---|---|
-| `GET` | `/api/reminders` | List all active reminders for user | Bearer |
 | `POST` | `/api/reminders` | Create or update reminder on note | Bearer |
 | `PATCH` | `/api/reminders/:id` | Update reminder (snooze or mark completed) | Bearer |
 | `DELETE` | `/api/reminders/:id` | Delete a reminder | Bearer |
