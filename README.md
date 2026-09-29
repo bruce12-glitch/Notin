@@ -2,9 +2,7 @@
 
 **Live demo (marketing site):** [bruce12-glitch.github.io/Notin](https://bruce12-glitch.github.io/Notin/) — the full app (login, notes, AI) runs with the [local setup](#quick-start) below.
 
-<p align="center">
-  <strong>An Evernote-inspired note-taking web application with a pixel-perfect marketing site (Green &amp; Neon editions), a RESTful API backend, offline PWA, rich-text editor, AI writing assistant, and per-note reminders with Web Push notifications — all built from scratch.</strong>
-</p>
+Notin is a full-stack note-taking app: a marketing landing site, a REST API backend, and a rich-text notes app with sign-in, all in one repository.
 
 <p align="center">
   <a href="https://bruce12-glitch.github.io/Notin"><img src="https://img.shields.io/badge/Live_Demo-GitHub_Pages-2ea44f?style=for-the-badge&logo=github&logoColor=white" alt="Live Demo" /></a>
