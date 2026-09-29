@@ -52,6 +52,12 @@ function notinAppOrigin(){
 const DEMO_APP_URL = 'https://github.com/bruce12-glitch/Notin#-quick-start';
 
 function showDemoNotice(){
+  let bar = document.getElementById('demoNotice');
+  if(!bar){
+    bar = document.createElement('div');
+    bar.id = 'demoNotice';
+    bar.setAttribute('role', 'status');
+    bar.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:1000;max-width:min(92vw,560px);background:#2c2d2a;color:#f7f6f2;padding:13px 18px;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.3);font:15px/1.5 system-ui,-apple-system,sans-serif;display:flex;gap:14px;align-items:center;';
 // WP-FUNNEL-001 — resolve funnel CTAs at runtime (per-environment origin)
 document.addEventListener('DOMContentLoaded', () => {
   const origin = notinAppOrigin();
