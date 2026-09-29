@@ -155,7 +155,11 @@ if (navToggle && mobilePanel) {
         mobilePanel.appendChild(wrap);
       } else {
         const a = document.createElement('a');
-        a.href = item.href;
+        // App entries resolve against the app/auth origin (see notinAppOrigin),
+        // so "My Notes" lands on /app.html in every environment. On the static
+        // frontend demo (origin null) wireDemoLink points at the Quick Start.
+        if (item.app) {
+          if (!wireDemoLink(a)) a.href = notinAppOrigin() + item.href;
         a.textContent = item.label;
         a.className = 'block border-b border-stroke-cards py-2.5 text-[15px] font-semibold text-text-primary transition hover:text-brand-600';
         mobilePanel.appendChild(a);
