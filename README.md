@@ -20,7 +20,7 @@ Notin is a full-stack note-taking app: a marketing landing site, a REST API back
 - Auth: password + email OTP + Google OAuth, JWT access/refresh rotation, sessions device list, password reset, account export/delete
 - PWA with offline read-only snapshot; keyboard shortcuts throughout
 
-## 🌐 Live Website & Links
+Not included (roadmap): native desktop/mobile apps, team workspaces, billing, real-time sync.
 
 | Destination | Link | Description |
 |---|---|---|
