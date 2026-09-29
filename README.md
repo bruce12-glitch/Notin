@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-│   │   └── db/migrate.js       # SQL database migrations (Postgres + SQLite)
-│   ├── tests/
-│   │   ├── unit/               # Fast Node unit tests (db, jwt, reminders, validation)
-│   │   └── e2e/                # Playwright browser automation suites
-│   └── package.json
-│
 └── authentication/             # 🔐 PWA & APP SHELL
     ├── app.html                # Main application UI
     ├── app.js                  # Frontend client state & TipTap integration
