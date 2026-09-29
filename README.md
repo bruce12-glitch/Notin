@@ -51,11 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-
-The codebase includes automated unit and end-to-end test suites:
-
-### Running Unit Tests
-Fast execution using Node's native test runner (zero external test runner dependencies):
 ```bash
 cd backend
 npm run test:unit
