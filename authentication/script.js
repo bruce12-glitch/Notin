@@ -512,6 +512,11 @@ if(appleBtn){
     if(appleBtn){
       if(p.apple === true){
         appleBtn.hidden = false;
+        appleBtn.removeAttribute('aria-hidden');
+      }else{
+        appleBtn.hidden = true;
+        appleBtn.setAttribute('aria-hidden','true');
+      }
     }
     // If every social option is hidden, drop the whole row (and its divider)
     if(googleBtn && appleBtn && googleBtn.hidden && appleBtn.hidden){
