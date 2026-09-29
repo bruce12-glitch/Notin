@@ -40,6 +40,8 @@ function notinAppOrigin(){
     // app.notin.app. Deployments on another domain must inject
     // window.NOTIN_APP_ORIGIN before this script.
     if(/^(www\.)?notin\.app$/i.test(location.hostname)) return 'https://app.notin.app';
+    // GitHub Pages frontend demo — static marketing only, no API.
+    if(/\.github\.io$/i.test(location.hostname)) return null;
     return location.origin;
   }catch{ return location.origin; }
 }
