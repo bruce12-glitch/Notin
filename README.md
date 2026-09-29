@@ -37,7 +37,11 @@ Not included (roadmap): native desktop/mobile apps, team workspaces, billing, re
 ## Project Structure
 
 ```
-  Marketing Dev Server: http://localhost:3000 (frontend/dev-server.mjs)
+notin/
+├── frontend/         # Marketing site (index.html, index-neon.html, context.html, legal pages)
+├── backend/          # API server (src/server.js, routes, controllers, migrations)
+├── authentication/   # Sign-up/login pages + notes app (app.html, app.js, sw.js)
+├── deploy/           # Reverse-proxy example config
 ```
 
 ---
