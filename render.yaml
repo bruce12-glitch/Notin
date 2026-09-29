@@ -46,3 +46,9 @@ services:
         sync: false
       - key: PUBLIC_APP_URL
         sync: false
+      - key: AUTH_EMAIL_ENABLED
+        value: false
+      - key: TRUST_PROXY
+        value: 1
+
+databases:
