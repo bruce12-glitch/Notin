@@ -81,7 +81,7 @@ Open `http://localhost:5000` to sign up. Without SMTP configured (local dev only
 | `STORAGE_PROVIDER`, `S3_BUCKET`, `AWS_*` | S3/R2 file storage | Only if not using local disk |
 | `SENTRY_DSN` | Error monitoring | No |
 
-## 🔒 Security Hardening
+## API Overview
 
 | Protection | Implementation Detail |
 |---|---|
