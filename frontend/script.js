@@ -46,6 +46,12 @@ function notinAppOrigin(){
   }catch{ return location.origin; }
 }
 
+// --- Static demo fallback -------------------------------------------------
+// When notinAppOrigin() is null (frontend demo on *.github.io) the app/auth
+// CTAs land here: a visible Quick Start guide instead of a 404 page.
+const DEMO_APP_URL = 'https://github.com/bruce12-glitch/Notin#-quick-start';
+
+function showDemoNotice(){
 // WP-FUNNEL-001 — resolve funnel CTAs at runtime (per-environment origin)
 document.addEventListener('DOMContentLoaded', () => {
   const origin = notinAppOrigin();
