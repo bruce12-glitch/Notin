@@ -1,4 +1,4 @@
-﻿# 📝 Notin — Full-Stack Note-Taking Platform
+# Notin — Note-Taking Web App
 
 <p align="center">
   <img src="frontend/assets/notin-icon-nav.png" width="100" alt="Notin 3D icon" />
