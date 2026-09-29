@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-|---|---|---|---|
-| `POST` | `/api/auth/otp/request` | Request 6-digit email OTP challenge | Public |
-| `POST` | `/api/auth/otp/verify` | Atomically verify OTP & return JWT access token | Public |
-| `POST` | `/api/auth/refresh` | Rotate refresh token cookie & issue new access token | Cookie |
-| `POST` | `/api/auth/logout` | Revoke active refresh session & clear cookie | Cookie |
-| `GET` | `/api/auth/sessions` | List active user device sessions | Bearer |
 | `POST` | `/api/auth/sessions/revoke-others` | Invalidate all sessions except current device | Bearer |
 | `POST` | `/api/auth/password-strength` | Evaluate password strength against security policy | Public |
 
