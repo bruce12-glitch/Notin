@@ -409,7 +409,7 @@ const OS_META = NOTIN_PLATFORMS[OS] || NOTIN_PLATFORMS.web;
   if (card) card.classList.add('recommended');
 
   smart.textContent = 'Open Notin web app';
-  smart.setAttribute('href', notinAppOrigin() + '/app.html');
+  if (!wireDemoLink(smart)) smart.setAttribute('href', notinAppOrigin() + '/app.html');
   if (osBadge) osBadge.textContent = `We detected ${OS_META.label} — native builds are not available yet`;
   if (osName) osName.textContent = 'in your browser';
 })();
