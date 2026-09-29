@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-| `POST` | `/api/reminders` | Create or update reminder on note | Bearer |
-| `PATCH` | `/api/reminders/:id` | Update reminder (snooze or mark completed) | Bearer |
-| `DELETE` | `/api/reminders/:id` | Delete a reminder | Bearer |
-| `POST` | `/api/reminders/subscribe`| Register Web Push subscription object | Bearer |
-
-### 🤖 AI Writing Tools (`/api/notes`)
 | Method | Path | Description | Auth |
 |---|---|---|---|
 | `POST` | `/api/notes/:id/summarize` | Generate note summary | Bearer |
