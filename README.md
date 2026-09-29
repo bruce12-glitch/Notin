@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-│   │   ├── server.js           # Server bootstrap & middleware setup (Port 5000)
-│   │   ├── config/             # DB connection pool (db.js) & Sentry
-│   │   ├── controllers/        # Express handlers (notes, reminders, auth, AI)
-│   │   ├── routes/             # REST route definitions
-│   │   ├── middleware/         # Auth, CSRF, rate-limiter middlewares
-│   │   ├── lib/                # JWT helpers, Zod validation schemas, AI driver
 │   │   └── db/migrate.js       # SQL database migrations (Postgres + SQLite)
 │   ├── tests/
 │   │   ├── unit/               # Fast Node unit tests (db, jwt, reminders, validation)
