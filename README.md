@@ -6,6 +6,7 @@ Notin is a full-stack note-taking app: a marketing landing site, a REST API back
 
 - **Marketing site** (`frontend/`) — landing pages in Green and Neon themes, plus an About page.
 - **Backend API** (`backend/`) — Node.js + Express on port 5000. Serves the API, the auth pages, the notes app, and the marketing site from one process.
+- **Notes app** (`authentication/`) — sign-up/sign-in pages and the TipTap rich-text editor app (`/app.html`).
 
 <p align="center">
   <img src="https://img.shields.io/badge/Node.js-22.x-339933?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js" />
