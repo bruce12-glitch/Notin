@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-| Method | Path | Description | Auth |
-|---|---|---|---|
-| `POST` | `/api/notes/:id/summarize` | Generate note summary | Bearer |
-| `POST` | `/api/notes/:id/suggest-title` | AI suggested title generation | Bearer |
-| `POST` | `/api/notes/:id/suggest-tags` | AI smart tag categorization | Bearer |
-| `POST` | `/api/notes/:id/chat` | Chat conversation with note context | Bearer |
 | `POST` | `/api/notes/:id/chat/stream` | Server-Sent Events (SSE) streaming chat | Bearer |
 | `POST` | `/api/notes/:id/assist` | Inline writing assistant actions | Bearer |
 
