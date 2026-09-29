@@ -52,3 +52,5 @@ services:
         value: 1
 
 databases:
+  - name: notin-db
+    plan: free
