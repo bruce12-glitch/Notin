@@ -48,6 +48,9 @@ jobs:
       - run: npm run build
       - run: npm run check
 
+      # node_modules must not ship to Pages (hundreds of MB, breaks the upload)
+      - run: rm -rf node_modules
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: frontend
