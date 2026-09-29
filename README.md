@@ -15,6 +15,10 @@ Notin is a full-stack note-taking app: a marketing landing site, a REST API back
 - Image/PDF/audio attachments, sketch pad, voice recording with transcription
 - `[[wiki-style]]` note links with backlinks panel, knowledge graph view, global Ask AI
 - AI writing tools: summarize, suggest title/tags, per-note chat (streaming), rephrase/shorten/expand/grammar/outline
+- Public read-only share links (hashed tokens, rotate/revoke), per-note Markdown/text/HTML export and print
+- Per-note reminders: due dates, reminders view with snooze/complete, Web Push notifications
+- Auth: password + email OTP + Google OAuth, JWT access/refresh rotation, sessions device list, password reset, account export/delete
+- PWA with offline read-only snapshot; keyboard shortcuts throughout
 
 ## 🌐 Live Website & Links
 
