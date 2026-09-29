@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-### Frontend & Landing Site
-- **HTML5 & CSS3** — Semantic elements, responsive layouts, ARIA accessibility landmarks.
-- **Tailwind CSS v4** — Ultra-fast compile-time styling, zero CSS runtime overhead.
-- **Vanilla ES6+ JavaScript** — Lightweight, high-performance DOM manipulation with `requestAnimationFrame` and `IntersectionObserver`.
-- **CSS 3D Transforms** — Depth effects, tilt cards, and smooth parallax interactions.
-
 ### Backend & API
 - **Node.js (v22+)** — Modern JavaScript runtime with native test runner (`node --test`).
 - **Express 4.21** — ESM-native routing, security middleware, and controller layer.
