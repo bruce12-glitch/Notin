@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-- **Focus Writing Mode** — Distraction-free full-screen writing view (`Ctrl+Shift+F`) that hides sidebars and navigation.
-- **Trash-First Delete** — Safety-first deletion lifecycle with 6-second undo toast before permanent deletion.
-- **Multi-Format Export** — Export any note instantly as Markdown (`.md`), plain text (`.txt`), or formatted HTML.
-
-### ⏰ Per-Note Reminders & Web Push (WP-REM-001)
-- **Schedule Due Dates** — Attach specific reminder timestamps to any note directly from the editor toolbar.
 - **Central Reminders View** — Dedicated navigation view listing active, overdue, and upcoming reminders sorted chronologically.
 - **Quick Snooze & Complete** — 1-click 10-minute snooze, completion toggle, and direct deep-link jump into the corresponding note.
 - **Web Push Integration** — Service worker listener receives push payloads and launches notifications that navigate directly to the note.
