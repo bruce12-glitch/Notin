@@ -22,12 +22,6 @@ Notin is a full-stack note-taking app: a marketing landing site, a REST API back
 
 Not included (roadmap): native desktop/mobile apps, team workspaces, billing, real-time sync.
 
-| Destination | Link | Description |
-|---|---|---|
-| 🚀 **Live Demo (Frontend)** | [bruce12-glitch.github.io/Notin](https://bruce12-glitch.github.io/Notin) | Pixel-perfect marketing landing site with interactive 3D hero & feature showcases |
-| 📦 **GitHub Repository** | [github.com/bruce12-glitch/Notin](https://github.com/bruce12-glitch/Notin) | Source repository with complete commit history, issues, and discussions |
-| 📖 **About & Roadmap** | [frontend/context.html](frontend/context.html) | Vision, architecture story, and roadmap milestones |
-| 🛡️ **Security Policy** | [SECURITY.md](SECURITY.md) | Vulnerability disclosure and security contacts |
 | 🤝 **Contributing Guide** | [CONTRIBUTING.md](CONTRIBUTING.md) | Development standards, git workflow, and branch policy |
 
 ---
