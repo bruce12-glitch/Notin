@@ -28,3 +28,9 @@ services:
     plan: free
     healthCheckPath: /health
     envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: DATABASE_URL
+        fromDatabase:
