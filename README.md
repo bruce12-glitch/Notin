@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-│   ├── script.js               # 3D motion engine & interaction logic
-│   ├── dev-server.mjs          # Local dev server with API proxying
-│   └── assets/                 # Brand assets, icons, and 3D graphics
-│
-├── backend/                    # ⚙️ REST API BACKEND
-│   ├── src/
 │   │   ├── server.js           # Server bootstrap & middleware setup (Port 5000)
 │   │   ├── config/             # DB connection pool (db.js) & Sentry
 │   │   ├── controllers/        # Express handlers (notes, reminders, auth, AI)
