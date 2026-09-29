@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-- **Central Reminders View** — Dedicated navigation view listing active, overdue, and upcoming reminders sorted chronologically.
-- **Quick Snooze & Complete** — 1-click 10-minute snooze, completion toggle, and direct deep-link jump into the corresponding note.
-- **Web Push Integration** — Service worker listener receives push payloads and launches notifications that navigate directly to the note.
-
-### 🤖 AI Writing Assistant
-- **Smart Summarization** — Generates concise bulleted executive summaries of long notes.
 - **AI Title & Tag Generator** — Analyzes note contents to suggest punchy titles and relevant tags.
 - **Ask AI (Global Search)** — Ask questions across your notes with citations linked to source notes.
 - **In-Editor Assistant** — Quick prompts to rewrite, shorten, expand, or adjust writing tone on highlighted selections.
