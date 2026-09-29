@@ -90,6 +90,10 @@ Base URL is the unified server (`http://localhost:5000`). Authenticated routes u
 - Notes: `GET|POST /api/notes`, `GET|PUT|PATCH|DELETE /api/notes/:id`, `POST :id/trash|restore`, `POST|DELETE :id/share`
 - Organize: `GET|POST|PATCH|DELETE /api/notebooks`, `GET|POST|DELETE /api/tags`
 - Reminders: `GET|POST /api/reminders`, `PATCH|DELETE /api/reminders/:id`, `POST /api/reminders/subscribe` (Web Push)
+- Files: `GET|POST /api/notes/:noteId/attachments`, `GET /api/attachments/:id/file`, `DELETE /api/attachments/:id`
+- AI: `POST /api/notes/:id/summarize|suggest-title|suggest-tags|chat|chat/stream|assist|transcribe`, `POST /api/ai/ask`
+- Public: `GET /api/public/share/:token`
+- Account: `GET /api/users/me/export|usage|sessions`, `DELETE /api/users/me`
 
 ## 🔁 CI/CD & DevOps
 
