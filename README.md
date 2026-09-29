@@ -34,12 +34,6 @@ Not included (roadmap): native desktop/mobile apps, team workspaces, billing, re
 | AI | Groq API (live) with deterministic mock when no key is set |
 | Tests | Playwright E2E, Node unit tests, ESLint, GitHub Actions CI |
 
-## 📌 Overview
-
-**Notin** is an end-to-end personal knowledge base and note-taking platform inspired by Evernote. It is structured into three unified, zero-bloat layers:
-
-1. **Frontend (Marketing & Landing)** — Dual-theme landing site (**Green Edition** & **Neon Edition**) built entirely with **vanilla JavaScript** and **Tailwind CSS v4** without any bloated client-side framework runtime. Features 3D parallax effects, interactive feature carousels, responsive mega-menus, and accessibility standards.
-2. **Backend (Unified API)** — An Express 4.21 server with a dual-database architecture: production-grade **PostgreSQL 16** with a zero-setup **SQLite (`node:sqlite`)** fallback for instant local developer onboarding.
 3. **Authentication & App Shell** — A focused PWA application offering TipTap rich-text editing, quick-capture notes, bi-directional `[[ wikilinks ]]`, interactive knowledge graph, per-note reminders with snoozing and Web Push notifications, offline snapshot caching via IndexedDB + Service Worker, and Groq-powered AI writing tools.
 
 ---
