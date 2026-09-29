@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-- **Web Push** — Push notification subscription management with payload delivery for due reminders.
-- **AI Engine** — Groq API integration (LLM summarization, title generation, tag suggestion, streaming chat) with keyless deterministic mocks for testing.
-
-### Authentication & App Shell
-- **TipTap 2.27 (ProseMirror)** — Headless, extensible rich-text editing experience with custom formatting extensions.
-- **esbuild** — High-speed bundling and minification for client assets.
 - **Service Worker & PWA** — Offline asset caching, background push notifications, and deep linking.
 - **IndexedDB** — Client-side persistent note snapshots for resilient offline reading.
 
