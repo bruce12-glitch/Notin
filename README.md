@@ -95,7 +95,7 @@ Base URL is the unified server (`http://localhost:5000`). Authenticated routes u
 - Public: `GET /api/public/share/:token`
 - Account: `GET /api/users/me/export|usage|sessions`, `DELETE /api/users/me`
 
-## 🔁 CI/CD & DevOps
+## Testing
 
 The repository utilizes **GitHub Actions** for continuous integration and automated quality gates:
 
