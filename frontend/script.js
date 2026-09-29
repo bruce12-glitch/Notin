@@ -83,7 +83,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('[data-cta]').forEach((el) => {
     const kind = el.getAttribute('data-cta');
     if(kind === 'contact'){ el.setAttribute('href', 'mailto:hello@notin.app'); return; }
-    if(targets[kind]) el.setAttribute('href', origin + targets[kind]);
+    if(targets[kind]){
+      if(origin){ el.setAttribute('href', origin + targets[kind]); }
+      else { wireDemoLink(el); }
+    }
   });
 });
 
