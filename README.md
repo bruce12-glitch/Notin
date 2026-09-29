@@ -113,4 +113,4 @@ See `RUNBOOK.md` for the full production checklist (HTTPS reverse proxy, secrets
 
 ## License
 
-Developed with precision by **[Inbasekaran S](https://github.com/bruce12-glitch)**.
+MIT — see `LICENSE`. The Evernote Lottie asset is Evernote's property, used for design reference only.
