@@ -85,7 +85,11 @@ Open `http://localhost:5000` to sign up. Without SMTP configured (local dev only
 
 Base URL is the unified server (`http://localhost:5000`). Authenticated routes use `Authorization: Bearer <accessToken>`.
 
----
+- Health: `GET /health` (liveness), `GET /api/health` (readiness), `GET /api/health/deep`
+- Auth: `POST /api/auth/otp/request|verify|resend`, `POST /api/users/signup|signin`, `POST /api/auth/refresh|logout|forgot-password|reset-password`, `GET /api/auth/sessions`, `GET /api/auth/providers`
+- Notes: `GET|POST /api/notes`, `GET|PUT|PATCH|DELETE /api/notes/:id`, `POST :id/trash|restore`, `POST|DELETE :id/share`
+- Organize: `GET|POST|PATCH|DELETE /api/notebooks`, `GET|POST|DELETE /api/tags`
+- Reminders: `GET|POST /api/reminders`, `PATCH|DELETE /api/reminders/:id`, `POST /api/reminders/subscribe` (Web Push)
 
 ## 🔁 CI/CD & DevOps
 
