@@ -22,7 +22,7 @@ Notin is a full-stack note-taking app: a marketing landing site, a REST API back
 
 Not included (roadmap): native desktop/mobile apps, team workspaces, billing, real-time sync.
 
-| 🤝 **Contributing Guide** | [CONTRIBUTING.md](CONTRIBUTING.md) | Development standards, git workflow, and branch policy |
+## Tech Stack
 
 ---
 
