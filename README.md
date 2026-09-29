@@ -47,7 +47,7 @@ notin/
 └── ARCHITECTURE_DIAGRAM.md  # System architecture reference
 ```
 
----
+## Quick Start
 
 ## 🛠️ Tech Stack
 
