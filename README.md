@@ -42,6 +42,9 @@ notin/
 ├── backend/          # API server (src/server.js, routes, controllers, migrations)
 ├── authentication/   # Sign-up/login pages + notes app (app.html, app.js, sw.js)
 ├── deploy/           # Reverse-proxy example config
+├── ci/               # CI workflow mirror (active copy in .github/workflows/)
+├── RUNBOOK.md        # Operations: setup, backup/restore, health checks, production list
+└── ARCHITECTURE_DIAGRAM.md  # System architecture reference
 ```
 
 ---
