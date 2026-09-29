@@ -8,12 +8,6 @@ Notin is a full-stack note-taking app: a marketing landing site, a REST API back
 - **Backend API** (`backend/`) — Node.js + Express on port 5000. Serves the API, the auth pages, the notes app, and the marketing site from one process.
 - **Notes app** (`authentication/`) — sign-up/sign-in pages and the TipTap rich-text editor app (`/app.html`).
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Node.js-22.x-339933?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js" />
-  <img src="https://img.shields.io/badge/Express-4.21-000000?style=flat-square&logo=express&logoColor=white" alt="Express" />
-  <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL" />
-  <img src="https://img.shields.io/badge/SQLite-Dev_Fallback-003B57?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite" />
-  <img src="https://img.shields.io/badge/Tailwind-v4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS v4" />
   <img src="https://img.shields.io/badge/TipTap-2.27-6C47FF?style=flat-square" alt="TipTap Editor" />
   <img src="https://img.shields.io/badge/JWT-Auth-000000?style=flat-square&logo=jsonwebtokens&logoColor=white" alt="JWT" />
   <img src="https://img.shields.io/badge/PWA-Ready-5A0FC8?style=flat-square&logo=pwa&logoColor=white" alt="PWA Ready" />
