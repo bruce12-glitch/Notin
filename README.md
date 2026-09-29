@@ -24,6 +24,12 @@ Not included (roadmap): native desktop/mobile apps, team workspaces, billing, re
 
 ## Tech Stack
 
+| Layer | Technologies |
+|---|---|
+| Marketing | Static HTML, Tailwind CSS v4, vanilla JS, three.js |
+| App | Vanilla JS, TipTap 2.27, esbuild |
+| Backend | Node.js 22, Express 4.21, Zod validation |
+| Database | PostgreSQL 16 (production), SQLite fallback (development only) |
 
 ## 📌 Overview
 
