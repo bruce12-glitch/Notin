@@ -7,6 +7,9 @@
   },
   "scripts": {
     "check": "node --check script.js && node --check dev-server.mjs",
+    "build": "npx @tailwindcss/cli -i ./input.css -o ./styles.css --minify && npx @tailwindcss/cli -i ./input-neon.css -o ./styles-neon.css --minify",
+    "build:green": "npx @tailwindcss/cli -i ./input.css -o ./styles.css --minify",
+    "build:neon": "npx @tailwindcss/cli -i ./input-neon.css -o ./styles-neon.css --minify",
     "test": "npm run check"
   },
   "keywords": [],
