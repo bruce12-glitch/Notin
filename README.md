@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-## 🚀 Getting Started
-
-### Prerequisites
-- **Node.js** v20.x or v22.x+
-- **npm** v10+
-
 ### Option A: Local Sandbox Mode (Zero Setup, SQLite)
 
 1. **Clone the repository:**
