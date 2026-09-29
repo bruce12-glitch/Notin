@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-3. Run migrations and start:
-   ```bash
-   npm run db:migrate
-   npm start
-   ```
-
 ---
 
 ## 📡 API Endpoints
