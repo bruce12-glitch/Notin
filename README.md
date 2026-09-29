@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-   ```
-2. Configure your production variables in `.env`:
-   - `DATABASE_URL` — `postgresql://user:password@localhost:5432/notin`
-   - `JWT_ACCESS_SECRET` — 32+ character random secret
-   - `JWT_REFRESH_SECRET` — 32+ character random secret
-   - `OTP_PEPPER` — 32+ character random pepper
 3. Run migrations and start:
    ```bash
    npm run db:migrate
