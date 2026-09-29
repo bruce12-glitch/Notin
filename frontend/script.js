@@ -124,6 +124,7 @@ if (navToggle && mobilePanel) {
     ]},
     { label: 'Enterprise', href: 'mailto:hello@notin.app?subject=Enterprise%20demo' },
     { label: 'About', href: 'context.html' },
+    { label: 'My Notes', href: '/app.html', app: true },
   ];
 
   const buildMobile = () => {
