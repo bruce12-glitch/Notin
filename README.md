@@ -1,8 +1,6 @@
 # Notin — Note-Taking Web App
 
-<p align="center">
-  <img src="frontend/assets/notin-icon-nav.png" width="100" alt="Notin 3D icon" />
-</p>
+**Live demo (marketing site):** [bruce12-glitch.github.io/Notin](https://bruce12-glitch.github.io/Notin/) — the full app (login, notes, AI) runs with the [local setup](#quick-start) below.
 
 <p align="center">
   <strong>An Evernote-inspired note-taking web application with a pixel-perfect marketing site (Green &amp; Neon editions), a RESTful API backend, offline PWA, rich-text editor, AI writing assistant, and per-note reminders with Web Push notifications — all built from scratch.</strong>
