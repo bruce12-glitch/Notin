@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-| `POST` | `/api/notes/:id/chat/stream` | Server-Sent Events (SSE) streaming chat | Bearer |
-| `POST` | `/api/notes/:id/assist` | Inline writing assistant actions | Bearer |
-
----
-
-## 🧪 Testing & Quality Gates
 
 The codebase includes automated unit and end-to-end test suites:
 
