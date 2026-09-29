@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-| `GET` | `/api/notes` | List notes (search `?q=`, tag `?tag=`, pagination) | Bearer |
-| `POST` | `/api/notes` | Create a new note | Bearer |
-| `PUT/PATCH`| `/api/notes/:id` | Update note title, content, or metadata | Bearer |
-| `POST` | `/api/notes/:id/trash` | Move note to trash with undo safety | Bearer |
-| `POST` | `/api/notes/:id/restore` | Restore trashed note | Bearer |
-| `DELETE` | `/api/notes/:id` | Permanently delete note | Bearer |
 | `POST` | `/api/notes/:id/share` | Generate secure 32-byte public share link | Bearer |
 
 ### ⏰ Reminders & Push (`/api/reminders`)
