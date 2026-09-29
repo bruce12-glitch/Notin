@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-- **Fail-Closed Design** — Server strictly refuses to start in production if insecure default keys or placeholder secrets are detected.
-- **Anti-Brute Force** — Exponential lockout ladders on failed sign-in attempts and OTP request rate limits.
-- **Zero Raw Tokens** — Public share tokens and refresh cookies are stored exclusively as SHA-256 hashes.
-
----
-
 ## 📁 Project Structure
 
 ```
