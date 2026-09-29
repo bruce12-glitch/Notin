@@ -24,12 +24,6 @@ Not included (roadmap): native desktop/mobile apps, team workspaces, billing, re
 
 ## Tech Stack
 
-- [Architecture](#️-architecture)
-- [Tech Stack](#-tech-stack)
-- [Features](#-features)
-- [Project Structure](#-project-structure)
-- [Getting Started](#-getting-started)
-- [API Endpoints](#-api-endpoints)
 - [Testing & Quality Gates](#-testing--quality-gates)
 - [Security Hardening](#-security-hardening)
 - [CI/CD & DevOps](#-cicd--devops)
