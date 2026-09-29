@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-### Backend & API
-- **Node.js (v22+)** — Modern JavaScript runtime with native test runner (`node --test`).
-- **Express 4.21** — ESM-native routing, security middleware, and controller layer.
-- **Dual Database Architecture** — PostgreSQL 16 (with connection pooling) for production; native SQLite (`node:sqlite`) for local sandbox development.
-- **Zod** — Strict runtime schema validation for incoming request payloads and query parameters.
-- **Security & Crypto** — `jose` (JWT), `bcryptjs` (password hashing), secure HTTP-only cookies, SHA-256 token hashing, and CSRF origin verification.
 - **Web Push** — Push notification subscription management with payload delivery for due reminders.
 - **AI Engine** — Groq API integration (LLM summarization, title generation, tag suggestion, streaming chat) with keyless deterministic mocks for testing.
 
