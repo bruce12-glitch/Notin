@@ -37,12 +37,6 @@ Not included (roadmap): native desktop/mobile apps, team workspaces, billing, re
 ## Project Structure
 
 ```
-│  │                       │  │                   │  │                  │ │
-│  │  • index.html (Green) │  │  • RESTful API    │  │  • TipTap 2.27   │ │
-│  │  • index-neon.html    │  │  • Auth / JWT     │  │  • Reminders UI  │ │
-│  │  • Vanilla ES6 JS     │  │  • Web Push API   │  │  • Graph View    │ │
-│  │  • Tailwind CSS v4    │  │  • Rate Limiting  │  │  • PWA Shell     │ │
-│  │  • 3D Motion Engine   │  │  • AI Provider    │  │  • ServiceWorker │ │
 │  └───────────────────────┘  └───────────────────┘  └──────────────────┘ │
 │                                       │                      │          │
 │                                       └──────────┬───────────┘          │
