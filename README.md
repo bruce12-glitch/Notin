@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-### Option A: Local Sandbox Mode (Zero Setup, SQLite)
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/bruce12-glitch/Notin.git
-   cd Notin
    ```
 
 2. **Install all dependencies:**
