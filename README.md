@@ -102,6 +102,8 @@ cd backend
 npm run test:unit                # fast unit tests (Node test runner)
 npm run lint                     # ESLint
 npx playwright install chromium
+npm run test:e2e                 # full browser suite
+```
 
 - **`.github/workflows/e2e.yml`** — Runs linting, bundle freshness checks, unit tests, and Playwright browser suites against a live PostgreSQL 16 container.
 - **`.github/workflows/codeql.yml`** — Automated static code analysis and semantic security vulnerability scanning.
