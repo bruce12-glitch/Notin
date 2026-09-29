@@ -37,12 +37,6 @@ Not included (roadmap): native desktop/mobile apps, team workspaces, billing, re
 ## Project Structure
 
 ```
-│  └───────────────────────┘  └───────────────────┘  └──────────────────┘ │
-│                                       │                      │          │
-│                                       └──────────┬───────────┘          │
-│                                                  │                      │
-│                                       ┌──────────▼───────────┐          │
-│                                       │       DATABASE       │          │
 │                                       │  PostgreSQL (Prod)   │          │
 │                                       │   SQLite (Local Dev) │          │
 │                                       └──────────────────────┘          │
