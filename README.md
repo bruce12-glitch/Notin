@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-- **Service Worker & PWA** — Offline asset caching, background push notifications, and deep linking.
-- **IndexedDB** — Client-side persistent note snapshots for resilient offline reading.
-
----
-
-## ✨ Features
 
 ### 📝 Core Note-Taking & Editing
 - **TipTap Rich-Text Editor** — Headings (H1–H3), bold, italics, underline, strike, blockquotes, checklists, code blocks, hyperlinks.
