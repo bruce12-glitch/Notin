@@ -59,6 +59,10 @@ cp .env.example .env   # edit values; SQLite fallback works with defaults for lo
 npm run db:migrate
 npm start
 
+# 2. Marketing site with live API (separate terminal, http://localhost:3000)
+cd frontend
+npm install
+PORT=3000 API_TARGET=http://localhost:5000 node dev-server.mjs
 ```
 **Covers:** SQL rewrite adapters, JWT claims & rotation, password complexity policies, throttle/lockout ladders, Zod input validation, and reminder schemas.
 
