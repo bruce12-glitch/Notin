@@ -64,7 +64,6 @@ cd frontend
 npm install
 PORT=3000 API_TARGET=http://localhost:5000 node dev-server.mjs
 ```
-**Covers:** SQL rewrite adapters, JWT claims & rotation, password complexity policies, throttle/lockout ladders, Zod input validation, and reminder schemas.
 
 ### Running Security & CSP Audits
 ```bash
