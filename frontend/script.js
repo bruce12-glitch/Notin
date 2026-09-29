@@ -64,6 +64,12 @@ function showDemoNotice(){
     document.body.appendChild(bar);
     bar.querySelector('button').addEventListener('click', () => bar.remove());
     setTimeout(() => bar.remove(), 8000);
+  }
+  return bar;
+}
+
+// Point an app/auth link at the demo fallback (returns true when wired).
+function wireDemoLink(el){
 // WP-FUNNEL-001 — resolve funnel CTAs at runtime (per-environment origin)
 document.addEventListener('DOMContentLoaded', () => {
   const origin = notinAppOrigin();
