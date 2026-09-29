@@ -65,11 +65,7 @@ npm install
 PORT=3000 API_TARGET=http://localhost:5000 node dev-server.mjs
 ```
 
-### Running Security & CSP Audits
-```bash
-node ci/check-csp.mjs
-```
-Ensures strict Content Security Policy compliance with zero inline scripts or unverified third-party assets.
+Open `http://localhost:5000` to sign up. Without SMTP configured (local dev only), the demo OTP is `123456`.
 
 ### Running End-to-End Tests
 Comprehensive browser automation using Playwright across full user lifecycles:
