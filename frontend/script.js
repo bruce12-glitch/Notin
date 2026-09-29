@@ -169,7 +169,7 @@ if (navToggle && mobilePanel) {
       }
     });
     const login = document.createElement('a');
-    login.href = notinAppOrigin() + '/login.html';
+    if (!wireDemoLink(login)) login.href = notinAppOrigin() + '/login.html';
     login.textContent = 'Log in';
     login.className = 'mt-2 text-[15px] font-semibold text-text-secondary transition hover:text-brand-500';
     const cta = document.createElement('a');
