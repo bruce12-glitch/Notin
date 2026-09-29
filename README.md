@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
----
-
-## 📡 API Endpoints
-
-### 🔑 Authentication (`/api/auth`)
-| Method | Path | Description | Auth |
 |---|---|---|---|
 | `POST` | `/api/auth/otp/request` | Request 6-digit email OTP challenge | Public |
 | `POST` | `/api/auth/otp/verify` | Atomically verify OTP & return JWT access token | Public |
