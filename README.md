@@ -37,12 +37,6 @@ Not included (roadmap): native desktop/mobile apps, team workspaces, billing, re
 ## Project Structure
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           NOTIN MONOREPO                                │
-│                                                                         │
-│  ┌───────────────────────┐  ┌───────────────────┐  ┌──────────────────┐ │
-│  │       FRONTEND        │  │     BACKEND       │  │  AUTHENTICATION  │ │
-│  │   (Marketing Site)    │  │   (Express API)   │  │   (App & Editor) │ │
 │  │                       │  │                   │  │                  │ │
 │  │  • index.html (Green) │  │  • RESTful API    │  │  • TipTap 2.27   │ │
 │  │  • index-neon.html    │  │  • Auth / JWT     │  │  • Reminders UI  │ │
