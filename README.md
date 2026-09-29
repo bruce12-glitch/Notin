@@ -49,7 +49,7 @@ notin/
 
 ## Quick Start
 
-## 🛠️ Tech Stack
+Requirements: Node.js 22.5+, npm.
 
 ### Frontend & Landing Site
 - **HTML5 & CSS3** — Semantic elements, responsive layouts, ARIA accessibility landmarks.
