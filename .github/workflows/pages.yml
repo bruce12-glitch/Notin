@@ -1,0 +1,63 @@
+# Pages demo — publishes the static marketing site (frontend/) to GitHub Pages.
+# This is the "live demo" link for the repo About box:
+#   https://bruce12-glitch.github.io/Notin/
+# Marketing only: on *.github.io the app/auth CTAs show a Quick Start notice
+# (see wireDemoLink in frontend/script.js) instead of 404ing. The full app
+# (login, notes, AI) runs with the local setup in README Quick Start, or a
+# container deploy via render.yaml.
+#
+# First-time setup (owner, one minute, GitHub web UI):
+#   Settings -> Pages -> Build and deployment -> Source: "GitHub Actions".
+# After that every push touching frontend/ redeploys automatically.
+
+name: Pages demo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm run check
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: frontend
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
