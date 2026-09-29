@@ -107,7 +107,7 @@ npm run test:e2e                 # full browser suite
 
 CI (`.github/workflows/e2e.yml`) runs syntax/bundle checks, dependency audit, fail-closed boot gates, a Postgres boot rehearsal, and the full Playwright suite on every push/PR to `main`.
 
----
+## Deployment
 
 ## 📄 License
 
