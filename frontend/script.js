@@ -70,6 +70,12 @@ function showDemoNotice(){
 
 // Point an app/auth link at the demo fallback (returns true when wired).
 function wireDemoLink(el){
+  if(notinAppOrigin() !== null) return false;
+  el.setAttribute('href', DEMO_APP_URL);
+  el.addEventListener('click', (e) => { e.preventDefault(); showDemoNotice(); });
+  return true;
+}
+
 // WP-FUNNEL-001 — resolve funnel CTAs at runtime (per-environment origin)
 document.addEventListener('DOMContentLoaded', () => {
   const origin = notinAppOrigin();
