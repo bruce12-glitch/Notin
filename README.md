@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-├── ci/
-│   ├── check-csp.mjs           # Content Security Policy & asset checker
-│   └── checks.sh               # Local pre-push validation script
-├── docker-compose.yml          # Multi-container orchestration (API + Postgres)
-├── Dockerfile                  # Multi-stage production container build
-│
 ├── frontend/                   # 🎨 MARKETING SITE
 │   ├── index.html              # Green Edition landing page
 │   ├── index-neon.html         # Neon Edition landing page
