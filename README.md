@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-└── authentication/             # 🔐 PWA & APP SHELL
-    ├── app.html                # Main application UI
-    ├── app.js                  # Frontend client state & TipTap integration
-    ├── app.css                 # Dark Evernote-inspired shell styles
-    ├── app.bundle.js           # Bundled & minified client bundle
-    ├── sw.js                   # Service Worker (offline cache + Web Push)
     ├── manifest.webmanifest    # PWA web manifest
     └── login.html / index.html # Authentication login & signup screens
 ```
