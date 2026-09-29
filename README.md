@@ -83,8 +83,7 @@ Open `http://localhost:5000` to sign up. Without SMTP configured (local dev only
 
 ## API Overview
 
-| **Dual SQL Protection** | Parameterized queries on all paths preventing SQL injection across both PostgreSQL and SQLite. |
-| **Attachment Safety** | Magic-byte file header validation ensuring files match allowable MIME types (PNG, JPEG, WebP, GIF, PDF). |
+Base URL is the unified server (`http://localhost:5000`). Authenticated routes use `Authorization: Bearer <accessToken>`.
 
 ---
 
