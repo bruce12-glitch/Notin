@@ -492,7 +492,11 @@ if(googleBtn){
 }
 
 // WP-FUNNEL-002 — capability discovery: render only sign-in options this
-// deployment actually supports. Replaces the old dead-end "coming soon" stub.
+// deployment actually supports. Apple stays hidden by default (no backend)
+// and is only revealed when /api/auth/providers reports apple:true.
+if(appleBtn){
+  appleBtn.addEventListener('click', ()=>{
+    const msg = document.getElementById('emailError') || document.getElementById('pwdError') || document.getElementById('otpError');
 (async function syncAuthProviders(){
   try{
     const r = await fetch(apiUrl('/api/auth/providers'), { headers: { Accept: 'application/json' } });
