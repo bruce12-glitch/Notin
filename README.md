@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-
-   # Install backend dependencies
-   cd ../backend && npm install
-   ```
-
-3. **Initialize the local SQLite database:**
    ```bash
    npm run db:migrate
    ```
