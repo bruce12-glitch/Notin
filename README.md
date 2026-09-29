@@ -37,12 +37,6 @@ Not included (roadmap): native desktop/mobile apps, team workspaces, billing, re
 ## Project Structure
 
 ```
-│                                       │  PostgreSQL (Prod)   │          │
-│                                       │   SQLite (Local Dev) │          │
-│                                       └──────────────────────┘          │
-└─────────────────────────────────────────────────────────────────────────┘
-
-  Unified App Server: http://localhost:5000 (backend/src/server.js)
   Marketing Dev Server: http://localhost:3000 (frontend/dev-server.mjs)
 ```
 
