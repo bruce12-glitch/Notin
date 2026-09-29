@@ -58,6 +58,12 @@ function showDemoNotice(){
     bar.id = 'demoNotice';
     bar.setAttribute('role', 'status');
     bar.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:1000;max-width:min(92vw,560px);background:#2c2d2a;color:#f7f6f2;padding:13px 18px;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.3);font:15px/1.5 system-ui,-apple-system,sans-serif;display:flex;gap:14px;align-items:center;';
+    bar.innerHTML = '<span>This is the live frontend demo — login and notes run with the local server.</span>'
+      + `<a href="${DEMO_APP_URL}" style="color:#8fe333;font-weight:700;white-space:nowrap">Quick Start &rarr;</a>`
+      + '<button type="button" aria-label="Dismiss" style="background:none;border:0;color:#b6b0c2;font-size:20px;cursor:pointer;line-height:1;padding:0">&times;</button>';
+    document.body.appendChild(bar);
+    bar.querySelector('button').addEventListener('click', () => bar.remove());
+    setTimeout(() => bar.remove(), 8000);
 // WP-FUNNEL-001 — resolve funnel CTAs at runtime (per-environment origin)
 document.addEventListener('DOMContentLoaded', () => {
   const origin = notinAppOrigin();
