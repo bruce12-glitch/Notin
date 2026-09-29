@@ -1,0 +1,6 @@
+# Render Blueprint — one-click live demo deploy for Notin
+# Usage:
+#   1. Commit + push this repo to GitHub (main branch).
+#   2. Go to https://dashboard.render.com -> New -> Blueprint -> select bruce12-glitch/Notin.
+#   3. When prompted, set APP_ORIGIN and PUBLIC_APP_URL to the service URL
+#      Render assigns (https://notin-XXXX.onrender.com) — both must be the
