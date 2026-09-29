@@ -111,6 +111,6 @@ CI (`.github/workflows/e2e.yml`) runs syntax/bundle checks, dependency audit, fa
 
 See `RUNBOOK.md` for the full production checklist (HTTPS reverse proxy, secrets, Postgres + uploads backup/restore, load-balancer health endpoints). `deploy/nginx.conf.example` shows the two-origin routing (marketing + app/API).
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for full details.
+## License
 
 Developed with precision by **[Inbasekaran S](https://github.com/bruce12-glitch)**.
