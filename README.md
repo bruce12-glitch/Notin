@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-   ```
-
-2. **Install all dependencies:**
-   ```bash
-   # Install auth dependencies
-   cd authentication && npm install
 
    # Install backend dependencies
    cd ../backend && npm install
