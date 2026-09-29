@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-## 📁 Project Structure
-
-```
-Notin/
-├── .github/
-│   └── workflows/              # GitHub Actions CI (CodeQL, Docker, E2E)
 ├── ci/
 │   ├── check-csp.mjs           # Content Security Policy & asset checker
 │   └── checks.sh               # Local pre-push validation script
