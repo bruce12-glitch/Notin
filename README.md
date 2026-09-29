@@ -10,7 +10,11 @@ Notin is a full-stack note-taking app: a marketing landing site, a REST API back
 
 ## Features
 
----
+- Rich-text notes (headings, lists, checklists, code blocks, quotes, links) with 900ms autosave
+- Notebooks, tags, pinning, trash with restore and undo, full-text search with filters
+- Image/PDF/audio attachments, sketch pad, voice recording with transcription
+- `[[wiki-style]]` note links with backlinks panel, knowledge graph view, global Ask AI
+- AI writing tools: summarize, suggest title/tags, per-note chat (streaming), rephrase/shorten/expand/grammar/outline
 
 ## 🌐 Live Website & Links
 
