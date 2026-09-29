@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-├── frontend/                   # 🎨 MARKETING SITE
-│   ├── index.html              # Green Edition landing page
-│   ├── index-neon.html         # Neon Edition landing page
-│   ├── context.html            # About & roadmap page
-│   ├── styles.css              # Compiled production CSS (Green)
-│   ├── styles-neon.css         # Compiled production CSS (Neon)
 │   ├── script.js               # 3D motion engine & interaction logic
 │   ├── dev-server.mjs          # Local dev server with API proxying
 │   └── assets/                 # Brand assets, icons, and 3D graphics
