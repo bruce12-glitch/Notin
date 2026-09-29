@@ -26,6 +26,8 @@
 // WP-FUNNEL-001 — derive the app/auth origin for this environment.
 // Local dev: same host, port 5000. Arena preview: per-port hostnames share the
 // sandbox suffix, so swap the port prefix. Production: same origin.
+// Static hosting demo (GitHub Pages): returns null — there is no backend on
+// that origin, so callers must fall back to DEMO_APP_URL instead of /app.html.
 function notinAppOrigin(){
   try{
     const override = window.NOTIN_APP_ORIGIN;
