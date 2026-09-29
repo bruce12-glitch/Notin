@@ -40,3 +40,9 @@ services:
         generateValue: true
       - key: JWT_REFRESH_SECRET
         generateValue: true
+      - key: OTP_PEPPER
+        generateValue: true
+      - key: APP_ORIGIN
+        sync: false
+      - key: PUBLIC_APP_URL
+        sync: false
