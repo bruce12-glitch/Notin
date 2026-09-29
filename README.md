@@ -24,12 +24,6 @@ Not included (roadmap): native desktop/mobile apps, team workspaces, billing, re
 
 ## Tech Stack
 
-- [Testing & Quality Gates](#-testing--quality-gates)
-- [Security Hardening](#-security-hardening)
-- [CI/CD & DevOps](#-cicd--devops)
-- [License](#-license)
-
----
 
 ## 📌 Overview
 
