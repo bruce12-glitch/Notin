@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-### Option B: Production Setup (PostgreSQL)
-
-1. Create your environment file:
-   ```bash
-   cd backend
-   cp .env.example .env
    ```
 2. Configure your production variables in `.env`:
    - `DATABASE_URL` — `postgresql://user:password@localhost:5432/notin`
