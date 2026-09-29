@@ -8,11 +8,7 @@ Notin is a full-stack note-taking app: a marketing landing site, a REST API back
 - **Backend API** (`backend/`) — Node.js + Express on port 5000. Serves the API, the auth pages, the notes app, and the marketing site from one process.
 - **Notes app** (`authentication/`) — sign-up/sign-in pages and the TipTap rich-text editor app (`/app.html`).
 
-  <img src="https://img.shields.io/badge/TipTap-2.27-6C47FF?style=flat-square" alt="TipTap Editor" />
-  <img src="https://img.shields.io/badge/JWT-Auth-000000?style=flat-square&logo=jsonwebtokens&logoColor=white" alt="JWT" />
-  <img src="https://img.shields.io/badge/PWA-Ready-5A0FC8?style=flat-square&logo=pwa&logoColor=white" alt="PWA Ready" />
-  <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="License MIT" />
-</p>
+## Features
 
 ---
 
