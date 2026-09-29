@@ -54,7 +54,11 @@ Requirements: Node.js 22.5+, npm.
 ```bash
 # 1. Backend + app (unified server on http://localhost:5000)
 cd backend
-npm run test:unit
+npm ci
+cp .env.example .env   # edit values; SQLite fallback works with defaults for local dev
+npm run db:migrate
+npm start
+
 ```
 **Covers:** SQL rewrite adapters, JWT claims & rotation, password complexity policies, throttle/lockout ladders, Zod input validation, and reminder schemas.
 
