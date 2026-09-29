@@ -420,7 +420,7 @@ const OS_META = NOTIN_PLATFORMS[OS] || NOTIN_PLATFORMS.web;
   const label = document.getElementById('heroDownloadLabel');
   if (!btn || !label) return;
   label.textContent = 'Open the web app';
-  btn.setAttribute('href', notinAppOrigin() + '/app.html');
+  if (!wireDemoLink(btn)) btn.setAttribute('href', notinAppOrigin() + '/app.html');
 })();
 
 
