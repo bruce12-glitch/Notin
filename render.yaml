@@ -10,3 +10,9 @@
 #      GET /api/health.
 #
 # Notes:
+#   - JWT/OTP secrets are auto-generated per deploy. AUTH_EMAIL_ENABLED=false
+#     means OTP login uses the API flow without SMTP (demo codes are disabled
+#     in production; use password signup or wire SMTP_* vars to enable email).
+#   - Free tier has no persistent disk: uploaded files are ephemeral across
+#     deploys. For durable files set STORAGE_PROVIDER=s3 with S3_BUCKET +
+#     AWS credentials, or upgrade to a paid instance with a disk mounted at
