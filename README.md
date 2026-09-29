@@ -24,12 +24,6 @@ Not included (roadmap): native desktop/mobile apps, team workspaces, billing, re
 
 ## Tech Stack
 
----
-
-## 📋 Table of Contents
-
-- [Live Website & Links](#-live-website--links)
-- [Overview](#-overview)
 - [Architecture](#️-architecture)
 - [Tech Stack](#-tech-stack)
 - [Features](#-features)
