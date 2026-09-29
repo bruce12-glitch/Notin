@@ -497,6 +497,9 @@ if(googleBtn){
 if(appleBtn){
   appleBtn.addEventListener('click', ()=>{
     const msg = document.getElementById('emailError') || document.getElementById('pwdError') || document.getElementById('otpError');
+    if(msg){ msg.textContent = 'Continue with Apple is not available in this deployment.'; msg.hidden = false; }
+  });
+}
 (async function syncAuthProviders(){
   try{
     const r = await fetch(apiUrl('/api/auth/providers'), { headers: { Accept: 'application/json' } });
