@@ -67,8 +67,10 @@ PORT=3000 API_TARGET=http://localhost:5000 node dev-server.mjs
 
 Open `http://localhost:5000` to sign up. Without SMTP configured (local dev only), the demo OTP is `123456`.
 
-### Running End-to-End Tests
-Comprehensive browser automation using Playwright across full user lifecycles:
+## Environment Variables
+
+| Variable | Purpose | Required in production |
+|---|---|---|
 ```bash
 cd backend
 npm run test:e2e
