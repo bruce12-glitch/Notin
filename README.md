@@ -4,10 +4,8 @@
 
 Notin is a full-stack note-taking app: a marketing landing site, a REST API backend, and a rich-text notes app with sign-in, all in one repository.
 
-<p align="center">
-  <a href="https://bruce12-glitch.github.io/Notin"><img src="https://img.shields.io/badge/Live_Demo-GitHub_Pages-2ea44f?style=for-the-badge&logo=github&logoColor=white" alt="Live Demo" /></a>
-  <a href="https://github.com/bruce12-glitch/Notin"><img src="https://img.shields.io/badge/Repository-GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="Repository" /></a>
-</p>
+- **Marketing site** (`frontend/`) — landing pages in Green and Neon themes, plus an About page.
+- **Backend API** (`backend/`) — Node.js + Express on port 5000. Serves the API, the auth pages, the notes app, and the marketing site from one process.
 
 <p align="center">
   <img src="https://img.shields.io/badge/Node.js-22.x-339933?style=flat-square&logo=nodedotjs&logoColor=white" alt="Node.js" />
