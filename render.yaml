@@ -16,3 +16,9 @@
 #   - Free tier has no persistent disk: uploaded files are ephemeral across
 #     deploys. For durable files set STORAGE_PROVIDER=s3 with S3_BUCKET +
 #     AWS credentials, or upgrade to a paid instance with a disk mounted at
+#     /app/backend/uploads.
+#   - Free Postgres expires after its trial window; attach a paid Postgres
+#     (or any external postgres:// URL via DATABASE_URL) for a permanent demo.
+
+services:
+  - type: web
