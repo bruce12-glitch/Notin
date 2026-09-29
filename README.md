@@ -83,12 +83,6 @@ Open `http://localhost:5000` to sign up. Without SMTP configured (local dev only
 
 ## API Overview
 
-| Protection | Implementation Detail |
-|---|---|
-| **Memory-Only Tokens** | Short-lived 15-minute JWTs kept exclusively in application memory (never written to `localStorage`). |
-| **HTTP-Only Cookies** | Refresh tokens stored in strict `SameSite=Lax`, `HttpOnly`, `Secure` cookies with SHA-256 database hashing. |
-| **Fail-Closed Startup** | Production refuses to boot if placeholder secrets or missing encryption keys are detected. |
-| **Password Complexity** | Strict 3-of-4 character class validation, sequential character checks, and 10,000-entry common password blocklist. |
 | **Dual SQL Protection** | Parameterized queries on all paths preventing SQL injection across both PostgreSQL and SQLite. |
 | **Attachment Safety** | Magic-byte file header validation ensuring files match allowable MIME types (PNG, JPEG, WebP, GIF, PDF). |
 
