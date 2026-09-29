@@ -22,3 +22,9 @@
 
 services:
   - type: web
+    name: notin
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
