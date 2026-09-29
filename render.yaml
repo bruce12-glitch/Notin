@@ -4,3 +4,9 @@
 #   2. Go to https://dashboard.render.com -> New -> Blueprint -> select bruce12-glitch/Notin.
 #   3. When prompted, set APP_ORIGIN and PUBLIC_APP_URL to the service URL
 #      Render assigns (https://notin-XXXX.onrender.com) — both must be the
+#      exact https:// URL, otherwise the production boot refuses to start.
+#   4. Deploy. First boot runs migrations automatically (migrate.js is
+#      idempotent). Health check: GET /health ; load-balancer readiness:
+#      GET /api/health.
+#
+# Notes:
