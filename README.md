@@ -71,6 +71,12 @@ Open `http://localhost:5000` to sign up. Without SMTP configured (local dev only
 
 | Variable | Purpose | Required in production |
 |---|---|---|
+| `DATABASE_URL` | PostgreSQL connection string | Yes (`postgres://…`; server refuses to boot otherwise) |
+| `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `OTP_PEPPER` | Token/OTP signing secrets | Yes (32+ chars, not placeholders) |
+| `APP_ORIGIN`, `PUBLIC_APP_URL` | Public HTTPS origins (CORS, cookies) | Yes |
+| `TRUST_PROXY` | Reverse-proxy hop count | Yes |
+| `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM` | OTP/reset emails | Yes, unless `AUTH_EMAIL_ENABLED=false` |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI` | Google sign-in | Only if Google login is offered |
 ```bash
 cd backend
 npm run test:e2e
