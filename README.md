@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-   ```bash
-   npm run db:migrate
-   ```
-
-4. **Start the unified server:**
-   ```bash
    npm start
    ```
    Open **`http://localhost:5000`** in your browser. The app runs on local SQLite with demo OTP authentication enabled out of the box!
