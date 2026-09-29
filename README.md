@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-    ├── manifest.webmanifest    # PWA web manifest
-    └── login.html / index.html # Authentication login & signup screens
-```
-
----
-
 ## 🚀 Getting Started
 
 ### Prerequisites
