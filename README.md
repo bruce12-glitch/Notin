@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-| `POST` | `/api/auth/sessions/revoke-others` | Invalidate all sessions except current device | Bearer |
-| `POST` | `/api/auth/password-strength` | Evaluate password strength against security policy | Public |
-
-### 📝 Notes Management (`/api/notes`)
-| Method | Path | Description | Auth |
-|---|---|---|---|
 | `GET` | `/api/notes` | List notes (search `?q=`, tag `?tag=`, pagination) | Bearer |
 | `POST` | `/api/notes` | Create a new note | Bearer |
 | `PUT/PATCH`| `/api/notes/:id` | Update note title, content, or metadata | Bearer |
