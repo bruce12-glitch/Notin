@@ -51,12 +51,6 @@ notin/
 
 Requirements: Node.js 22.5+, npm.
 
-
-### 📝 Core Note-Taking & Editing
-- **TipTap Rich-Text Editor** — Headings (H1–H3), bold, italics, underline, strike, blockquotes, checklists, code blocks, hyperlinks.
-- **Bi-Directional `[[ Note ]]` Linking** — Type `[[` to open an autocomplete link picker; notes automatically surface incoming backlinks and outgoing mentions.
-- **Force-Directed Knowledge Graph** — Interactive 2D graph visualizing note relationships and linkages with draggable nodes.
-- **Attachments & Media** — Drag-and-drop or paste images (PNG/JPEG/WebP/GIF), audio notes, and PDF viewer attachments with strict magic-byte validation.
 - **Focus Writing Mode** — Distraction-free full-screen writing view (`Ctrl+Shift+F`) that hides sidebars and navigation.
 - **Trash-First Delete** — Safety-first deletion lifecycle with 6-second undo toast before permanent deletion.
 - **Multi-Format Export** — Export any note instantly as Markdown (`.md`), plain text (`.txt`), or formatted HTML.
