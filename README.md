@@ -97,7 +97,11 @@ Base URL is the unified server (`http://localhost:5000`). Authenticated routes u
 
 ## Testing
 
-The repository utilizes **GitHub Actions** for continuous integration and automated quality gates:
+```bash
+cd backend
+npm run test:unit                # fast unit tests (Node test runner)
+npm run lint                     # ESLint
+npx playwright install chromium
 
 - **`.github/workflows/e2e.yml`** — Runs linting, bundle freshness checks, unit tests, and Playwright browser suites against a live PostgreSQL 16 container.
 - **`.github/workflows/codeql.yml`** — Automated static code analysis and semantic security vulnerability scanning.
