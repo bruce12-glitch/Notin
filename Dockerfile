@@ -3,7 +3,7 @@ FROM node:22.22-alpine AS auth-build
 WORKDIR /workspace/authentication
 COPY authentication/package.json authentication/package-lock.json ./
 RUN npm ci
-COPY authentication/app.js ./app.js
+COPY authentication/app.js authentication/auth-client.js ./
 RUN npm run build:app
 
 FROM node:22.22-alpine AS backend-deps

@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env bash
+#!/usr/bin/env bash
 # Fast pre-push gate â€” the same checks CI runs, minus the Playwright suite.
 # Usage: ./ci/checks.sh   (run from the repository root)
 
