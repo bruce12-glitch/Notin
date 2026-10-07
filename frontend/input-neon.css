@@ -1540,3 +1540,176 @@ section[data-sentry-component="CallToAction"] .text-\[\#94e130\] {
 .magnetic-3d::after { content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; opacity:0; background:radial-gradient(circle at var(--glare-x,50%) var(--glare-y,50%),rgba(223,255,184,.28),transparent 34%); transition:opacity .2s ease; }
 .magnetic-3d.is-magnetic::after { opacity:1; }
 @media (pointer:coarse),(prefers-reduced-motion:reduce) { .cursor-orb,.cursor-trail{display:none}.magnetic-3d{transform:none!important} }
+
+/* Keep design overrides in source so production builds preserve them. */
+/* ===== Discover-more promo video: Notin branding overlay (appended) ===== */
+.video-modal-stage{position:relative;line-height:0}
+.video-brand{position:absolute;top:16px;left:18px;z-index:3;display:inline-flex;align-items:center;gap:9px;padding:8px 14px 8px 9px;border-radius:999px;background:rgba(255,255,255,.92);box-shadow:0 6px 20px rgba(0,0,0,.28);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);pointer-events:none}
+.video-brand-icon{width:26px;height:26px;display:block}
+.video-brand-name{font-family:"IBM Plex Sans","Inter",sans-serif;font-weight:800;font-size:17px;letter-spacing:-.02em;color:#141414;line-height:1}
+@media (max-width:600px){.video-brand{top:10px;left:10px;padding:6px 11px 6px 7px}.video-brand-icon{width:21px;height:21px}.video-brand-name{font-size:14px}}
+
+/* ===== Navbar polish: 3D buttons + 3D Notin icon (appended override) ===== */
+.btn-3d{border-radius:10px;box-shadow:0 1px 0 rgba(255,255,255,.18) inset,0 5px 0 #000,0 10px 24px rgba(0,0,0,.5);transform:translateY(0);transition:transform .16s cubic-bezier(.2,.8,.3,1.2),box-shadow .16s ease,background .25s ease,color .25s ease}
+.btn-3d:hover{background:#8fe333;color:#141414;transform:translateY(-3px);box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 8px 0 #5aa50f,0 18px 36px rgba(143,227,51,.5)}
+.btn-3d:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(255,255,255,.3) inset,0 2px 0 #5aa50f,0 6px 14px rgba(143,227,51,.4);transition-duration:.07s}
+.brand-logo{text-decoration:none}
+.brand-icon-3d{border-radius:12px;transform:perspective(400px) translateZ(0);box-shadow:0 2px 0 rgba(0,0,0,.4),0 6px 16px rgba(0,0,0,.5),0 1px 0 rgba(255,255,255,.25) inset;transition:transform .22s cubic-bezier(.2,.8,.3,1.2),box-shadow .22s ease,filter .22s ease;will-change:transform}
+.brand-logo:hover .brand-icon-3d{transform:perspective(400px) translateY(-2px) rotateX(12deg) rotateY(-12deg) scale(1.06);box-shadow:0 6px 0 rgba(0,0,0,.35),0 14px 28px rgba(0,0,0,.55),0 1px 0 rgba(255,255,255,.3) inset;filter:brightness(1.08)}
+.brand-logo:active .brand-icon-3d{transform:perspective(400px) translateY(1px) rotateX(4deg) rotateY(-4deg) scale(.98);box-shadow:0 2px 0 rgba(0,0,0,.35),0 5px 12px rgba(0,0,0,.5),0 1px 0 rgba(255,255,255,.2) inset;transition-duration:.08s}
+@media (prefers-reduced-motion:reduce){.brand-icon-3d,.brand-logo:hover .brand-icon-3d,.brand-logo:active .brand-icon-3d{transition:none;transform:none}}
+
+/* Anchor targets clear the sticky navbar (72px) when jumped to from the menu */
+section[id], [id="top"]{scroll-margin-top:88px}
+
+/* Features nav button (appended) */
+.nav-features-btn{display:inline-flex;align-items:center;margin-right:8px;padding:8px 18px;border-radius:999px;background:#1c1c1c;color:#fff;font-size:15px;font-weight:600;text-decoration:none;white-space:nowrap;box-shadow:0 4px 0 #000,0 8px 20px rgba(0,0,0,.5),0 1px 0 rgba(255,255,255,.08) inset;transition:transform .16s cubic-bezier(.2,.8,.3,1.2),box-shadow .16s ease,background .2s ease,color .2s ease}
+.nav-features-btn:hover{background:#8fe333;color:#141414;transform:translateY(-2px);box-shadow:0 6px 0 #5aa50f,0 14px 28px rgba(143,227,51,.45)}
+.nav-features-btn:active{transform:translateY(2px);box-shadow:0 2px 0 #5aa50f,0 5px 12px rgba(143,227,51,.4);transition-duration:.07s}
+@media (prefers-reduced-motion:reduce){.nav-features-btn{transition:none}}
+
+/* Neon cursor motion — additive 3D pointer layer */
+.cursor-orb{position:fixed;left:0;top:0;width:18px;height:18px;border:1px solid rgba(143,227,51,.9);border-radius:50%;pointer-events:none;z-index:9999;opacity:0;transform:translate3d(-50%,-50%,0);transition:width .25s ease,height .25s ease,opacity .25s ease,background .25s ease;mix-blend-mode:screen;box-shadow:0 0 12px rgba(143,227,51,.65)}.cursor-orb.is-visible{opacity:1}.cursor-orb.is-hovering{width:58px;height:58px;background:rgba(143,227,51,.15);box-shadow:0 0 30px rgba(143,227,51,.75),inset 0 0 18px rgba(143,227,51,.18)}.cursor-trail{position:fixed;left:0;top:0;width:8px;height:8px;border-radius:50%;pointer-events:none;z-index:9998;background:#b7ff68;box-shadow:0 0 22px 4px rgba(143,227,51,.85);opacity:0;transform:translate3d(-50%,-50%,0)}.magnetic-3d{transform-style:preserve-3d;will-change:transform;transition:transform .18s cubic-bezier(.22,1,.36,1),box-shadow .25s ease}.magnetic-3d::after{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;background:radial-gradient(circle at var(--glare-x,50%) var(--glare-y,50%),rgba(223,255,184,.28),transparent 34%);transition:opacity .2s ease}.magnetic-3d.is-magnetic::after{opacity:1}@media (pointer:coarse),(prefers-reduced-motion:reduce){.cursor-orb,.cursor-trail{display:none}.magnetic-3d{transform:none!important}}
+
+/* ============================================================
+   HERO APP DEMO — original animated workspace mock (WP-AUDIT-H3)
+   Neon theme variant. Pure CSS/JS, honors prefers-reduced-motion.
+   ============================================================ */
+.hero-app-demo {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  background: #0d0f0a;
+  color: #e8f0dc;
+  font-family: inherit;
+  text-align: left;
+}
+.had-sidebar {
+  width: 26%;
+  min-width: 96px;
+  background: #12150c;
+  border-right: 1px solid #232b14;
+  padding: 8% 8% 8% 10%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.had-logo {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: #94e130;
+  margin-bottom: 8px;
+}
+.had-nav {
+  height: 10px;
+  border-radius: 5px;
+  background: #2a3317;
+  width: 85%;
+}
+.had-nav--active { background: #94e13026; outline: 1.5px solid #94e13066; width: 95%; }
+.had-nav--short { width: 60%; }
+.had-main {
+  flex: 1;
+  padding: 6% 7%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.had-search {
+  height: 22px;
+  border-radius: 11px;
+  background: #171b0f;
+  border: 1px solid #2a3317;
+  width: 62%;
+}
+.had-note {
+  flex: 1;
+  background: #141810;
+  border: 1px solid #2a3317;
+  border-radius: 12px;
+  padding: 7% 8%;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+.had-title {
+  min-height: 1.4em;
+  font-weight: 700;
+  font-size: clamp(13px, 1.6vw, 18px);
+  color: #e8f0dc;
+  margin-bottom: 10px;
+}
+.had-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background: #94e130;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  animation: had-blink 1s steps(1) infinite;
+}
+.hero-app-demo.is-static .had-caret { display: none; }
+@keyframes had-blink { 50% { opacity: 0; } }
+.had-line {
+  height: 8px;
+  border-radius: 4px;
+  background: #242b14;
+  margin-bottom: 8px;
+  width: 92%;
+}
+.had-line--short { width: 64%; }
+.had-checklist { list-style: none; margin: 14px 0 0; padding: 0; }
+.had-checklist li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+}
+.had-box {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  border-radius: 4px;
+  border: 2px solid #4a5527;
+  position: relative;
+  transition: background 0.25s ease, border-color 0.25s ease;
+}
+.had-checklist li.is-done .had-box { background: #94e130; border-color: #94e130; }
+.had-checklist li.is-done .had-box::after {
+  content: "";
+  position: absolute;
+  left: 3.5px;
+  top: 0.5px;
+  width: 4px;
+  height: 8px;
+  border: solid #0d0f0a;
+  border-width: 0 2px 2px 0;
+  transform: rotate(42deg);
+}
+.had-text {
+  height: 8px;
+  border-radius: 4px;
+  background: #333d1c;
+  position: relative;
+  overflow: hidden;
+}
+.had-text--a { width: 58%; }
+.had-text--b { width: 44%; }
+.had-text--c { width: 66%; }
+.had-text::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #0d0f0a;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s ease;
+}
+.had-checklist li.is-done .had-text::after { transform: scaleX(0.55); }
+.hero-frame-flash .hero-product-frame {
+  outline: 3px solid #94e130;
+  outline-offset: 4px;
+  transition: outline-color 0.3s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .had-caret { animation: none; }
+}
