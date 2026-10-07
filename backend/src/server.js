@@ -445,7 +445,7 @@ start().then(() => {
     try {
       const results = await cleanupExpiredTokens();
       const total = Object.values(results).reduce((a,b)=>a+b,0);
-      if (total > 0) console.log(`[cleanup] removed expired tokens`, results);
+      if (total > 0) console.log('[cleanup] removed expired tokens');
     } catch (_e) {
       console.warn('[cleanup] failed');
     }

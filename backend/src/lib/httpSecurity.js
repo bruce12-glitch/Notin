@@ -18,5 +18,8 @@ export function isOriginAllowed(originHeader) {
 // Extra development origins must be configured explicitly in APP_ORIGIN.
 export function corsOriginFor(originHeader) {
   if (typeof originHeader !== 'string') return null;
-  return allowList.find((allowed) => allowed === originHeader) || null;
+  for (const allowed of allowList) {
+    if (allowed === originHeader) return allowed;
+  }
+  return null;
 }
