@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "script.js",
   "engines": {
-    "node": ">=22.5.0"
+    "node": ">=22.13.0"
   },
   "scripts": {
     "check": "node --check script.js && node --check dev-server.mjs",
@@ -17,7 +17,7 @@
   "license": "MIT",
   "description": "Notin marketing site (Green/Neon editions), served by the unified backend at /site/",
   "devDependencies": {
-    "@tailwindcss/cli": "^4.3.3",
-    "tailwindcss": "^4.3.3"
+    "@tailwindcss/cli": "4.3.0",
+    "tailwindcss": "4.3.0"
   }
 }

@@ -18,6 +18,7 @@ on:
     paths:
       - 'frontend/**'
       - '.github/workflows/pages.yml'
+      - 'ci/stage-pages.mjs'
   workflow_dispatch:
 
 permissions:
@@ -36,9 +37,9 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -48,12 +49,13 @@ jobs:
       - run: npm run build
       - run: npm run check
 
-      # node_modules must not ship to Pages (hundreds of MB, breaks the upload)
-      - run: rm -rf node_modules
+      - name: Stage public marketing files
+        run: node ../ci/stage-pages.mjs
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
-          path: frontend
+          path: _site
+          include-hidden-files: false
 
   deploy:
     needs: build

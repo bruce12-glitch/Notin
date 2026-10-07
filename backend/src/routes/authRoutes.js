@@ -1,5 +1,5 @@
 import express from 'express';
-import rateLimit from 'express-rate-limit';
+import { rateLimit } from 'express-rate-limit';
 import { isOriginAllowed } from '../lib/httpSecurity.js';
 import { verifyCsrfToken } from '../lib/jwt.js';
 import auth from '../middleware/auth.js';

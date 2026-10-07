@@ -353,7 +353,7 @@ export async function otpVerify(req, res) {
     return res.status(401).json({ error: 'Invalid or expired code' });
   }
   const expected = otpHash(challenge, String(code));
-  let ok = false;
+  let ok;
   try {
     ok = crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(c.code_hash));
   } catch {

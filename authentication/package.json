@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22.5.0"
+    "node": ">=22.13.0"
   },
   "scripts": {
     "build:app": "esbuild app.js --bundle --format=esm --target=es2020 --minify --outfile=app.bundle.js",

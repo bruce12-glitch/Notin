@@ -64,7 +64,7 @@ export const audioUpload = multer({
   storage,
   limits: { fileSize: MAX_AUDIO_BYTES, files: 1 },
   fileFilter: (_req, file, cb) => {
-    if (!file.mimetype || !file.mimetype.startsWith('audio/')) return cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'audio'));
+    if (!allowedMimes.has(file.mimetype) || !file.mimetype.startsWith('audio/')) return cb(new multer.MulterError('LIMIT_UNEXPECTED_FILE', 'audio'));
     cb(null, true);
   },
 }).single('audio');
@@ -89,12 +89,19 @@ async function ownedNote(noteId, userId) {
   return rows[0] || null;
 }
 
+function temporaryUploadPath(file) {
+  if (typeof file?.filename !== 'string' || !/^[a-f0-9-]{36}\.(?:png|jpg|webp|gif|pdf|webm|ogg|mp3|m4a|wav)$/i.test(file.filename)) {
+    throw new Error('Invalid temporary upload filename');
+  }
+  return path.join(uploadDir, path.basename(file.filename));
+}
+
 async function removeFiles(files = []) {
-  await Promise.all(files.map((file) => fs.promises.unlink(file.path).catch(() => {})));
+  await Promise.all(files.map((file) => fs.promises.unlink(temporaryUploadPath(file)).catch(() => {})));
 }
 
 async function hasExpectedImageSignature(file) {
-  const handle = await fs.promises.open(file.path, 'r');
+  const handle = await fs.promises.open(temporaryUploadPath(file), 'r');
   try {
     const header = Buffer.alloc(12);
     const { bytesRead } = await handle.read(header, 0, header.length, 0);
@@ -170,17 +177,17 @@ export async function ensureAttachmentCapacity(req, res, next) {
 }
 
 export async function uploadImages(req, res) {
-  const files = req.files || [];
+  const files = Array.isArray(req.files) ? req.files : [];
   const createdIds = [];
   try {
     if (!files.length) return res.status(400).json({ message: 'Choose at least one PNG, JPEG, WebP, or GIF image' });
-    if ((req.attachmentCount || 0) + files.length > MAX_IMAGES_PER_NOTE) {
+    if ((Number(req.attachmentCount) || 0) + files.length > MAX_IMAGES_PER_NOTE) {
       await removeFiles(files);
       return res.status(400).json({ message: `A note can have at most ${MAX_IMAGES_PER_NOTE} images` });
     }
 
     const uploadedBytes = files.reduce((sum, file) => sum + Number(file.size || 0), 0);
-    if ((req.attachmentStorageBytes || 0) + uploadedBytes > MAX_ATTACHMENT_STORAGE_BYTES) {
+    if ((Number(req.attachmentStorageBytes) || 0) + uploadedBytes > MAX_ATTACHMENT_STORAGE_BYTES) {
       await removeFiles(files);
       return res.status(403).json({ message: 'Attachment storage limit reached', code: 'STORAGE_QUOTA_REACHED' });
     }
@@ -370,7 +377,7 @@ export async function transcribeUpload(req, res) {
     let provider;
     try {
       const durationHint = Number(req.body?.durationSec);
-      const buffer = await fs.promises.readFile(file.path);
+      const buffer = await fs.promises.readFile(temporaryUploadPath(file));
       const result = await transcribeAudio({
         buffer,
         mime: file.mimetype,

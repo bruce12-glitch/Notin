@@ -79,8 +79,8 @@ function proxyToApi(req, res) {
       proxyRes.pipe(res);
     }
   );
-  proxyReq.on('error', (err) => {
-    console.error(`[proxy] ${req.method} ${req.url} -> ${API_TARGET} failed:`, err.message);
+  proxyReq.on('error', (_err) => {
+    console.error('[proxy] upstream request failed');
     if (!res.headersSent) {
       res.writeHead(502, { 'content-type': 'application/json' });
     }

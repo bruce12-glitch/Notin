@@ -32,3 +32,6 @@ Thumbs.db
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+
+# Staged Pages deployment artifact
+/_site/

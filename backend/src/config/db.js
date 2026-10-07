@@ -1,4 +1,5 @@
 import pg from 'pg';
+import { logError } from '../lib/logging.js';
 import 'dotenv/config';
 import { DatabaseSync } from 'node:sqlite';
 import crypto from 'node:crypto';
@@ -36,7 +37,7 @@ if (usePostgres) {
     query_timeout: Math.max(1000, Number.parseInt(process.env.PG_QUERY_TIMEOUT_MS || '12000', 10) || 12000),
   });
   pool.on('error', (err) => {
-    console.error('Unexpected PostgreSQL pool error', err);
+    logError(null, err, 'postgres_pool');
   });
 } else {
   try { fs.mkdirSync(path.dirname(sqlitePath), { recursive: true }); } catch {}
@@ -107,17 +108,17 @@ async function query(text, params = []) {
         // WP-DEPLOY-001 — same rule mid-flight: production must never silently
         // migrate live traffic onto an empty local SQLite file.
         if (process.env.NODE_ENV === 'production') {
-          console.error(`FATAL: lost the PostgreSQL connection in production (${err.message || err.code}) — refusing to fall back to SQLite`);
+          console.error('FATAL: lost the PostgreSQL connection in production — refusing to fall back to SQLite');
           throw err;
         }
         // WP-AUDIT-M1 — the dev fallback is now opt-in: without
         // ALLOW_SQLITE_FALLBACK=true a Postgres outage fails loudly instead of
         // silently serving an empty/divergent SQLite store.
         if (!sqliteFallbackAllowed) {
-          console.error(`PostgreSQL query failed (${err.message || err.code}). Set ALLOW_SQLITE_FALLBACK=true to enable the development SQLite fallback.`);
+          console.error('PostgreSQL query failed. Set ALLOW_SQLITE_FALLBACK=true to enable the development SQLite fallback.');
           throw err;
         }
-        console.warn(`⚠️  Postgres query failed (${err.message || err.code}), switching to SQLite fallback at ${sqlitePath}`);
+        console.warn('Postgres query failed, switching to development SQLite fallback');
         usePostgres = false;
         if (!sqliteDb) {
           try { fs.mkdirSync(path.dirname(sqlitePath), { recursive: true }); } catch {}
@@ -319,16 +320,16 @@ const db = {
         client.release();
         console.log('✅ Connected to PostgreSQL');
         return;
-      } catch (e) {
+      } catch (_e) {
         // WP-DEPLOY-001 — in production the SQLite fallback is never acceptable.
         // Without this the boot gate would be bypassable: a valid postgres:// URL
         // that simply cannot be reached would silently downgrade the whole
         // process to SQLite. Dev/preview keeps the forgiving fallback below.
         if (process.env.NODE_ENV === 'production') {
-          console.error(`FATAL: could not connect to PostgreSQL in production (${e.message}) — refusing to fall back to SQLite`);
+          console.error('FATAL: could not connect to PostgreSQL in production — refusing to fall back to SQLite');
           process.exit(1);
         }
-        console.warn(`⚠️  Postgres connect failed (${e.message}), using SQLite fallback`);
+        console.warn('Postgres connect failed, using development SQLite fallback');
         usePostgres = false;
         if (!sqliteDb) {
           try { fs.mkdirSync(path.dirname(sqlitePath), { recursive: true }); } catch {}
@@ -568,7 +569,7 @@ const db = {
       );
       const row = rows[0];
       if(row){
-        if(row.contentJson && typeof row.contentJson === 'string'){ try{ row.contentJson = JSON.parse(row.contentJson); }catch(parseErr){ console.warn(`[db] contentJson parse failed for note ${row.id ?? 'unknown'} — returning raw text:`, parseErr.message); } }
+        if(row.contentJson && typeof row.contentJson === 'string'){ try{ row.contentJson = JSON.parse(row.contentJson); }catch(_parseErr){ console.warn('Stored note content could not be parsed'); } }
         row.isTrashed = !!(row.isTrashed === true || row.isTrashed === 1 || row.isTrashed === '1' || row.isTrashed === 't');
         row.isPinned = !!(row.isPinned === true || row.isPinned === 1 || row.isPinned === '1' || row.isPinned === 't'); // WP-APP-007
         row.tags = row.tags || []; // WP-APP-006 — new notes start untagged
@@ -603,12 +604,12 @@ const db = {
       params.push(lim);
       const off = Number.isFinite(offset) ? Math.max(0, Math.floor(offset)) : 0;
       if (off > 0) {
-        sql += ` OFFSET $${idx++}`;
+        sql += ` OFFSET $${idx}`;
         params.push(off);
       }
       const { rows } = await query(sql, params);
       const mapped = rows.map(r=>{
-        if(r.contentJson && typeof r.contentJson === 'string'){ try{ r.contentJson = JSON.parse(r.contentJson); }catch(parseErr){ console.warn(`[db] contentJson parse failed for note ${r.id ?? 'unknown'} — returning raw text:`, parseErr.message); } }
+        if(r.contentJson && typeof r.contentJson === 'string'){ try{ r.contentJson = JSON.parse(r.contentJson); }catch(_parseErr){ console.warn('Stored note content could not be parsed'); } }
         r.isTrashed = !!(r.isTrashed === true || r.isTrashed === 1 || r.isTrashed === '1' || r.isTrashed === 't');
         r.isPinned = !!(r.isPinned === true || r.isPinned === 1 || r.isPinned === '1' || r.isPinned === 't'); // WP-APP-007
         // WP-HARDEN-001 — rank is internal unless the client asked for it.
@@ -631,7 +632,7 @@ const db = {
       );
       const row = rows[0] || null;
       if(row){
-        if(row.contentJson && typeof row.contentJson === 'string'){ try{ row.contentJson = JSON.parse(row.contentJson); }catch(parseErr){ console.warn(`[db] contentJson parse failed for note ${row.id ?? 'unknown'} — returning raw text:`, parseErr.message); } }
+        if(row.contentJson && typeof row.contentJson === 'string'){ try{ row.contentJson = JSON.parse(row.contentJson); }catch(_parseErr){ console.warn('Stored note content could not be parsed'); } }
         row.isTrashed = !!(row.isTrashed === true || row.isTrashed === 1 || row.isTrashed === '1' || row.isTrashed === 't');
         row.isPinned = !!(row.isPinned === true || row.isPinned === 1 || row.isPinned === '1' || row.isPinned === 't'); // WP-APP-007
         await attachTags([row]);
@@ -689,7 +690,7 @@ const db = {
         // NOTE: the leading `$` is load-bearing — without it the clause embeds
         // the raw index (e.g. `AND "updatedAt" = 3`) and keeps one extra bound
         // parameter, which SQLite rejects with SQLITE_RANGE.
-        whereClause += ` AND "updatedAt" = $${idx++}${usePostgres ? '::timestamptz' : ''}`;
+        whereClause += ` AND "updatedAt" = $${idx}${usePostgres ? '::timestamptz' : ''}`;
         params.push(data.expectedUpdatedAt);
       }
       const setClause = sets.join(', ');
@@ -703,7 +704,7 @@ const db = {
       }
       const row = rows[0];
       if(row){
-        if(row.contentJson && typeof row.contentJson === 'string'){ try{ row.contentJson = JSON.parse(row.contentJson); }catch(parseErr){ console.warn(`[db] contentJson parse failed for note ${row.id ?? 'unknown'} — returning raw text:`, parseErr.message); } }
+        if(row.contentJson && typeof row.contentJson === 'string'){ try{ row.contentJson = JSON.parse(row.contentJson); }catch(_parseErr){ console.warn('Stored note content could not be parsed'); } }
         row.isTrashed = !!(row.isTrashed === true || row.isTrashed === 1 || row.isTrashed === '1' || row.isTrashed === 't');
         row.isPinned = !!(row.isPinned === true || row.isPinned === 1 || row.isPinned === '1' || row.isPinned === 't'); // WP-APP-007
         await attachTags([row]);
@@ -754,7 +755,6 @@ const db = {
       }
       if (dueBefore !== undefined) {
         sql += ` AND (r."snoozedUntil" IS NOT NULL AND r."snoozedUntil" <= $${idx} OR (r."snoozedUntil" IS NULL AND r."remindAt" <= $${idx}))`;
-        idx++;
         params.push(dueBefore);
       }
       sql += ` ORDER BY COALESCE(r."snoozedUntil", r."remindAt") ASC`;
@@ -820,7 +820,7 @@ const db = {
       params.push(now);
       params.push(id, userId);
       const idParam = idx++;
-      const userParam = idx++;
+      const userParam = idx;
       const { rows } = await query(
         `UPDATE "Reminder" SET ${sets.join(', ')} WHERE id = $${idParam} AND "userId" = $${userParam}
          RETURNING id, "noteId", "userId", "remindAt", "isCompleted", "completedAt", "snoozedUntil", "createdAt", "updatedAt"`,

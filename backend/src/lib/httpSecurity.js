@@ -13,3 +13,10 @@ export function isOriginAllowed(originHeader) {
   if (process.env.NODE_ENV !== 'production' && DEV_ORIGIN.test(originHeader)) return true;
   return false;
 }
+
+// CORS values come from configuration, not from the incoming Origin header.
+// Extra development origins must be configured explicitly in APP_ORIGIN.
+export function corsOriginFor(originHeader) {
+  if (typeof originHeader !== 'string') return null;
+  return allowList.find((allowed) => allowed === originHeader) || null;
+}

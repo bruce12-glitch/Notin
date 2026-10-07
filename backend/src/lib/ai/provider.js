@@ -70,7 +70,7 @@ async function summarizeWithGroq(text, apiKey) {
     return summary;
   } catch (error) {
     if (error?.message === 'AI_PROVIDER_ERROR') throw error;
-    throw new Error('AI_PROVIDER_ERROR');
+    throw new Error('AI_PROVIDER_ERROR', { cause: error });
   } finally {
     clearTimeout(timeout);
   }
@@ -138,7 +138,7 @@ async function titleWithGroq(text, apiKey) {
     return title;
   } catch (error) {
     if (error?.message === 'AI_PROVIDER_ERROR') throw error;
-    throw new Error('AI_PROVIDER_ERROR');
+    throw new Error('AI_PROVIDER_ERROR', { cause: error });
   } finally {
     clearTimeout(timeout);
   }
@@ -250,7 +250,7 @@ async function tagsWithGroq(text, existingTags, apiKey) {
     return tags;
   } catch (error) {
     if (error?.message === 'AI_PROVIDER_ERROR') throw error;
-    throw new Error('AI_PROVIDER_ERROR');
+    throw new Error('AI_PROVIDER_ERROR', { cause: error });
   } finally {
     clearTimeout(timeout);
   }
@@ -336,7 +336,7 @@ async function chatWithGroq(noteText, question, history, apiKey) {
     return answer.slice(0, MAX_CHAT_ANSWER_CHARS);
   } catch (error) {
     if (error?.message === 'AI_PROVIDER_ERROR') throw error;
-    throw new Error('AI_PROVIDER_ERROR');
+    throw new Error('AI_PROVIDER_ERROR', { cause: error });
   } finally {
     clearTimeout(timeout);
   }
@@ -460,7 +460,7 @@ async function* groqChatDeltas(note, question, history, apiKey) {
     }
   } catch (error) {
     if (error?.message === 'AI_PROVIDER_ERROR') throw error;
-    throw new Error('AI_PROVIDER_ERROR');
+    throw new Error('AI_PROVIDER_ERROR', { cause: error });
   } finally {
     clearTimeout(timeout);
     if (reader) {
@@ -584,7 +584,7 @@ async function assistWithGroq(action, input, apiKey) {
     return suggestion.slice(0, MAX_ASSIST_OUTPUT_CHARS);
   } catch (error) {
     if (error?.message === 'AI_PROVIDER_ERROR') throw error;
-    throw new Error('AI_PROVIDER_ERROR');
+    throw new Error('AI_PROVIDER_ERROR', { cause: error });
   } finally {
     clearTimeout(timeout);
   }
@@ -656,7 +656,7 @@ async function askWithGroq(extracts, question, apiKey) {
     return answer.slice(0, MAX_CHAT_ANSWER_CHARS * 2);
   } catch (error) {
     if (error?.message === 'AI_PROVIDER_ERROR') throw error;
-    throw new Error('AI_PROVIDER_ERROR');
+    throw new Error('AI_PROVIDER_ERROR', { cause: error });
   } finally {
     clearTimeout(timeout);
   }
@@ -714,7 +714,7 @@ export async function transcribeAudio({ buffer, mime, filename, durationHintSec 
       return { transcript: text.slice(0, MAX_TRANSCRIPT_CHARS), provider: 'groq' };
     } catch (error) {
       if (error?.message === 'AI_PROVIDER_ERROR') throw error;
-      throw new Error('AI_PROVIDER_ERROR');
+      throw new Error('AI_PROVIDER_ERROR', { cause: error });
     } finally {
       clearTimeout(timeout);
     }

@@ -27,8 +27,8 @@ Not included (roadmap): native desktop/mobile apps, team workspaces, billing, re
 | Layer | Technologies |
 |---|---|
 | Marketing | Static HTML, Tailwind CSS v4, vanilla JS, three.js |
-| App | Vanilla JS, TipTap 2.27, esbuild |
-| Backend | Node.js 22, Express 4.21, Zod validation |
+| App | Vanilla JS, TipTap 3, esbuild |
+| Backend | Node.js 22, Express 4.22, Zod validation |
 | Database | PostgreSQL 16 (production), SQLite fallback (development only) |
 | Auth | JWT (jose), bcryptjs, email OTP, Google OAuth |
 | AI | Groq API (live) with deterministic mock when no key is set |
@@ -49,7 +49,7 @@ notin/
 
 ## Quick Start
 
-Requirements: Node.js 22.5+, npm.
+Requirements: Node.js 22.13+ (22.22 recommended), npm.
 
 ```bash
 # 1. Backend + app (unified server on http://localhost:5000)
@@ -65,7 +65,7 @@ npm install
 PORT=3000 API_TARGET=http://localhost:5000 node dev-server.mjs
 ```
 
-Open `http://localhost:5000` to sign up. Without SMTP configured (local dev only), the demo OTP is `123456`.
+Open `http://localhost:5000` to sign up. For local OTP testing without SMTP, explicitly set `ALLOW_DEMO_OTP=true`; the demo OTP is then `123456`. Production never enables this shortcut.
 
 ## Environment Variables
 

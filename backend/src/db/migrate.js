@@ -527,7 +527,7 @@ function migrateSqlite(dbPath) {
 
 async function migrate() {
   console.log('Running migrations...');
-  console.log(`DATABASE_URL: ${DATABASE_URL ? DATABASE_URL.replace(/:[^:@/]+@/, ':***@') : '(using SQLite fallback)'}`);
+  console.log('Database migration configuration loaded');
 
   // Try Postgres first if URL looks like postgres
   if (isPostgresUrl) {
@@ -543,9 +543,9 @@ async function migrate() {
     } catch (e) {
       try { await pool.end(); } catch {}
       if (isProduction) {
-        throw new Error(`Production PostgreSQL migration failed: ${e.message}`);
+        throw new Error('Production PostgreSQL migration failed', { cause: e });
       }
-      console.warn(`⚠️  Postgres connection failed (${e.message}), falling back to SQLite for local dev...`);
+      console.warn('Postgres connection failed, falling back to development SQLite');
       // fall through to sqlite
     }
   } else {
@@ -565,7 +565,7 @@ async function migrate() {
   migrateSqlite(sqlitePath);
 }
 
-migrate().catch(async (err) => {
-  console.error('❌ Migration failed:', err);
+migrate().catch(async (_err) => {
+  console.error('Migration failed; check database configuration and connectivity');
   process.exit(1);
 });

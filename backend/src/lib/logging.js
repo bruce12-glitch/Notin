@@ -13,14 +13,12 @@ export function resolveRequestId(headerValue) {
   return crypto.randomUUID();
 }
 
-// Shared error logger. Logs the request id + an optional context label + the
-// Error object. Never pass tokens, passwords, emails, or note content as
-// `context` — keep it a short static string.
+// Log correlation and a bounded error category. Driver errors, stacks, URLs,
+// and request data can contain credentials or private notes and never belong here.
+const ERROR_TYPES = new Set(['Error', 'TypeError', 'SyntaxError', 'RangeError', 'DatabaseError']);
 export function logError(req, error, context) {
-  const id = req && req.id ? req.id : '-';
-  if (context) {
-    console.error(`[${id}] ${context}`, error);
-  } else {
-    console.error(`[${id}]`, error);
-  }
+  const id = isSaneRequestId(req?.id) ? req.id : '-';
+  const label = typeof context === 'string' && /^[A-Za-z0-9 _-]{1,80}$/.test(context) ? context : 'request';
+  const errorType = ERROR_TYPES.has(error?.name) ? error.name : 'Error';
+  console.error('Application error', { requestId: id, context: label, errorType });
 }

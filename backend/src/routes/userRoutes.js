@@ -1,5 +1,5 @@
 import express from 'express';
-import rateLimit from 'express-rate-limit';
+import { rateLimit } from 'express-rate-limit';
 import { signup, signin } from '../controllers/userController.js';
 import { deleteAccount, exportAccount, getUsage } from '../controllers/accountController.js';
 import { listSessions, revokeSession, revokeOtherSessions } from '../controllers/authController.js';

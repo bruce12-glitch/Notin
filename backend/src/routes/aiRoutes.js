@@ -1,5 +1,5 @@
 import express from 'express';
-import rateLimit from 'express-rate-limit';
+import { rateLimit } from 'express-rate-limit';
 import auth from '../middleware/auth.js';
 import { askMyNotesController } from '../controllers/aiController.js';
 

@@ -6,7 +6,7 @@
   "type": "module",
   "license": "MIT",
   "engines": {
-    "node": ">=22.5.0"
+    "node": ">=22.13.0"
   },
   "scripts": {
     "dev": "node --watch src/server.js",
@@ -26,20 +26,21 @@
     "bcryptjs": "^2.4.3",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
-    "dotenv": "^16.4.5",
+    "dotenv": "^18.0.6",
     "express": "^4.22.3",
-    "express-rate-limit": "^8.6.2",
+    "express-rate-limit": "^8.7.1",
     "google-auth-library": "^11.0.0",
     "helmet": "^8.0.0",
-    "jose": "^6.2.8",
+    "jose": "^6.2.12",
     "multer": "^2.4.0",
     "nodemailer": "^10.0.12",
-    "pg": "^8.13.1",
+    "pg": "^8.23.1",
     "web-push": "^3.6.7",
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.62.1",
-    "eslint": "^9.39.1"
+    "eslint": "^10.12.0"
   }
 }

@@ -4,7 +4,7 @@ import express from 'express';
 import helmet from 'helmet';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
-import rateLimit from 'express-rate-limit';
+import { rateLimit } from 'express-rate-limit';
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -23,7 +23,7 @@ import aiRoutes from './routes/aiRoutes.js';
 import { signup, signin } from './controllers/userController.js';
 import storage from './lib/storage.js';
 import { cleanupExpiredTokens } from './lib/cleanup.js';
-import { canonicalOrigin, isOriginAllowed, DEV_ORIGIN } from './lib/httpSecurity.js';
+import { canonicalOrigin, corsOriginFor } from './lib/httpSecurity.js';
 import { logError } from './lib/logging.js';
 import requestId from './middleware/requestId.js';
 
@@ -118,6 +118,8 @@ try {
 // so every response (health, static, errors) carries X-Request-Id.
 app.use(requestId);
 app.use(compression());
+// Bound expensive API and static work, in addition to tighter route budgets.
+app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 2000, standardHeaders: true, legacyHeaders: false }));
 
 function resolveAppVersion() {
   const fromEnv = String(process.env.GIT_SHA || process.env.SOURCE_VERSION || '').trim();
@@ -160,7 +162,7 @@ async function probeUploadsWritable() {
 // remains frameable because Arena renders it in an iframe.
 app.use(
   helmet({
-    contentSecurityPolicy: isProd ? {
+    contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
         baseUri: ["'self'"],
@@ -175,10 +177,7 @@ app.use(
         workerSrc: ["'self'", 'blob:'],
         manifestSrc: ["'self'"],
       },
-    } : false,
-    crossOriginEmbedderPolicy: false,
-    frameguard: isProd ? { action: 'sameorigin' } : false,
-    hsts: isProd ? undefined : false,
+    },
   })
 );
 app.use((req, res, next) => {
@@ -186,21 +185,8 @@ app.use((req, res, next) => {
     res.removeHeader('X-Frame-Options');
     res.setHeader('Content-Security-Policy', 'frame-ancestors *');
   }
-  const reqOrigin = req.headers.origin;
-  // WP-DEPLOY-001 — CORS lockdown. In production only APP_ORIGIN allowlist
-  // entries are echoed; everyone else gets the canonical origin back, never
-  // their own. WP-AUDIT-H2 — non-production no longer echoes ANY origin with
-  // credentials: the echo is limited to the allowlist plus localhost/127.0.0.1
-  // (DEV_ORIGIN), so a publicly reachable preview cannot be driven from an
-  // attacker's page.
-  let allowOrigin = canonicalOrigin;
-  if (reqOrigin) {
-    if (isProd) {
-      if (isOriginAllowed(reqOrigin)) allowOrigin = reqOrigin;
-    } else if (isOriginAllowed(reqOrigin) || DEV_ORIGIN.test(reqOrigin)) {
-      allowOrigin = reqOrigin;
-    }
-  }
+  // Return trusted configured values; never reflect a request header.
+  const allowOrigin = corsOriginFor(req.headers.origin) || canonicalOrigin;
   res.setHeader('Access-Control-Allow-Origin', allowOrigin);
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Notin-CSRF, X-Request-Id');
@@ -407,8 +393,8 @@ const start = async () => {
       console.log(`   Auth UI:    http://0.0.0.0:${PORT}/ (index.html) + /login.html`);
       console.log(`   Marketing:  http://0.0.0.0:${PORT}/site/`);
     });
-  } catch (error) {
-    console.error('❌ Database connection failed:', error);
+  } catch (_error) {
+    console.error('Database connection failed during startup; check configuration and connectivity');
     process.exit(1);
   }
 };
@@ -460,8 +446,8 @@ start().then(() => {
       const results = await cleanupExpiredTokens();
       const total = Object.values(results).reduce((a,b)=>a+b,0);
       if (total > 0) console.log(`[cleanup] removed expired tokens`, results);
-    } catch (e) {
-      console.warn('[cleanup] failed', e.message);
+    } catch (_e) {
+      console.warn('[cleanup] failed');
     }
   };
   runCleanup();
