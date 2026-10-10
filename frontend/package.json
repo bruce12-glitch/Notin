@@ -18,6 +18,6 @@
   "description": "Notin marketing site (Green/Neon editions), served by the unified backend at /site/",
   "devDependencies": {
     "@tailwindcss/cli": "4.3.0",
-    "tailwindcss": "4.3.0"
+    "tailwindcss": "4.3.3"
   }
 }
