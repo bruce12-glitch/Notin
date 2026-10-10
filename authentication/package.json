@@ -13,7 +13,7 @@
     "dev:design": "node design-server.mjs"
   },
   "dependencies": {
-    "@tiptap/core": "^3.31.3",
+    "@tiptap/core": "^3.31.4",
     "@tiptap/extension-link": "^3.31.3",
     "@tiptap/extension-placeholder": "^3.31.3",
     "@tiptap/extension-task-item": "^3.31.3",
